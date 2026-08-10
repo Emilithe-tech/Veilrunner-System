@@ -1,0 +1,294 @@
+<section class="vr-item-sheet">
+  <header class="vr-basic-header">
+    <img class="vr-basic-img" src="{{item.img}}" data-edit="img" alt="" />
+    <div class="vr-basic-identity">
+      <input type="text" name="name" value="{{item.name}}" placeholder="{{localize 'VEILRUNNER.Name'}}" />
+    </div>
+  </header>
+
+  {{#if isAction}}
+    <label class="vr-check">
+      <input type="checkbox" name="system.favorite" {{checked system.favorite}} />
+      {{localize 'VEILRUNNER.Action.FIELDS.favorite.label'}}
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.actionType.label'}}
+      <select name="system.actionType">
+        {{#each (array "standard" "bonus" "reaction" "free") as |type|}}
+          <option value="{{type}}" {{#if (eq ../system.actionType type)}}selected{{/if}}>{{localize (concat "VEILRUNNER.ActionType." type)}}</option>
+        {{/each}}
+      </select>
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.category.label'}}
+      <select name="system.category">
+        {{#each (array "actions" "reactions" "magic" "tech") as |category|}}
+          <option value="{{category}}" {{#if (eq ../system.category category)}}selected{{/if}}>{{localize (concat "VEILRUNNER.ActionCategory." category)}}</option>
+        {{/each}}
+      </select>
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.cost.label'}}
+      <input type="text" name="system.cost" value="{{system.cost}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.description.label'}}</label>
+    {{editor system.description target="system.description" engine="prosemirror" button=true editable=editable}}
+  {{/if}}
+
+  {{#if isAbility}}
+    <label class="vr-check">
+      <input type="checkbox" name="system.featured" {{checked system.featured}} />
+      {{localize 'VEILRUNNER.Ability.FIELDS.featured.label'}}
+    </label>
+    <label>{{localize 'VEILRUNNER.Ability.FIELDS.recharge.label'}}
+      <input type="text" name="system.recharge" value="{{system.recharge}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Ability.FIELDS.description.label'}}</label>
+    {{editor system.description target="system.description" engine="prosemirror" button=true editable=editable}}
+  {{/if}}
+
+  {{#if isAccessory}}
+    <div class="vr-item-layout">
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.core'}}</h3>
+        <div class="vr-item-field-grid">
+          <label class="vr-item-field">{{localize 'VEILRUNNER.AccessoryItem.FIELDS.equipmentSlot.label'}}
+            <select name="system.equipmentSlot">
+              {{#each (array "" "head" "chest" "cloak" "shoulders" "arms" "hands" "waist" "legs" "feet" "accessory") as |slot|}}
+                <option value="{{slot}}" {{#if (eq ../system.equipmentSlot slot)}}selected{{/if}}>{{#if slot}}{{localize (concat "VEILRUNNER.EquipmentSlot." slot)}}{{else}}{{localize 'VEILRUNNER.None'}}{{/if}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.AccessoryItem.FIELDS.cost.label'}}
+            <input type="number" name="system.cost" value="{{system.cost}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.AccessoryItem.FIELDS.currency.label'}}
+            <input type="text" name="system.currency" value="{{system.currency}}" />
+          </label>
+          <label class="vr-item-field">Weight (kg)
+            <input type="number" name="system.weight" value="{{system.weight}}" min="0" step="0.01" />
+          </label>
+        </div>
+      </section>
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.effects'}}</h3>
+        <label class="vr-item-field wide">{{localize 'VEILRUNNER.AccessoryItem.FIELDS.bonuses.label'}}
+          <textarea name="system.bonusesText" rows="4">{{system.bonusesText}}</textarea>
+        </label>
+      </section>
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.notes'}}</h3>
+        <label class="vr-item-editor-label">{{localize 'VEILRUNNER.AccessoryItem.FIELDS.description.label'}}</label>
+        {{editor system.description.value target="system.description.value" engine="prosemirror" button=true editable=editable}}
+        {{#if isGM}}
+          <label class="vr-item-editor-label">{{localize 'VEILRUNNER.GMNotes'}}</label>
+          {{editor system.description.gm target="system.description.gm" engine="prosemirror" button=true editable=editable}}
+        {{/if}}
+      </section>
+    </div>
+  {{/if}}
+
+  {{#if isArmor}}
+    <div class="vr-item-layout">
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.core'}}</h3>
+        <div class="vr-item-field-grid">
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.armorType.label'}}
+            <select name="system.armorType">
+              {{#each (array "light" "medium" "heavy") as |type|}}
+                <option value="{{type}}" {{#if (eq ../system.armorType type)}}selected{{/if}}>{{localize (concat "VEILRUNNER.ArmorType." type)}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.equipmentSlot.label'}}
+            <select name="system.equipmentSlot">
+              {{#each (array "" "head" "chest" "cloak" "shoulders" "arms" "hands" "waist" "legs" "feet" "shield") as |slot|}}
+                <option value="{{slot}}" {{#if (eq ../system.equipmentSlot slot)}}selected{{/if}}>{{#if slot}}{{localize (concat "VEILRUNNER.EquipmentSlot." slot)}}{{else}}{{localize 'VEILRUNNER.None'}}{{/if}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.itemRating.label'}}
+            <input type="number" name="system.itemRating" value="{{system.itemRating}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.armorClass.label'}}
+            <input type="number" name="system.armorClass" value="{{system.armorClass}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.cost.label'}}
+            <input type="number" name="system.cost" value="{{system.cost}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.currency.label'}}
+            <input type="text" name="system.currency" value="{{system.currency}}" />
+          </label>
+          <label class="vr-item-field">Weight (kg)
+            <input type="number" name="system.weight" value="{{system.weight}}" min="0" step="0.01" />
+          </label>
+        </div>
+      </section>
+
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.durability'}}</h3>
+        <div class="vr-item-field-grid">
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.durability.label'}}
+            <input type="number" name="system.durability.value" value="{{system.durability.value}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.durabilityMax.label'}}
+            <input type="number" name="system.durability.max" value="{{system.durability.max}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.durabilityRating.label'}}
+            <input type="number" name="system.durabilityRating" value="{{system.durabilityRating}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.movementPenalty.label'}}
+            <input type="number" name="system.movementPenalty" value="{{system.movementPenalty}}" />
+          </label>
+        </div>
+      </section>
+
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.capacity'}}</h3>
+        <div class="vr-item-field-grid">
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.capacityMode.label'}}
+            <select name="system.capacity.mode">
+              {{#each (array "armor" "shield") as |mode|}}
+                <option value="{{mode}}" {{#if (eq ../system.capacity.mode mode)}}selected{{/if}}>{{localize (concat "VEILRUNNER.CapacityMode." mode)}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.armorCapacity.label'}}
+            <input type="number" name="system.capacity.armor" value="{{system.capacity.armor}}" />
+          </label>
+          <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.shieldCapacity.label'}}
+            <input type="number" name="system.capacity.shield" value="{{system.capacity.shield}}" />
+          </label>
+        </div>
+      </section>
+
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.effects'}}</h3>
+        <div class="vr-armor-effects">
+          <div class="vr-armor-effect-group">
+            <div class="vr-armor-effect-heading">
+              <span>{{localize 'VEILRUNNER.ArmorItem.FIELDS.resistances.label'}}</span>
+              <button type="button" class="vr-item-icon-btn" data-action="addArmorEntry" data-path="resistances" title="{{localize 'VEILRUNNER.Add'}}" aria-label="{{localize 'VEILRUNNER.Add'}}"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            {{#each armorResistances as |entry|}}
+              <div class="vr-armor-trait-row">
+                <select name="system.resistances.{{@index}}.trait">
+                  <option value="">{{localize 'VEILRUNNER.None'}}</option>
+                  {{#each ../armorTraits as |trait|}}
+                    <option value="{{trait}}" {{#if (eq entry.trait trait)}}selected{{/if}}>{{localize (concat "VEILRUNNER.DamageTrait." trait)}}</option>
+                  {{/each}}
+                </select>
+                <input type="number" name="system.resistances.{{@index}}.level" value="{{entry.level}}" min="0" />
+                <button type="button" class="vr-item-icon-btn" data-action="removeArmorEntry" data-path="resistances" data-index="{{@index}}" title="{{localize 'VEILRUNNER.Remove'}}" aria-label="{{localize 'VEILRUNNER.Remove'}}" {{#if entry.isEmpty}}disabled{{/if}}><i class="fa-solid fa-minus"></i></button>
+              </div>
+            {{/each}}
+          </div>
+          <div class="vr-armor-effect-group">
+            <div class="vr-armor-effect-heading">
+              <span>{{localize 'VEILRUNNER.ArmorItem.FIELDS.weaknesses.label'}}</span>
+              <button type="button" class="vr-item-icon-btn" data-action="addArmorEntry" data-path="weaknesses" title="{{localize 'VEILRUNNER.Add'}}" aria-label="{{localize 'VEILRUNNER.Add'}}"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            {{#each armorWeaknesses as |entry|}}
+              <div class="vr-armor-trait-row">
+                <select name="system.weaknesses.{{@index}}.trait">
+                  <option value="">{{localize 'VEILRUNNER.None'}}</option>
+                  {{#each ../armorTraits as |trait|}}
+                    <option value="{{trait}}" {{#if (eq entry.trait trait)}}selected{{/if}}>{{localize (concat "VEILRUNNER.DamageTrait." trait)}}</option>
+                  {{/each}}
+                </select>
+                <input type="number" name="system.weaknesses.{{@index}}.level" value="{{entry.level}}" min="0" />
+                <button type="button" class="vr-item-icon-btn" data-action="removeArmorEntry" data-path="weaknesses" data-index="{{@index}}" title="{{localize 'VEILRUNNER.Remove'}}" aria-label="{{localize 'VEILRUNNER.Remove'}}" {{#if entry.isEmpty}}disabled{{/if}}><i class="fa-solid fa-minus"></i></button>
+              </div>
+            {{/each}}
+          </div>
+          <div class="vr-armor-effect-group wide">
+            <div class="vr-armor-effect-heading">
+              <span>{{localize 'VEILRUNNER.ArmorItem.FIELDS.effects.label'}}</span>
+              <button type="button" class="vr-item-icon-btn" data-action="addArmorEntry" data-path="effects" title="{{localize 'VEILRUNNER.Add'}}" aria-label="{{localize 'VEILRUNNER.Add'}}"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            {{#each armorEffects as |effect|}}
+              <div class="vr-armor-effect-row">
+                <select name="system.effects.{{@index}}.targetType">
+                  {{#each ../armorEffectTargets as |targetType|}}
+                    <option value="{{targetType}}" {{#if (eq effect.targetType targetType)}}selected{{/if}}>{{localize (concat "VEILRUNNER.EffectTarget." targetType)}}</option>
+                  {{/each}}
+                </select>
+                <input type="text" name="system.effects.{{@index}}.target" value="{{effect.target}}" placeholder="{{localize 'VEILRUNNER.ArmorEffectTarget'}}" />
+                <input type="number" name="system.effects.{{@index}}.value" value="{{effect.value}}" />
+                <input type="text" name="system.effects.{{@index}}.notes" value="{{effect.notes}}" placeholder="{{localize 'VEILRUNNER.Notes'}}" />
+                <button type="button" class="vr-item-icon-btn" data-action="removeArmorEntry" data-path="effects" data-index="{{@index}}" title="{{localize 'VEILRUNNER.Remove'}}" aria-label="{{localize 'VEILRUNNER.Remove'}}" {{#if effect.isEmpty}}disabled{{/if}}><i class="fa-solid fa-minus"></i></button>
+              </div>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+
+      <section class="vr-item-panel">
+        <h3>{{localize 'VEILRUNNER.ItemSection.notes'}}</h3>
+        <label class="vr-item-editor-label">{{localize 'VEILRUNNER.ArmorItem.FIELDS.description.label'}}</label>
+        {{editor system.description.value target="system.description.value" engine="prosemirror" button=true editable=editable}}
+        {{#if isGM}}
+          <label class="vr-item-editor-label">{{localize 'VEILRUNNER.GMNotes'}}</label>
+          {{editor system.description.gm target="system.description.gm" engine="prosemirror" button=true editable=editable}}
+        {{/if}}
+      </section>
+    </div>
+  {{/if}}
+
+  {{#if isProfession}}
+    <label>{{localize 'VEILRUNNER.ProfessionItem.FIELDS.archetype.label'}}
+      <input type="text" name="system.archetype" value="{{system.archetype}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.ProfessionItem.FIELDS.profession.label'}}
+      <input type="text" name="system.profession" value="{{system.profession}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.ProfessionItem.FIELDS.discipline.label'}}
+      <input type="text" name="system.discipline" value="{{system.discipline}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.ProfessionItem.FIELDS.primaryWeapon.label'}}
+      <input type="text" name="system.primaryWeapon" value="{{system.primaryWeapon}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.ProfessionItem.FIELDS.bonusSkill.label'}}
+      <input type="text" name="system.bonusSkill" value="{{system.bonusSkill}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.ProfessionItem.FIELDS.description.label'}}</label>
+    {{editor system.description target="system.description" engine="prosemirror" button=true editable=editable}}
+  {{/if}}
+
+  {{#if isTreasure}}
+    <label>{{localize 'VEILRUNNER.Treasure.FIELDS.category.label'}}
+      <select name="system.category">
+        {{#each (array "weapon" "ammo" "armor" "consumable" "tech" "keyItem" "junk") as |category|}}
+          <option value="{{category}}" {{#if (eq ../system.category category)}}selected{{/if}}>{{localize (concat "VEILRUNNER.InventoryCategory." category)}}</option>
+        {{/each}}
+      </select>
+    </label>
+    <label>{{localize 'VEILRUNNER.Treasure.FIELDS.quantity.label'}}
+      <input type="number" name="system.quantity" value="{{system.quantity}}" />
+    </label>
+    <label>Weight (kg)
+      <input type="number" name="system.weight" value="{{system.weight}}" min="0" step="0.01" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Treasure.FIELDS.price.label'}}
+      <input type="number" name="system.price" value="{{system.price}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Treasure.FIELDS.rarity.label'}}
+      <input type="text" name="system.rarity" value="{{system.rarity}}" />
+    </label>
+    <label class="vr-check">
+      <input type="checkbox" name="system.identified" {{checked system.identified}} />
+      {{localize 'VEILRUNNER.Treasure.FIELDS.identified.label'}}
+    </label>
+    <label>{{localize 'VEILRUNNER.Treasure.FIELDS.description.label'}}</label>
+    {{editor system.description.value target="system.description.value" engine="prosemirror" button=true editable=editable}}
+    {{#if isGM}}
+      <label>{{localize 'VEILRUNNER.GMNotes'}}</label>
+      {{editor system.description.gm target="system.description.gm" engine="prosemirror" button=true editable=editable}}
+    {{/if}}
+  {{/if}}
+
+  {{#if isCharacterOption}}
+    <label>{{localize 'VEILRUNNER.PersonaIndex'}}
+      <input type="text" name="system.persona" value="{{system.persona}}" placeholder="+5 Lawful, +5 Empathy" />
+    </label>
+    <label>{{localize characterOptionDescriptionLabel}}</label>
+    {{editor system.description target="system.description" engine="prosemirror" button=true editable=editable}}
+  {{/if}}
+</section>

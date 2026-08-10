@@ -1,0 +1,85 @@
+<section class="equipment-panel">
+  <div class="panel-heading">
+    <button type="button" class="panel-icon-btn" data-action="toggleEquipment" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
+      <i class="fa-solid fa-angles-left"></i>
+    </button>
+  </div>
+  <div class="equip-subtabs">
+    <button type="button" class="{{#if (eq equipTab "equipped")}}active{{/if}}" data-action="setEquipTab" data-tab="equipped">
+      <i class="fa-solid fa-shirt"></i>
+      <span>{{localize 'VEILRUNNER.Equipment'}}</span>
+    </button>
+    <button type="button" class="{{#if (eq equipTab "appearance")}}active{{/if}}" data-action="setEquipTab" data-tab="appearance">
+      <i class="fa-solid fa-image-portrait"></i>
+      <span>{{localize 'VEILRUNNER.Appearance'}}</span>
+    </button>
+  </div>
+
+  <div class="equipment-tab-body {{equipmentTabAnimationClass}}">
+  {{#if (eq equipTab "equipped")}}
+    <div class="equipment-art-area" style="--portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}};">
+      <img class="equipment-art-bg" src="{{equipmentImage}}" alt="" />
+      <div class="equip-grid">
+        <div class="equip-column left">
+          {{#each equipmentSlots as |slot|}}
+            {{#if (isLeftSlot slot.slot)}}
+              {{> "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs" slot=slot}}
+            {{/if}}
+          {{/each}}
+        </div>
+
+        <div class="portrait-frame"></div>
+
+        <div class="equip-column right">
+          {{#each equipmentSlots as |slot|}}
+            {{#unless (isLeftSlot slot.slot)}}
+              {{> "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs" slot=slot}}
+            {{/unless}}
+          {{/each}}
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-equip">
+      <div class="panel-heading small">
+        <span>{{localize 'VEILRUNNER.Favorites'}}</span>
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </div>
+      <div class="quick-slots">
+        {{#each quickEquip as |item|}}
+          <div class="quick-slot filled" data-item-id="{{item.id}}">
+            <img src="{{item.img}}" alt="{{item.name}}" />
+          </div>
+        {{/each}}
+        {{#times (subtract 4 quickEquip.length) as |i|}}
+          <div class="quick-slot empty"></div>
+        {{/times}}
+      </div>
+    </div>
+  {{else}}
+    <div class="appearance-view">
+      <span class="appearance-preview" style="--portrait-x: {{portraitCrop.x}}%; --portrait-y: {{portraitCrop.y}}%; --portrait-zoom: {{portraitCrop.zoom}}; --portrait-rotation: {{portraitCrop.rotation}}deg; --portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}};">
+        <img src="{{portraitImage}}" alt="{{actor.name}}" />
+      </span>
+      <button type="button" class="appearance-pick-btn" data-action="setAppearanceImage">
+        <i class="fa-solid fa-image"></i>
+        <span>{{localize 'VEILRUNNER.ChangeAllImages'}}</span>
+      </button>
+      {{#if canEditPortrait}}
+        <button type="button" class="appearance-pick-btn" data-action="setPortraitImage">
+          <i class="fa-solid fa-user"></i>
+          <span>{{localize 'VEILRUNNER.ChangeCharacterPortrait'}}</span>
+        </button>
+      {{/if}}
+      <button type="button" class="appearance-pick-btn" data-action="setEquipmentImage">
+        <i class="fa-solid fa-shirt"></i>
+        <span>{{localize 'VEILRUNNER.ChangeEquipmentImage'}}</span>
+      </button>
+      <button type="button" class="appearance-pick-btn" data-action="setTokenImage">
+        <i class="fa-solid fa-map-marker-alt"></i>
+        <span>{{localize 'VEILRUNNER.ChangeTokenImage'}}</span>
+      </button>
+    </div>
+  {{/if}}
+  </div>
+</section>

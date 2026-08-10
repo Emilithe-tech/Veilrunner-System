@@ -1,0 +1,208 @@
+<section class="details-panel">
+  <div class="panel-heading">
+    <span>{{localize 'VEILRUNNER.Details'}}</span>
+    <button type="button" class="panel-icon-btn" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
+      <i class="fa-solid fa-angles-left"></i>
+    </button>
+  </div>
+  <nav class="details-tab-row">
+    {{#each categories as |cat|}}
+      <button type="button" class="details-tab-icon {{#if cat.active}}active{{/if}}"
+         data-action="setSubTab" data-section="about" data-tab="{{cat.key}}" title="{{localize cat.label}}" aria-label="{{localize cat.label}}">
+        <i class="{{cat.icon}}"></i>
+      </button>
+    {{/each}}
+  </nav>
+
+  <div class="details-body {{detailsTabAnimationClass}}">
+    {{#if (eq category "party")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.Party'}}</div>
+      {{#if partyOverview.available}}
+        <div class="party-drawer-section">
+          <div class="section-heading compact">{{localize 'VEILRUNNER.SharedCurrencies'}}</div>
+          {{#each partyOverview.currencies as |currency|}}
+            <div class="party-drawer-currency">
+              <span>{{currency.name}}</span>
+              <strong>{{currency.value}}</strong>
+            </div>
+          {{else}}
+            <p class="empty-row">{{localize 'VEILRUNNER.NoCurrencies'}}</p>
+          {{/each}}
+        </div>
+
+        <div class="party-drawer-section">
+          <div class="section-heading compact">{{localize 'VEILRUNNER.PartyStash'}}</div>
+          {{#each partyOverview.inventory as |item|}}
+            <button type="button" class="party-drawer-item" data-action="openPartyItem" data-item-id="{{item.id}}">
+              <img src="{{item.img}}" alt="" />
+              <span>
+                <strong>{{item.name}}</strong>
+                <small>{{item.typeLabel}}</small>
+              </span>
+              <em>{{item.quantity}}</em>
+            </button>
+          {{else}}
+            <p class="empty-row">{{localize 'VEILRUNNER.NoStashItems'}}</p>
+          {{/each}}
+        </div>
+      {{else}}
+        <p class="empty-row">{{localize 'VEILRUNNER.NoPartyAssigned'}}</p>
+      {{/if}}
+
+    {{else if (eq category "professions")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.ProfessionLibrary'}}</div>
+      {{#each professions as |profession|}}
+        <div class="profession-reference-card compact">
+          <div class="profession-reference-heading">
+            <span>{{profession.name}}</span>
+            <small>{{profession.summary}}</small>
+          </div>
+          {{#each profession.disciplines as |discipline|}}
+            <div class="discipline-reference-card compact">
+              <h4>{{discipline.name}}</h4>
+              <p>{{discipline.summary}}</p>
+              {{#if discipline.background}}
+                <p class="discipline-background"><strong>{{localize 'VEILRUNNER.Background'}}</strong>{{discipline.background}}</p>
+              {{/if}}
+              <dl>
+                <div><dt>{{localize 'VEILRUNNER.PrimaryWeapon'}}</dt><dd>{{discipline.primaryWeapon}}</dd></div>
+                <div><dt>{{localize 'VEILRUNNER.BonusSkill'}}</dt><dd>{{discipline.bonusSkill}}</dd></div>
+              </dl>
+              <div class="discipline-ability-list">
+                {{#each discipline.abilities as |ability|}}
+                  <div class="discipline-ability">
+                    <strong>{{ability.name}}</strong>
+                    <span>{{ability.type}}</span>
+                    <p>{{ability.text}}</p>
+                  </div>
+                {{/each}}
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      {{/each}}
+
+    {{else if (eq category "skills")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.SkillsAndProficiencies'}}</div>
+      {{#each skillCategories as |cat|}}
+        <div class="skill-category">
+          <div class="skill-category-heading"><i class="{{cat.icon}}"></i> {{cat.label}}</div>
+          {{#each cat.skills as |skill|}}
+            <div class="skill-row">
+              <span class="skill-name">{{skill.label}}</span>
+              <span class="skill-modifier">+{{skill.modifier}}</span>
+              <span class="skill-rank rank-{{lowercase skill.rank}}">{{skill.rank}}</span>
+              <span class="skill-dots">
+                {{#each skill.dotsArray as |filled|}}
+                  <span class="dot {{#if filled}}filled{{/if}}"></span>
+                {{/each}}
+              </span>
+            </div>
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="empty-row">{{localize 'VEILRUNNER.NoSkills'}}</div>
+      {{/each}}
+
+    {{else if (eq category "biography")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.Biography'}}</div>
+      <div class="bio-content">
+        {{#if biography}}{{{biography}}}{{else}}
+          <p class="empty-row">{{localize 'VEILRUNNER.NoBiography'}}</p>
+        {{/if}}
+      </div>
+
+    {{else if (eq category "reputation")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.Reputation'}}</div>
+      {{#each reputation as |rep|}}
+        <div class="reputation-row">
+          <div class="reputation-text">
+            <span class="reputation-name">{{rep.name}}</span>
+            <div class="bar-track horizontal reputation">
+              <div class="bar-fill" style="width: {{percent rep.value rep.max}}%"></div>
+            </div>
+          </div>
+          <div class="reputation-value">
+            <span class="reputation-standing">{{rep.standing}}</span>
+            <span>{{rep.value}} / {{rep.max}}</span>
+          </div>
+        </div>
+      {{else}}
+        <div class="empty-row">{{localize 'VEILRUNNER.NoReputation'}}</div>
+      {{/each}}
+
+    {{else if (eq category "relationships")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.Relationships'}}</div>
+      {{#each relationships as |rel|}}
+        <div class="relationship-row">
+          <img src="{{rel.img}}" />
+          <div class="relationship-text">
+            <span class="relationship-name">{{rel.name}}</span>
+            <span class="relationship-status status-{{lowercase rel.status}}">{{rel.status}}</span>
+          </div>
+          <span class="relationship-value">{{rel.value}}</span>
+        </div>
+      {{else}}
+        <div class="empty-row">{{localize 'VEILRUNNER.NoRelationships'}}</div>
+      {{/each}}
+
+    {{else if (eq category "conditions")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.Conditions'}}</div>
+      {{#each conditions as |c|}}
+        <div class="condition-row">
+          <img src="{{c.img}}" />
+          <div class="condition-text">
+            <span class="condition-name">{{c.name}}</span>
+            <span class="condition-sub">{{c.description}}</span>
+          </div>
+          <span class="condition-duration">{{c.duration}}</span>
+        </div>
+      {{else}}
+        <div class="empty-row">{{localize 'VEILRUNNER.NoConditions'}}</div>
+      {{/each}}
+
+    {{else if (eq category "customEffects")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.CustomEffects'}}</div>
+      {{#each customEffects as |effect|}}
+        <div class="custom-effect-row">
+          <div class="custom-effect-text">
+            <span class="custom-effect-name">{{effect.name}}</span>
+            <span class="custom-effect-sub">{{effect.description}}</span>
+          </div>
+        </div>
+      {{else}}
+        <div class="empty-row">{{localize 'VEILRUNNER.NoCustomEffects'}}</div>
+      {{/each}}
+
+    {{else if (eq category "rules")}}
+      <div class="section-heading">{{localize 'VEILRUNNER.Rules'}}</div>
+      {{#each ruleReferences as |rule|}}
+        <div class="profession-reference-card compact">
+          <div class="profession-reference-heading">
+            <span>{{rule.title}}</span>
+            <small>{{rule.summary}}</small>
+          </div>
+          <div class="initiative-band-grid compact">
+            {{#each rule.bands as |band|}}
+              <div class="initiative-band-card">
+                <strong>{{band.name}}</strong>
+                <span>{{band.range}}</span>
+              </div>
+            {{/each}}
+          </div>
+          <ul class="rule-reference-list">
+            {{#each rule.rules as |entry|}}
+              <li>{{entry}}</li>
+            {{/each}}
+          </ul>
+          {{#each rule.callouts as |callout|}}
+            <aside class="rule-reference-callout">
+              <strong>{{callout.title}}</strong>
+              <p>{{callout.text}}</p>
+            </aside>
+          {{/each}}
+        </div>
+      {{/each}}
+    {{/if}}
+  </div>
+</section>

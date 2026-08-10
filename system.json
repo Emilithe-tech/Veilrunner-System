@@ -1,0 +1,199 @@
+{
+  "id": "Veilrunner",
+  "type": "system",
+  "title": "Veilrunner First Edition",
+  "description": "The Official FoundryVTT System for Veilrunner",
+  "version": "0.0.9",
+  "license": "Open RPG Community License (ORC)",
+  "manifest": "",
+  "download": "",
+  "url": "",
+  "bugs": "",
+  "background": "systems/veilrunner/assets/img/veilrunner.webp",
+  "socket": true,
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.365"
+  },
+  "authors": [
+    {
+      "name": "Emilithe"
+    }
+  ],
+  "esmodules": [
+    "veilrunner.mjs"
+  ],
+  "styles": [
+    "css/veilrunner.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "packs": [
+    {
+      "name": "professions",
+      "label": "Profession Library",
+      "system": "Veilrunner",
+      "path": "packs/professions.db",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "species",
+      "label": "Species Library",
+      "system": "Veilrunner",
+      "path": "packs/species",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "origins",
+      "label": "Origin Library",
+      "system": "Veilrunner",
+      "path": "packs/origins",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "backgrounds",
+      "label": "Background Library",
+      "system": "Veilrunner",
+      "path": "packs/backgrounds",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    }
+  ],
+  "grid": {
+    "distance": 2,
+    "units": "m"
+  },
+  "documentTypes": {
+    "Actor": {
+      "hero": {
+        "htmlFields": [
+          "biography"
+        ],
+        "filePathFields": {
+          "appearanceImage": ["IMAGE"],
+          "portraitImage": ["IMAGE"],
+          "conditions.*.img": ["IMAGE"],
+          "relationships.*.img": ["IMAGE"]
+        }
+      },
+      "npc": {
+        "htmlFields": [
+          "biography"
+        ],
+        "filePathFields": {
+          "appearanceImage": ["IMAGE"],
+          "portraitImage": ["IMAGE"]
+        }
+      },
+      "creature": {
+        "htmlFields": [
+          "biography"
+        ]
+      },
+      "summon": {
+        "htmlFields": [
+          "biography"
+        ]
+      },
+      "drone": {
+        "htmlFields": [
+          "biography"
+        ]
+      },
+      "vehicle": {
+        "htmlFields": [
+          "biography"
+        ]
+      },
+      "party": {
+        "htmlFields": [
+          "biography"
+        ]
+      },
+      "loot": {
+        "htmlFields": [
+          "biography"
+        ]
+      },
+      "hazard": {
+        "htmlFields": [
+          "biography"
+        ]
+      }
+    },
+    "Item": {
+      "action": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "accessory": {
+        "htmlFields": [
+          "description.value",
+          "description.gm"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
+      },
+      "ability": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "armor": {
+        "htmlFields": [
+          "description.value",
+          "description.gm"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
+      },
+      "profession": {
+        "htmlFields": [
+          "description"
+        ],
+        "filePathFields": {
+          "pageImage": ["IMAGE"]
+        }
+      },
+      "treasure": {
+        "htmlFields": [
+          "description.value",
+          "description.gm"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
+      },
+      "species": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "origin": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "background": {
+        "htmlFields": [
+          "description"
+        ]
+      }
+    }
+  }
+}

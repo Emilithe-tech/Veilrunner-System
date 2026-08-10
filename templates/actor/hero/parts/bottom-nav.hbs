@@ -1,0 +1,28 @@
+<nav class="bottom-nav">
+  <div class="nav-indicator" style="left: {{percent sectionIndex sectionCount}}%; width: {{percent 1 sectionCount}}%;"></div>
+  <button type="button" class="bottom-nav-btn {{#if (eq section "character")}}active{{/if}}"
+          data-action="setSection" data-section="character">
+    <i class="fa-solid fa-user"></i>
+    <span>{{localize 'VEILRUNNER.Section.character'}}</span>
+  </button>
+  <button type="button" class="bottom-nav-btn {{#if (eq section "actions")}}active{{/if}}"
+          data-action="setSection" data-section="actions">
+    <i class="fa-solid fa-bolt"></i>
+    <span>{{localize 'VEILRUNNER.Section.actions'}}</span>
+  </button>
+  <button type="button" class="bottom-nav-btn {{#if (eq section "inventory")}}active{{/if}}"
+          data-action="setSection" data-section="inventory">
+    <i class="fa-solid fa-boxes-stacked"></i>
+    <span>{{localize 'VEILRUNNER.Section.inventory'}}</span>
+  </button>
+  <button type="button" class="bottom-nav-btn {{#if (eq section "datapad")}}active{{/if}}"
+          data-action="setSection" data-section="datapad">
+    <i class="fa-solid fa-tablet-screen-button"></i>
+    <span>{{localize 'VEILRUNNER.Section.datapad'}}</span>
+  </button>
+  <button type="button" class="bottom-nav-btn {{#if (eq section "settings")}}active{{/if}}"
+          data-action="setSection" data-section="settings">
+    <i class="fa-solid fa-gear"></i>
+    <span>{{localize 'VEILRUNNER.Section.settings'}}</span>
+  </button>
+</nav>

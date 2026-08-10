@@ -1,0 +1,21 @@
+<div class="vr-party-block vr-party-currency-part">
+  <div class="vr-party-block-heading">
+    <span><i class="fa-solid fa-coins"></i> {{localize 'VEILRUNNER.SharedCurrencies'}}</span>
+    <button type="button" class="panel-icon-btn" data-action="addPartyCurrency" title="{{localize 'VEILRUNNER.AddCurrency'}}" aria-label="{{localize 'VEILRUNNER.AddCurrency'}}">
+      <i class="fa-solid fa-plus"></i>
+    </button>
+  </div>
+  <div class="vr-party-currencies">
+    {{#each partyOverview.currencies as |currency|}}
+      <div class="vr-party-currency-row">
+        <input type="text" name="system.currencies.{{currency.index}}.name" value="{{currency.name}}" placeholder="{{localize 'VEILRUNNER.Currency'}}" />
+        <input type="number" name="system.currencies.{{currency.index}}.value" value="{{currency.value}}" />
+        <button type="button" class="panel-icon-btn" data-action="removePartyCurrency" data-index="{{currency.index}}" title="{{localize 'VEILRUNNER.RemoveCurrency'}}" aria-label="{{localize 'VEILRUNNER.RemoveCurrency'}}">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    {{else}}
+      <p class="empty-row">{{localize 'VEILRUNNER.NoCurrencies'}}</p>
+    {{/each}}
+  </div>
+</div>

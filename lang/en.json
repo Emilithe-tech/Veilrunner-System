@@ -1,0 +1,734 @@
+{
+  "TYPES": {
+    "Actor": {
+      "hero": "Hero",
+      "npc": "NPC",
+      "creature": "Creature",
+      "summon": "Summon",
+      "drone": "Drone",
+      "vehicle": "Vehicle",
+      "party": "Party",
+      "loot": "Loot",
+      "hazard": "Hazard"
+    },
+    "Item": {
+      "action": "Action",
+      "accessory": "Accessory",
+      "ability": "Ability",
+      "armor": "Armor",
+      "profession": "Profession",
+      "treasure": "Treasure",
+      "species": "Species",
+      "origin": "Origin",
+      "background": "Background"
+    }
+  },
+  "VEILRUNNER": {
+    "SheetLabel": {
+      "hero": "Veilrunner Hero Sheet",
+      "actor": "Veilrunner Actor Sheet",
+      "item": "Veilrunner Item Sheet"
+    },
+    "Keybindings": {
+      "openPlayerDatapad": {
+        "Name": "Open Player Datapad",
+        "Hint": "Open the campaign Datapad."
+      }
+    },
+    "Settings": {
+      "Sections": {
+        "datapad": "Datapad",
+        "general": "General Settings"
+      },
+      "combatCarouselEnabled": {
+        "Name": "Combat Carousel",
+        "Hint": "Show the separate top-of-screen combat carousel while combat is active."
+      },
+      "combatCarouselPortraitShape": {
+        "Name": "Combat Carousel Portrait Shape",
+        "Hint": "Choose the portrait shape used by combat carousel cards.",
+        "Choices": {
+          "circle": "Circle",
+          "rounded": "Rounded",
+          "square": "Square"
+        }
+      },
+      "combatCarouselPortraitSize": {
+        "Name": "Combat Carousel Portrait Size",
+        "Hint": "Choose the standard portrait size used by combat carousel cards.",
+        "Choices": {
+          "small": "Small",
+          "medium": "Medium",
+          "large": "Large",
+          "xl": "XL",
+          "xxl": "XXL"
+        }
+      },
+      "combatCarouselTextSize": {
+        "Name": "Combat Carousel Text Size",
+        "Hint": "Set the text size in pixels."
+      },
+      "combatCarouselShowResourceNumbers": {
+        "Name": "Combat Carousel Resource Numbers",
+        "Hint": "Show health, armor, barrier, and shield numbers when the viewer has access."
+      },
+      "combatCarouselRevealPlayerNumbers": {
+        "Name": "Reveal Carousel Numbers to Players",
+        "Hint": "Allow players to see non-owned combatant numbers. Off by default so PAN details stay hidden until access is earned."
+      },
+      "combatCarouselShowResourceBars": {
+        "Name": "Combat Carousel Resource Bars",
+        "Hint": "Show bars for health, armor, barrier, and shields."
+      },
+      "combatCarouselResourceBarsGmOnly": {
+        "Name": "Resource Bars GM Only",
+        "Hint": "Only GMs can see Combat Carousel resource bars when this is enabled."
+      },
+      "combatCarouselResourceBarVisibility": {
+        "Name": "Resource Bars Visibility",
+        "Hint": "Choose when Combat Carousel resource bars are visible on this client.",
+        "Choices": {
+          "hover": "Hover",
+          "always": "Always On",
+          "off": "Always Off"
+        }
+      },
+      "combatCarouselActivePhaseOnly": {
+        "Name": "Combat Carousel: Phase View",
+        "Hint": "In phase initiative, choose whether to show every phase, only the active phase, or the active and upcoming phases.",
+        "Choices": {
+          "all": "All Phases",
+          "active": "Active Phase Only",
+          "hybrid": "Active Phase + Next Turn"
+        }
+      },
+      "combatCarouselGmCompact": {
+        "Name": "Combat Carousel: Compact GM View",
+        "Hint": "Use a smaller, denser carousel on this GM client. This does not affect players."
+      },
+      "combatCarouselHideDead": {
+        "Name": "Combat Carousel: Hide Dead Actors",
+        "Hint": "Hide defeated or zero-health combatants from this client's carousel."
+      },
+      "combatCarouselLocked": {
+        "Name": "Combat Carousel Locked",
+        "Hint": "Stores whether this client's Combat Carousel can be dragged."
+      },
+      "combatCarouselPosition": {
+        "Name": "Combat Carousel Position",
+        "Hint": "Stores this client's Combat Carousel screen position."
+      },
+      "allowPlayerDatapad": {
+        "Name": "Allow Player Datapad",
+        "Hint": "Let non-GM users open the campaign Datapad from the Journal directory, hero sheet, or J keybinding."
+      },
+      "createDatapadFolders": {
+        "Name": "Create Datapad Folders",
+        "Hint": "Automatically create and maintain the Journal folder structure used by the Veilrunner Datapad."
+      },
+      "initiativeMode": {
+        "Name": "Initiative Mode",
+        "Hint": "Choose how combat turns are organized for this world.",
+        "Choices": {
+          "traditional": "Traditional Initiative",
+          "phases": "Initiative Phases",
+          "block": "Block Initiative"
+        }
+      },
+      "initiativeBands": {
+        "Name": "Initiative Bands",
+        "Hint": "Stores the GM's current initiative phase names and breakpoints."
+      },
+      "initiativeNeutralPhaseEnabled": {
+        "Name": "Use Neutral Initiative Phase",
+        "Hint": "Place combatants without rolled initiative into a Neutral Phase at the end of the carousel."
+      },
+      "initiativeBandsPanelEnabled": {
+        "Name": "Show Initiative Bands Panel",
+        "Hint": "Show the movable Initiative Bands panel during initiative phase combat."
+      },
+      "initiativeBandsPanelLocked": {
+        "Name": "Initiative Bands Panel Locked",
+        "Hint": "Stores whether this client's Initiative Bands panel can be dragged."
+      },
+      "initiativeBandsPanelPosition": {
+        "Name": "Initiative Bands Panel Position",
+        "Hint": "Stores this client's Initiative Bands panel screen position."
+      },
+      "defaultQuestObjectiveVisibility": {
+        "Name": "Default Quest Objective Visibility",
+        "Hint": "Choose what quest objective visibility means when a quest is set to Default.",
+        "Choices": {
+          "observers": "Visible to observers",
+          "gm": "GM only"
+        }
+      },
+      "DatapadDisabled": "The Player Datapad is disabled for players in this world."
+    },
+    "CombatCarousel": {
+      "PanLocked": "PAN Locked",
+      "Defeated": "Defeated",
+      "Wounded": "Wounded",
+      "PhaseLabel": "Phase {number}",
+      "PlayerTurn": "Player Turn",
+      "HostileTurn": "Hostile Turn",
+      "NeutralTurn": "Neutral Turn",
+      "Controls": {
+        "Drag": "Move Combat Carousel",
+        "Settings": "Configure Combat Carousel",
+        "Lock": "Lock Combat Carousel",
+        "Unlock": "Unlock Combat Carousel",
+        "LastRound": "Last Round",
+        "NextRound": "Next Round",
+        "LastPhase": "Last Phase",
+        "NextPhase": "Next Phase",
+        "LastTurn": "Last Turn",
+        "NextTurn": "Next Turn"
+      }
+    },
+    "Hero": {
+      "FIELDS": {
+        "species": { "label": "Species" },
+        "origin": { "label": "Origin" },
+        "background": { "label": "Background" },
+        "pronouns": { "label": "Pronouns" },
+        "age": { "label": "Age" },
+        "archetype": { "label": "Archetype" },
+        "profession": { "label": "Profession" },
+        "discipline": { "label": "Discipline" },
+        "personaIndex": { "label": "Persona Index" },
+        "size": { "label": "Size" },
+        "qualities": { "label": "Perks" },
+        "flaws": { "label": "Flaws" },
+        "tags": { "label": "Tags" },
+        "level": { "label": "Level" },
+        "experience": { "label": "Experience" },
+        "attributes": { "label": "Attributes" },
+        "appearanceImage": { "label": "Appearance" },
+        "portraitImage": { "label": "Portrait" },
+        "portraitCrop": { "label": "Portrait Crop" },
+        "networkLinked": { "label": "Nearby Network" },
+        "resources": { "label": "Resources" },
+        "equipment": { "label": "Equipment" },
+        "credits": { "label": "Credits" },
+        "quickEquip": { "label": "Quick Equip" },
+        "skillCategories": { "label": "Skills" },
+        "knownLanguages": { "label": "Known Languages" },
+        "contacts": { "label": "Contacts" },
+        "characterGeneration": { "label": "Character Generation" },
+        "biography": { "label": "Biography" },
+        "conditions": { "label": "Conditions" },
+        "reputation": { "label": "Reputation" },
+        "relationships": { "label": "Relationships" },
+        "customEffects": { "label": "Custom Effects" }
+      }
+    },
+    "Npc": {
+      "FIELDS": {
+        "species": { "label": "Species" },
+        "level": { "label": "Level" },
+        "appearanceImage": { "label": "Appearance" },
+        "portraitImage": { "label": "Portrait" },
+        "portraitCrop": { "label": "Portrait Crop" },
+        "networkLinked": { "label": "Nearby Network" },
+        "resources": { "label": "Resources" },
+        "biography": { "label": "Biography" }
+      }
+    },
+    "Combatant": {
+      "FIELDS": {
+        "resources": { "label": "Resources" },
+        "biography": { "label": "Biography" }
+      }
+    },
+    "Summon": { "FIELDS": {} },
+    "Creature": { "FIELDS": {} },
+    "Drone": { "FIELDS": {} },
+    "Vehicle": {
+      "FIELDS": {
+        "crew": { "label": "Crew" },
+        "speed": { "label": "Speed" },
+        "resources": { "label": "Resources" },
+        "biography": { "label": "Biography" }
+      }
+    },
+    "PartyData": {
+      "FIELDS": {
+        "members": { "label": "Members" },
+        "currencies": { "label": "Currencies" },
+        "biography": { "label": "Biography" }
+      }
+    },
+    "Loot": {
+      "FIELDS": {
+        "biography": { "label": "Biography" }
+      }
+    },
+    "Hazard": {
+      "FIELDS": {
+        "severity": { "label": "Severity" },
+        "saveDC": { "label": "Save DC" },
+        "biography": { "label": "Biography" }
+      }
+    },
+    "Action": {
+      "FIELDS": {
+        "actionType": { "label": "Action Type" },
+        "category": { "label": "Category" },
+        "favorite": { "label": "Favorite" },
+        "cost": { "label": "Cost" },
+        "description": { "label": "Description" }
+      }
+    },
+    "Ability": {
+      "FIELDS": {
+        "featured": { "label": "Featured" },
+        "recharge": { "label": "Recharge" },
+        "description": { "label": "Description" }
+      }
+    },
+    "AccessoryItem": {
+      "FIELDS": {
+        "equipmentSlot": { "label": "Equipment Slot" },
+        "cost": { "label": "Cost" },
+        "currency": { "label": "Currency Required" },
+        "bonuses": { "label": "Bonuses" },
+        "description": { "label": "Description" }
+      }
+    },
+    "ArmorItem": {
+      "FIELDS": {
+        "armorType": { "label": "Armor Type" },
+        "itemRating": { "label": "Item Rating" },
+        "armorClass": { "label": "Armor Class" },
+        "cost": { "label": "Cost" },
+        "currency": { "label": "Currency Required" },
+        "durability": { "label": "Durability" },
+        "durabilityMax": { "label": "Maximum Durability" },
+        "movementPenalty": { "label": "Movement Penalty" },
+        "equipmentSlot": { "label": "Equipment Slot" },
+        "capacityMode": { "label": "Capacity Mode" },
+        "armorCapacity": { "label": "Armor Capacity" },
+        "shieldCapacity": { "label": "Shield Capacity" },
+        "resistances": { "label": "Resistances" },
+        "weaknesses": { "label": "Weaknesses" },
+        "durabilityRating": { "label": "Durability Rating" },
+        "bonuses": { "label": "Bonuses" },
+        "effects": { "label": "Effects" },
+        "description": { "label": "Description" }
+      }
+    },
+    "ProfessionItem": {
+      "FIELDS": {
+        "archetype": { "label": "Archetype" },
+        "profession": { "label": "Profession" },
+        "discipline": { "label": "Discipline" },
+        "quote": { "label": "Quote" },
+        "primaryWeapon": { "label": "Primary Weapon Type" },
+        "primaryAttributes": { "label": "Primary Attributes" },
+        "bonusAttributes": { "label": "Bonus Attributes" },
+        "bonusSkill": { "label": "Bonus Skill" },
+        "persona": { "label": "Persona Index" },
+        "pageImage": { "label": "PDF Page Image" },
+        "sourcePage": { "label": "Source Page" },
+        "description": { "label": "PDF Reference" }
+      }
+    },
+    "Treasure": {
+      "FIELDS": {
+        "category": { "label": "Category" },
+        "quantity": { "label": "Quantity" },
+        "price": { "label": "Price" },
+        "rarity": { "label": "Rarity" },
+        "description": { "label": "Description" },
+        "identified": { "label": "Identified" }
+      }
+    },
+    "SpeciesItem": {
+      "FIELDS": {
+        "persona": { "label": "Persona Index Modifiers" },
+        "description": { "label": "Species Details" }
+      }
+    },
+    "OriginItem": {
+      "FIELDS": {
+        "persona": { "label": "Persona Index Modifiers" },
+        "description": { "label": "Origin Details" }
+      }
+    },
+    "BackgroundItem": {
+      "FIELDS": {
+        "persona": { "label": "Persona Index Modifiers" },
+        "description": { "label": "Background Details" }
+      }
+    },
+    "Section": {
+      "character": "Character",
+      "actions": "Actions",
+      "inventory": "Inventory",
+      "datapad": "Datapad",
+      "settings": "Settings"
+    },
+    "ActionType": {
+      "standard": "Standard",
+      "bonus": "Bonus",
+      "reaction": "Reaction",
+      "free": "Free"
+    },
+    "ActionCategory": {
+      "actions": "Actions",
+      "reactions": "Reactions",
+      "magic": "Magic",
+      "tech": "Tech"
+    },
+    "InventoryCategory": {
+      "all": "All",
+      "weapon": "Weapons",
+      "ammo": "Ammo",
+      "armor": "Armor",
+      "consumable": "Consumables",
+      "tech": "Tech",
+      "keyItem": "Key Items",
+      "junk": "Junk"
+    },
+    "WeaponFilter": {
+      "label": "Weapon filters",
+      "allWeapons": "All Weapons",
+      "melee": "Melee",
+      "shortBlades": "Short Blades",
+      "longBlades": "Long Blades",
+      "pistols": "Pistols",
+      "smgs": "SMGs",
+      "assaultRifles": "Assault Rifles",
+      "heavyRifles": "Heavy Rifles",
+      "ammoAll": "All Ammo",
+      "ammoBallistic": "Ballistic Ammo",
+      "ammoEnergy": "Energy Clips",
+      "ammoLaser": "Laser Cells"
+    },
+    "ArmorFilter": {
+      "allArmor": "All Armor",
+      "lightArmor": "Light Armor",
+      "mediumArmor": "Medium Armor",
+      "heavyArmor": "Heavy Armor"
+    },
+    "ItemSection": {
+      "core": "Core",
+      "durability": "Durability",
+      "capacity": "Capacity",
+      "effects": "Effects",
+      "notes": "Notes"
+    },
+    "ArmorType": {
+      "light": "Light",
+      "medium": "Medium",
+      "heavy": "Heavy"
+    },
+    "CapacityMode": {
+      "armor": "Armor",
+      "shield": "Shield"
+    },
+    "DamageTrait": {
+      "pyro": "Pyro",
+      "hydro": "Hydro",
+      "cryo": "Cryo",
+      "floral": "Floral",
+      "geo": "Geo",
+      "aero": "Aero",
+      "electric": "Electric",
+      "sonic": "Sonic",
+      "light": "Light",
+      "void": "Void"
+    },
+    "EffectTarget": {
+      "action": "Action",
+      "trait": "Trait",
+      "attribute": "Attribute"
+    },
+    "EquipmentSlot": {
+      "head": "Head",
+      "chest": "Chest",
+      "cloak": "Cloak",
+      "shoulders": "Shoulders",
+      "arms": "Arms",
+      "hands": "Hands",
+      "waist": "Waist",
+      "legs": "Legs",
+      "feet": "Feet",
+      "shield": "Shield",
+      "accessory": "Accessory"
+    },
+    "InventoryFilter": {
+      "label": "Filters",
+      "all": "All Items"
+    },
+    "AttributeGroup": {
+      "Physical": "Physical Attributes",
+      "Mental": "Mental Attributes",
+      "Social": "Social Attributes"
+    },
+    "Attribute": {
+      "strength": "Strength",
+      "dexterity": "Dexterity",
+      "agility": "Agility",
+      "reaction": "Reaction",
+      "intelligence": "Intelligence",
+      "wisdom": "Wisdom",
+      "focus": "Focus",
+      "logic": "Logic",
+      "charisma": "Charisma",
+      "perception": "Perception"
+    },
+    "AttributeHint": {
+      "strength": "Armor use and damage with heavy melee weapons.",
+      "dexterity": "Light finesse weapons.",
+      "agility": "Hand-to-hand combat and movement.",
+      "reaction": "Reaction points and initiative.",
+      "intelligence": "Offensive spells.",
+      "wisdom": "Defensive spells and spell resistance.",
+      "focus": "Interruptions and defensive matrix.",
+      "logic": "Digital systems.",
+      "charisma": "Offensive social interactions.",
+      "perception": "Perception and defensive social interactions."
+    },
+    "Slot": {
+      "helmet": "Helmet",
+      "back": "Back",
+      "neck": "Neck",
+      "mainHand": "Main Hand",
+      "shoulders": "Shoulders",
+      "offHand": "Off Hand",
+      "chest": "Chest",
+      "waist": "Waist",
+      "arms": "Arms",
+      "legs": "Legs",
+      "hands": "Hands",
+      "feet": "Feet"
+    },
+    "Name": "Name",
+    "None": "None",
+    "Add": "Add",
+    "Remove": "Remove",
+    "Notes": "Notes",
+    "ArmorEffectTarget": "Target",
+    "Level": "Level",
+    "TagsHint": "Tags (comma separated)",
+    "GMNotes": "GM Notes",
+    "Species": "Species",
+    "Origin": "Origin",
+    "Background": "Background",
+    "Identity": "Identity",
+    "Pronouns": {
+      "unspecified": "Unspecified",
+      "sheHer": "She / Her",
+      "heHim": "He / Him",
+      "theyThem": "They / Them",
+      "sheThey": "She / They",
+      "heThey": "He / They",
+      "zeHir": "Ze / Hir",
+      "custom": "Custom"
+    },
+    "Age": "Age",
+    "Archetype": "Archetype",
+    "Profession": "Profession",
+    "Discipline": "Discipline",
+    "PersonaIndex": "Persona Index",
+    "QualitiesFlaws": "Perks & Flaws",
+    "Qualities": "Perks",
+    "Flaws": "Flaws",
+    "Severe": "Severe",
+    "Major": "Major",
+    "Minor": "Minor",
+    "PersonaAxis": {
+      "Criminal": "Criminal",
+      "Lawful": "Lawful",
+      "Ruthless": "Ruthless",
+      "Empathy": "Empathy",
+      "Individual": "Individual",
+      "Collectivist": "Collectivist"
+    },
+    "Size": "Size",
+    "EditMode": "Edit Mode",
+    "Equipment": "Equipment",
+    "Details": "Details",
+    "Collapse": "Collapse",
+    "Equipped": "Equipment",
+    "Appearance": "Appearance",
+    "AppearanceHint": "",
+    "ClickToChangeArt": "Click to change art",
+    "ChangeImage": "Change Image",
+    "ChangeAllImages": "Change All Images",
+    "ChangeCharacterPortrait": "Change Character Portrait",
+    "ChangeEquipmentImage": "Change Equipment Image",
+    "ChangeEquipmentDrawerImage": "Change Equipment Drawer Image",
+    "ChangeTokenImage": "Change Token Image",
+    "ImagePickerFailed": "Could not open the image picker.",
+    "QuickEquip": "Quick Equip",
+    "Unequip": "Unequip",
+    "XP": "XP",
+    "XPToNextLevel": "XP to Next Level",
+    "TotalXPEarned": "Total XP Earned",
+    "SkillPoints": "Skill Points",
+    "TalentPoints": "Talent Points",
+    "Available": "Available",
+    "Total": "Total",
+    "ViewProgression": "View Progression",
+    "LevelUpReady": "Level up ready",
+    "LevelUpCanvas": "Level Up",
+    "Close": "Close",
+    "Save": "Save",
+    "Reset": "Reset",
+    "InitiativeBands": {
+      "Title": "Initiative Band Decider",
+      "Subtitle": "Set the number of phases and the initiative breakpoints for this encounter.",
+      "PhaseCount": "Phases",
+      "Name": "Band",
+      "Minimum": "Starts At",
+      "Lowest": "Lowest",
+      "Preview": "Current Bands",
+      "Recommendation": "Recommended: {phases} phases",
+      "RecommendationDetail": "{players} player actors and {enemies} enemies. Target: 3 actors per side per phase.",
+      "ApplyRecommendation": "Use recommendation",
+      "NoActiveCombat": "Start a combat to get a phase recommendation.",
+      "PlayerBlock": "Player Block",
+      "EnemyBlock": "Enemy Block",
+      "FriendlyBlock": "Friendly Block",
+      "HostileBlock": "Hostile Block",
+      "NeutralBlock": "Neutral Block",
+      "SecretBlock": "Secret Block",
+      "CombatTitle": "Initiative Bands",
+      "Saved": "Initiative bands saved.",
+      "GMOnly": "Only the GM can configure initiative bands.",
+      "Drag": "Move Initiative Bands",
+      "Lock": "Lock Initiative Bands",
+      "Unlock": "Unlock Initiative Bands",
+      "FloatPanel": "Float Initiative Bands",
+      "ClosePanel": "Hide Floating Initiative Bands",
+      "SettingsButton": {
+        "Name": "Initiative Band Decider",
+        "Label": "Open Decider",
+        "Hint": "Choose how many initiative phases this world uses and set each phase breakpoint."
+      }
+    },
+    "Health": "Health",
+    "TempHealth": "Temp Health",
+    "Resolve": "Resolve",
+    "Dying": "Dying",
+    "Wounded": "Wounded",
+    "Mana": "Mana",
+    "Stamina": "Stamina",
+    "Inspiration": "Inspiration",
+    "Armor": "Armor",
+    "Shield": "Shield",
+    "Shields": "Shields",
+    "Barriers": "Barriers",
+    "Party": "Party",
+    "Members": "Members",
+    "PartyMembers": "Party Members",
+    "NoParty": "No other party members",
+    "ShowPartyList": "Show Party List",
+    "ShowPartyListHint": "Show the party list in the hero column.",
+    "OnlyActiveResourceBars": "Only Show Active Resource Bars",
+    "OnlyActiveResourceBarsHint": "Only show Armor, Shields, and Barriers with an active resource. All three remain visible in edit mode.",
+    "NoPartyAssigned": "No party assigned.",
+    "NoPartyMembers": "No party members in this folder.",
+    "OpenPartyFolder": "Open Party",
+    "PartyFolderGMOnly": "Only the GM can create a party for this folder.",
+    "SharedCurrencies": "Shared Currencies",
+    "Currency": "Currency",
+    "AddCurrency": "Add Currency",
+    "RemoveCurrency": "Remove Currency",
+    "NoCurrencies": "No currencies.",
+    "PartyStash": "Party Stash",
+    "PartyInventory": "Party Inventory",
+    "StashItems": "Stash Items",
+    "NoStashItems": "No stash items.",
+    "StashValue": "Stash Value",
+    "TotalWealth": "Total Wealth",
+    "Overview": "Overview",
+    "OverviewHint": "Core identity and hero notes.",
+    "Stats": "Stats",
+    "Progression": "Progression",
+    "Inventory": "Inventory",
+    "Favorites": "Favorites",
+    "Actions": "Actions",
+    "Abilities": "Abilities",
+    "Reactions": "Reactions",
+    "Magic": "Magic",
+    "Tech": "Tech",
+    "FeaturedAbilities": "Featured Abilities",
+    "Skills": "Skills",
+    "Biography": "Biography",
+    "Reputation": "Reputation",
+    "Relationships": "Relationships",
+    "Conditions": "Conditions",
+    "CustomEffects": "Custom Effects",
+    "Professions": "Professions",
+    "ProfessionLibrary": "Profession Library",
+    "PrimaryWeapon": "Primary Weapon",
+    "PrimaryAttributes": "Primary Attributes",
+    "BonusAttributes": "Bonus Attributes",
+    "BonusSkill": "Bonus Skill",
+    "Rules": "Rules",
+    "SkillsAndProficiencies": "Skills and Proficiencies",
+    "NoItems": "No items.",
+    "NoFavorites": "No favorites.",
+    "NoActions": "No actions.",
+    "NoAbilities": "No abilities.",
+    "NoReactions": "No reactions.",
+    "NoMagic": "No magic.",
+    "NoTech": "No tech.",
+    "NoSkills": "No skills defined.",
+    "NoBiography": "No biography yet.",
+    "NoReputation": "No reputation entries.",
+    "NoRelationships": "No relationships.",
+    "NoConditions": "No conditions.",
+    "NoCustomEffects": "No custom effects.",
+    "AboutPreviewHint": "Open the details panel for skills, biography, and more.",
+    "OpenDetails": "Open Details",
+    "ComingSoon": "Coming soon.",
+    "PAN": {
+      "Label": "PAN",
+      "On": "On",
+      "Off": "Off"
+    },
+    "OpenCharacterGeneration": "Open Character Generation",
+    "OpenCharacterGenerationHint": "Reopen the character generation menu for this hero.",
+    "NearbyNetwork": "Nearby Network",
+    "NearbyNetworkHint": "When enabled on both heroes, exact vitals are shared in the party panel.",
+    "CropPortrait": "Portrait Editor",
+    "PortraitEditor": "Portrait Editor",
+    "CropPortraitHint": "Drag the preview or use the sliders to frame the portrait.",
+    "PortraitEditorHint": "Drag the preview or use the controls to frame the portrait.",
+    "CropHorizontal": "Horizontal",
+    "CropVertical": "Vertical",
+    "CropZoom": "Zoom",
+    "CropRotation": "Rotation",
+    "CropFlipHorizontal": "Flip",
+    "SaveCrop": "Save Crop",
+    "Status": {
+      "Health": {
+        "Unconscious": "Unconscious",
+        "BadlyInjured": "Badly Injured",
+        "Weakened": "Weakened",
+        "Uninjured": "Uninjured"
+      },
+      "Armor": {
+        "None": "None",
+        "Breaking": "Breaking",
+        "Weakened": "Weakened",
+        "Full": "Full"
+      },
+      "Shield": {
+        "Active": "Active",
+        "None": "None",
+        "Off": "Off"
+      },
+      "Barrier": {
+        "None": "None",
+        "Weakened": "Weakened",
+        "Active": "Active"
+      }
+    }
+  }
+}

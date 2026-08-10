@@ -1,0 +1,13 @@
+<div class="equip-slot {{#if slot.item}}filled{{else}}empty{{/if}}" data-slot="{{slot.slot}}">
+  <span class="slot-label">{{slot.label}}</span>
+  <div class="slot-box" {{#if slot.item}}data-item-id="{{slot.item.id}}"{{/if}}>
+    {{#if slot.item}}
+      <img src="{{slot.item.img}}" alt="{{slot.item.name}}" />
+      <button type="button" class="unequip-btn" data-action="unequip" data-slot="{{slot.slot}}" title="{{localize 'VEILRUNNER.Unequip'}}">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    {{else}}
+      <i class="fa-solid fa-gear empty-slot-icon"></i>
+    {{/if}}
+  </div>
+</div>

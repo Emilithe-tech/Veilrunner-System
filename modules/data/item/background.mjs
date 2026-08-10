@@ -1,0 +1,13 @@
+const { ArrayField, HTMLField, StringField } = foundry.data.fields;
+
+/** Background reference data. */
+export default class BackgroundData extends foundry.abstract.TypeDataModel {
+  static LOCALIZATION_PREFIXES = ["VEILRUNNER.BackgroundItem"];
+
+  static defineSchema() {
+    return {
+      persona: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      description: new HTMLField({ required: false, blank: true, initial: "" })
+    };
+  }
+}

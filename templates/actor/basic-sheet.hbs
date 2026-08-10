@@ -1,0 +1,149 @@
+<section class="vr-basic-sheet">
+  {{#unless isParty}}
+    <header class="vr-basic-header">
+      <img class="vr-basic-img" src="{{actor.img}}" data-edit="img" alt="" />
+      <div class="vr-basic-identity">
+        <input type="text" name="name" value="{{actor.name}}" placeholder="{{localize 'VEILRUNNER.Name'}}" />
+        {{#if hasSpecies}}
+          <input type="text" name="system.species" value="{{system.species}}" placeholder="{{localize 'VEILRUNNER.Species'}}" />
+        {{/if}}
+        {{#if hasLevel}}
+          <label>{{localize 'VEILRUNNER.Level'}}
+            <input type="number" name="system.level" value="{{system.level}}" />
+          </label>
+        {{/if}}
+      </div>
+    </header>
+  {{/unless}}
+
+  {{#if hasResources}}
+    <div class="vr-basic-resources">
+      {{#if system.resources.health}}
+        <label>{{localize 'VEILRUNNER.Health'}}
+          <input type="number" name="system.resources.health.value" value="{{system.resources.health.value}}" />
+          /
+          <input type="number" name="system.resources.health.max" value="{{system.resources.health.max}}" />
+        </label>
+      {{/if}}
+      {{#if system.resources.mana}}
+        <label>{{localize 'VEILRUNNER.Mana'}}
+          <input type="number" name="system.resources.mana.value" value="{{system.resources.mana.value}}" />
+          /
+          <input type="number" name="system.resources.mana.max" value="{{system.resources.mana.max}}" />
+        </label>
+      {{/if}}
+      {{#if system.resources.stamina}}
+        <label>{{localize 'VEILRUNNER.Stamina'}}
+          <input type="number" name="system.resources.stamina.value" value="{{system.resources.stamina.value}}" />
+          /
+          <input type="number" name="system.resources.stamina.max" value="{{system.resources.stamina.max}}" />
+        </label>
+      {{/if}}
+    </div>
+  {{/if}}
+
+  {{#if hasCrew}}
+    <label>{{localize 'VEILRUNNER.Vehicle.FIELDS.crew.label'}}
+      <input type="number" name="system.crew" value="{{system.crew}}" />
+    </label>
+  {{/if}}
+
+  {{#if hasSeverity}}
+    <label>{{localize 'VEILRUNNER.Hazard.FIELDS.severity.label'}}
+      <input type="text" name="system.severity" value="{{system.severity}}" />
+    </label>
+  {{/if}}
+
+  {{#if hasSaveDC}}
+    <label>{{localize 'VEILRUNNER.Hazard.FIELDS.saveDC.label'}}
+      <input type="number" name="system.saveDC" value="{{system.saveDC}}" />
+    </label>
+  {{/if}}
+
+  {{#if isParty}}
+    <section class="vr-party-sheet">
+      <header class="vr-party-header">
+        <div class="vr-party-summary">
+          <div>
+            <span>{{localize 'VEILRUNNER.Members'}}</span>
+            <strong>{{partyOverview.memberCount}}</strong>
+          </div>
+          <div>
+            <span>{{localize 'VEILRUNNER.StashItems'}}</span>
+            <strong>{{partyOverview.itemCount}}</strong>
+          </div>
+          <div>
+            <span>{{localize 'VEILRUNNER.TotalWealth'}}</span>
+            <strong>{{partyOverview.totalWealth}}</strong>
+          </div>
+        </div>
+      </header>
+
+      <div class="vr-party-columns">
+        <aside class="vr-party-column vr-party-column-members">
+          <div class="vr-party-block">
+            <div class="vr-party-block-heading">
+              <span><i class="fa-solid fa-users"></i> {{localize 'VEILRUNNER.PartyMembers'}}</span>
+            </div>
+            <div class="vr-party-roster">
+              {{#each partyOverview.members as |member|}}
+                <button type="button" class="vr-party-roster-row" data-action="openPartyMember" data-actor-id="{{member.id}}">
+                  <img src="{{member.img}}" alt="" />
+                  <span class="vr-party-member-text">
+                    <strong>{{member.name}}</strong>
+                    {{#if member.discipline}}
+                      <em>{{member.discipline}}</em>
+                    {{/if}}
+                  </span>
+                  <small>{{localize 'VEILRUNNER.Level'}} {{member.level}}</small>
+                </button>
+              {{else}}
+                <p class="empty-row">{{localize 'VEILRUNNER.NoPartyMembers'}}</p>
+              {{/each}}
+            </div>
+          </div>
+        </aside>
+
+        <div class="vr-party-column vr-party-column-panel">
+          <nav class="vr-party-tabs" aria-label="{{localize 'VEILRUNNER.Party'}}">
+            <button type="button" class="vr-party-tab {{#if (eq partyTab "currencies")}}active{{/if}}" data-action="setPartyTab" data-tab="currencies">
+              <i class="fa-solid fa-coins"></i>
+              <span>{{localize 'VEILRUNNER.SharedCurrencies'}}</span>
+            </button>
+            <button type="button" class="vr-party-tab {{#if (eq partyTab "inventory")}}active{{/if}}" data-action="setPartyTab" data-tab="inventory">
+              <i class="fa-solid fa-boxes-stacked"></i>
+              <span>{{localize 'VEILRUNNER.PartyInventory'}}</span>
+            </button>
+          </nav>
+
+          {{#if (eq partyTab "currencies")}}
+            {{> "systems/veilrunner/templates/actor/party/parts/currencies.hbs"}}
+          {{else}}
+            <div class="vr-party-block">
+              <div class="vr-party-block-heading">
+                <span><i class="fa-solid fa-boxes-stacked"></i> {{localize 'VEILRUNNER.PartyInventory'}}</span>
+                <small>{{localize 'VEILRUNNER.StashValue'}} {{partyOverview.totalInventoryValue}}</small>
+              </div>
+              <div class="vr-party-stash">
+                {{#each partyOverview.inventory as |item|}}
+                  <button type="button" class="vr-party-stash-row" data-action="openPartyItem" data-item-id="{{item.id}}">
+                    <img src="{{item.img}}" alt="" />
+                    <span>{{item.name}}</span>
+                    <small>{{item.quantity}} x {{item.price}}</small>
+                  </button>
+                {{else}}
+                  <p class="empty-row">{{localize 'VEILRUNNER.NoStashItems'}}</p>
+                {{/each}}
+              </div>
+            </div>
+          {{/if}}
+        </div>
+      </div>
+    </section>
+  {{/if}}
+
+  {{#if hasBiography}}
+    <label class="vr-basic-bio">{{localize 'VEILRUNNER.Biography'}}</label>
+    {{editor system.biography target="system.biography" engine="prosemirror" button=true editable=editable}}
+  {{/if}}
+</section>
