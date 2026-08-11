@@ -27,6 +27,7 @@ const DETAILS_SUBTABS = DETAILS_CATEGORIES.map(category => category.key);
 const SECTIONS = ["character", "actions", "inventory", "datapad", "settings"];
 const CHARACTER_SUBTABS = ["stats", "progression", "details", "biography"];
 const ACTIONS_SUBTABS = ["favorites", "actions", "abilities", "reactions", "magic", "tech"];
+const SETTINGS_SUBTABS = ["ui", "other"];
 const INVENTORY_CATEGORIES = [
   { key: "all", icon: "fa-solid fa-layer-group", label: "VEILRUNNER.InventoryCategory.all" },
   { key: "weapon", icon: "fa-solid fa-gun", label: "VEILRUNNER.InventoryCategory.weapon" },
@@ -150,6 +151,11 @@ function tabAnimationClass(from, to) {
 function normalizeArchetype(value) {
   const archetype = String(value ?? "").trim();
   return archetype === "Technical" ? "Tech" : archetype;
+}
+
+function normalizeUiColor(value, fallback) {
+  const color = String(value ?? "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
 }
 
 function professionTreeRecords() {
@@ -485,6 +491,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       setSection: VeilrunnerHeroSheet.#onSetSection,
       setSubTab: VeilrunnerHeroSheet.#onSetSubTab,
       toggleInventoryFilters: VeilrunnerHeroSheet.#onToggleInventoryFilters,
+      toggleSheetOption: VeilrunnerHeroSheet.#onToggleSheetOption,
+      togglePan: VeilrunnerHeroSheet.#onTogglePan,
       setInventoryWeaponFilter: VeilrunnerHeroSheet.#onSetInventoryWeaponFilter,
       rollAction: VeilrunnerHeroSheet.#onRollAction,
       rollInitiative: VeilrunnerHeroSheet.#onRollInitiative,
@@ -522,7 +530,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     character: "stats",
     actions: "actions",
     inventory: "all",
-    about: "skills"
+    about: "skills",
+    settings: "ui"
   };
   inventoryWeaponFilter = "all";
   inventoryFiltersOpen = false;
@@ -561,9 +570,21 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     this.#bindStatusTrackControls();
     this.#bindProfessionFilters();
     this.#bindIdentitySelect();
+    this.#bindUiCustomization();
+    this.#bindPartyMemberSheetOpeners();
+    this.#applySheetPalette(context.sheetOptions);
+    this.#syncPartyListScroll();
     this.#applyDrawerState();
     this.#playPendingNavAnimation();
     this.#clearPendingTabAnimations();
+  }
+
+  /** @override */
+  _onUpdate(changed, options, userId) {
+    // Display-only option buttons update their affected elements directly.
+    // Do not let their actor update recreate the main application part.
+    if (options?.veilrunnerPreserveMainPosition) return;
+    return super._onUpdate(changed, options, userId);
   }
 
   /** Keep the CSS-only carry-weight footer synchronized with the inventory state. */
@@ -621,6 +642,198 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       event.preventDefault();
       filterBar.scrollLeft += delta;
     }, { passive: false });
+  }
+
+  /** Enable Party-list scrolling only when the rendered member rows overflow its available space. */
+  #syncPartyListScroll() {
+    const list = this.element?.querySelector(".party-member-list");
+    if (!list) return;
+
+    requestAnimationFrame(() => {
+      list.classList.toggle("is-scrollable", list.scrollHeight > list.clientHeight + 1);
+    });
+  }
+
+  /** Open a visible party member's sheet when their name is double-clicked. */
+  #bindPartyMemberSheetOpeners() {
+    for (const name of this.element?.querySelectorAll(".party-member-name[data-actor-id]") ?? []) {
+      name.addEventListener("dblclick", event => {
+        event.preventDefault();
+        game.actors.get(name.dataset.actorId)?.sheet?.render(true);
+      });
+    }
+  }
+
+  /** Preview UI palette choices as they are adjusted, before the form persists them. */
+  #bindUiCustomization() {
+    const mainPanel = this.element?.querySelector(".main-panel");
+    if (!mainPanel) return;
+    const defaultColors = {
+      uiColor: "#101216",
+      categoryHighlightColor: "#a855f7",
+      characterBorderColor: "#66717d",
+      manaTextColor: "#60a5fa",
+      staminaTextColor: "#f59e0b",
+      levelUpColor: "#22d3ee",
+      totalXpColor: "#12141c",
+      levelUpGlowColor: "#22d3ee",
+      panOffColor: "#c084fc",
+      panOnColor: "#b9f6ca",
+      panInterferenceColor: "#fbbf24"
+    };
+    const colorProperties = {
+      categoryHighlightColor: "--vr-accent",
+      panOffColor: "--vr-pan-off",
+      panOnColor: "--vr-pan-on",
+      panInterferenceColor: "--vr-pan-interference",
+      characterBorderColor: "--vr-character-border",
+      manaTextColor: "--vr-mana-text",
+      staminaTextColor: "--vr-stamina-text",
+      levelUpColor: "--vr-level-up",
+      totalXpColor: "--vr-total-xp",
+      levelUpGlowColor: "--vr-level-up-glow"
+    };
+    const persistentUiOptionKeys = new Set(["uiColor", "colorVision", ...Object.keys(colorProperties)]);
+    const updateUiOption = (key, value) => this.actor.update({ [`system.sheetOptions.${key}`]: value }, {
+      render: false,
+      veilrunnerPreserveMainPosition: true
+    });
+    mainPanel.querySelectorAll("button[data-reset-ui-color], button[data-reset-ui-slider]").forEach(button => {
+      const resetTitle = button.title || "Reset to default";
+      button.replaceChildren(Object.assign(document.createElement("i"), { className: "fa-solid fa-rotate-left" }));
+      button.title = resetTitle;
+      button.setAttribute("aria-label", resetTitle);
+    });
+    const sliderDescriptors = {
+      levelUpBrightness: value => (Math.max(0.25, Math.min(2, Number(value) || 1))).toFixed(2),
+      levelUpIntensity: value => (Math.max(0.25, Math.min(2, Number(value) || 1))).toFixed(2),
+      levelUpGlowIntensity: value => (Math.max(0.25, Math.min(2, Number(value) || 1))).toFixed(2)
+    };
+    mainPanel.querySelectorAll("[data-ui-preview]").forEach(control => {
+      const preview = () => {
+        const key = control.dataset.uiPreview;
+        const property = colorProperties[key];
+        if (property) mainPanel.style.setProperty(property, normalizeUiColor(control.value, mainPanel.style.getPropertyValue(property)));
+        if (key === "levelUpBrightness") mainPanel.style.setProperty("--vr-level-brightness", Math.max(0.25, Math.min(2, Number(control.value) || 1)));
+        if (key === "levelUpIntensity") mainPanel.style.setProperty("--vr-level-rate-duration", `${1.35 / Math.max(0.25, Math.min(2, Number(control.value) || 1))}s`);
+        if (key === "levelUpGlowIntensity") mainPanel.style.setProperty("--vr-level-intensity", Math.max(0.25, Math.min(2, Number(control.value) || 1)));
+        if (sliderDescriptors[key]) {
+          mainPanel.querySelectorAll(`[data-ui-value="${key}"]`).forEach(output => {
+            output.value = sliderDescriptors[key](control.value);
+          });
+        }
+        const values = Object.fromEntries(Array.from(mainPanel.querySelectorAll("[data-ui-preview]"))
+          .map(entry => [entry.dataset.uiPreview, entry.value]));
+        this.#applySheetPalette(values);
+      };
+      control.addEventListener("input", preview);
+      control.addEventListener("change", async event => {
+        preview();
+        const key = control.dataset.uiPreview;
+        if (!persistentUiOptionKeys.has(key)) return;
+        // These controls normally submit through the sheet form, which rerenders it
+        // and resets its scroll position. Persist them like the option buttons instead.
+        event.stopPropagation();
+        await updateUiOption(key, control.value);
+      });
+    });
+    mainPanel.querySelectorAll("[data-reset-ui-color]").forEach(button => {
+      button.addEventListener("click", async event => {
+        event.preventDefault();
+        const key = button.dataset.resetUiColor;
+        const color = defaultColors[key];
+        const input = mainPanel.querySelector(`[data-ui-preview="${key}"]`);
+        if (!color || !input) return;
+        input.value = color;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        await updateUiOption(key, color);
+      });
+    });
+    mainPanel.querySelectorAll("[data-reset-theme]").forEach(button => {
+      button.addEventListener("click", async event => {
+        event.preventDefault();
+        const confirmed = await foundry.applications.api.DialogV2.confirm({
+          window: { title: game.i18n.localize("VEILRUNNER.ResetThemeTitle") },
+          content: `<p>${game.i18n.localize("VEILRUNNER.ResetThemeConfirm")}</p>`,
+          yes: { label: game.i18n.localize("VEILRUNNER.ResetTheme"), callback: () => true },
+          no: { label: game.i18n.localize("VEILRUNNER.Cancel"), callback: () => false },
+          rejectClose: false
+        });
+        if (!confirmed) return;
+        const defaults = {
+          ...defaultColors,
+          colorVision: "default",
+          levelUpBrightness: 1,
+          levelUpIntensity: 1,
+          levelUpGlowIntensity: 1
+        };
+        const update = Object.fromEntries(Object.entries(defaults)
+          .map(([key, value]) => [`system.sheetOptions.${key}`, value]));
+        await this.actor.update(update);
+      });
+    });
+    mainPanel.querySelectorAll("[data-ui-value]").forEach(input => {
+      input.addEventListener("change", async () => {
+        const key = input.dataset.uiValue;
+        const slider = mainPanel.querySelector(`input[type="range"][data-ui-preview="${key}"]`);
+        if (!slider || !sliderDescriptors[key]) return;
+        slider.value = sliderDescriptors[key](input.value);
+        slider.dispatchEvent(new Event("input", { bubbles: true }));
+        await this.actor.update({ [`system.sheetOptions.${key}`]: Number(slider.value) });
+      });
+    });
+    mainPanel.querySelectorAll("[data-reset-ui-slider]").forEach(button => {
+      button.addEventListener("click", async event => {
+        event.preventDefault();
+        const key = button.dataset.resetUiSlider;
+        const slider = mainPanel.querySelector(`input[type="range"][data-ui-preview="${key}"]`);
+        if (!slider || !sliderDescriptors[key]) return;
+        slider.value = "1";
+        slider.dispatchEvent(new Event("input", { bubbles: true }));
+        await this.actor.update({ [`system.sheetOptions.${key}`]: 1 });
+      });
+    });
+  }
+
+  /** Apply the saved accessibility and UI palette to the complete application, including its header and scrollbars. */
+  #applySheetPalette(options = {}) {
+    const root = this.element;
+    if (!root) return;
+    const colorVision = ["default", "protanopia", "deuteranopia", "tritanopia"].includes(options.colorVision) ? options.colorVision : "default";
+    const uiColor = normalizeUiColor(options.uiColor, "#101216");
+    root.classList.remove("color-vision-default", "color-vision-protanopia", "color-vision-deuteranopia", "color-vision-tritanopia");
+    root.classList.add(`color-vision-${colorVision}`);
+    root.style.setProperty("--vr-ui-color", uiColor);
+    root.style.setProperty("--vr-accent", normalizeUiColor(options.categoryHighlightColor, "#a855f7"));
+    root.style.setProperty("--vr-pan-off", normalizeUiColor(options.panOffColor, "#c084fc"));
+    root.style.setProperty("--vr-pan-on", normalizeUiColor(options.panOnColor, "#b9f6ca"));
+    root.style.setProperty("--vr-pan-interference", normalizeUiColor(options.panInterferenceColor, "#fbbf24"));
+    const resourcePalette = {
+      default: { health: "#f87171", mana: "#60a5fa", stamina: "#f59e0b", armor: "#cbd5e1", shields: "#22d3ee", barriers: "#c084fc" },
+      protanopia: { health: "#d6a35f", mana: "#4c78d1", stamina: "#2aa7a0", armor: "#d0d7df", shields: "#2aa7a0", barriers: "#4c78d1" },
+      deuteranopia: { health: "#d5895d", mana: "#457b9d", stamina: "#e9c46a", armor: "#d0d7df", shields: "#457b9d", barriers: "#e9c46a" },
+      tritanopia: { health: "#d85f6f", mana: "#2f8fce", stamina: "#e08a4f", armor: "#d0d7df", shields: "#2f8fce", barriers: "#e08a4f" }
+    }[colorVision];
+    root.style.setProperty("--vr-resource-health", resourcePalette.health);
+    root.style.setProperty("--vr-resource-mana", resourcePalette.mana);
+    root.style.setProperty("--vr-resource-stamina", resourcePalette.stamina);
+    root.style.setProperty("--vr-resource-armor", resourcePalette.armor);
+    root.style.setProperty("--vr-resource-shields", resourcePalette.shields);
+    root.style.setProperty("--vr-resource-barriers", resourcePalette.barriers);
+  }
+
+  /** Update defensive-bar visibility in place, avoiding a main-panel redraw and scroll reset. */
+  #syncResourceBarVisibility() {
+    const options = this.actor.system.sheetOptions ?? {};
+    const resourceIsActive = key => Number(this.actor.system.resources?.[key]?.max ?? this.actor.system.resources?.[key]?.value ?? 0) > 0;
+    const visible = {
+      armor: this.#editMode || options.showAllResourceBars || options.showArmorResourceBar || resourceIsActive("armor"),
+      shields: this.#editMode || options.showAllResourceBars || options.showShieldsResourceBar || resourceIsActive("shields"),
+      barriers: this.#editMode || options.showAllResourceBars || options.showBarriersResourceBar || resourceIsActive("barriers")
+    };
+    this.element?.querySelectorAll("[data-resource-bar]").forEach(bar => {
+      bar.closest(".stat")?.toggleAttribute("hidden", !visible[bar.dataset.resourceBar]);
+    });
   }
 
   /** Right-click removes a status point; the standard sheet action adds one. */
@@ -837,8 +1050,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
 
   /** Party hooks. */
   #bindPartyHooks() {
-    const id = Hooks.on("updateActor", (doc) => {
+    const id = Hooks.on("updateActor", (doc, change, options) => {
       if (!this.rendered) return;
+      if (options?.veilrunnerPreserveMainPosition) return;
       if (doc.id === this.actor.id || ["hero", "party"].includes(doc.type)) this.#debouncedRender();
     });
     this.#hookIds.push(["updateActor", id]);
@@ -992,15 +1206,42 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.appearanceImage = system.appearanceImage || actor.img;
     context.portraitImage = system.portraitImage || actor.img;
     context.equipmentImage = system.equipmentImage || context.appearanceImage || context.portraitImage;
+    const storedUiColor = normalizeUiColor(system.sheetOptions?.uiColor, "#101216");
+    const storedHidePartyList = foundry.utils.getProperty(actor._source, "system.sheetOptions.hidePartyList");
     const sheetOptions = {
-      showPartyList: system.sheetOptions?.showPartyList !== false,
-      onlyActiveResourceBars: Boolean(system.sheetOptions?.onlyActiveResourceBars)
+      // Preserve the former positive setting for existing heroes while the UI uses the clearer hide toggle.
+      hidePartyList: typeof storedHidePartyList === "boolean" ? storedHidePartyList : system.sheetOptions?.showPartyList === false,
+      showAllResourceBars: Boolean(system.sheetOptions?.showAllResourceBars),
+      showArmorResourceBar: Boolean(system.sheetOptions?.showArmorResourceBar),
+      showShieldsResourceBar: Boolean(system.sheetOptions?.showShieldsResourceBar),
+      showBarriersResourceBar: Boolean(system.sheetOptions?.showBarriersResourceBar),
+      colorVision: ["default", "protanopia", "deuteranopia", "tritanopia"].includes(system.sheetOptions?.colorVision) ? system.sheetOptions.colorVision : "default",
+      // The earlier UI-color control used the category purple as its implicit default.
+      // Treat that legacy value as the new subdued-black default unless the player selects another color.
+      uiColor: storedUiColor.toLowerCase() === "#a855f7" ? "#101216" : storedUiColor,
+      categoryHighlightColor: normalizeUiColor(system.sheetOptions?.categoryHighlightColor, "#a855f7"),
+      panOffColor: normalizeUiColor(system.sheetOptions?.panOffColor, "#c084fc"),
+      panOnColor: normalizeUiColor(system.sheetOptions?.panOnColor, "#b9f6ca"),
+      panInterferenceColor: normalizeUiColor(system.sheetOptions?.panInterferenceColor, "#fbbf24")
+      ,characterBorderColor: normalizeUiColor(system.sheetOptions?.characterBorderColor, "#66717d")
+      ,manaTextColor: normalizeUiColor(system.sheetOptions?.manaTextColor, "#60a5fa")
+      ,staminaTextColor: normalizeUiColor(system.sheetOptions?.staminaTextColor, "#f59e0b")
+      ,levelUpColor: normalizeUiColor(system.sheetOptions?.levelUpColor, "#22d3ee")
+      ,totalXpColor: normalizeUiColor(system.sheetOptions?.totalXpColor, "#12141c")
+      ,levelUpGlowColor: normalizeUiColor(system.sheetOptions?.levelUpGlowColor, "#22d3ee")
+      ,levelUpBrightness: Math.max(0.25, Math.min(2, Number(system.sheetOptions?.levelUpBrightness) || 1))
+      ,levelUpRate: Math.max(0.25, Math.min(2, Number.isFinite(Number(system.sheetOptions?.levelUpIntensity)) ? Number(system.sheetOptions.levelUpIntensity) : 1))
+      ,levelUpGlowIntensity: Math.max(0.25, Math.min(2, Number.isFinite(Number(system.sheetOptions?.levelUpGlowIntensity)) ? Number(system.sheetOptions.levelUpGlowIntensity) : 1))
     };
+    sheetOptions.levelUpRateDuration = 1.35 / sheetOptions.levelUpRate;
+    sheetOptions.levelUpBrightnessDescriptor = sheetOptions.levelUpBrightness.toFixed(2);
+    sheetOptions.levelUpRateDescriptor = sheetOptions.levelUpRate.toFixed(2);
+    sheetOptions.levelUpGlowIntensityDescriptor = sheetOptions.levelUpGlowIntensity.toFixed(2);
     const resourceIsActive = key => Number(system.resources?.[key]?.max ?? system.resources?.[key]?.value ?? 0) > 0;
-    context.showArmorResource = this.#editMode || !sheetOptions.onlyActiveResourceBars || resourceIsActive("armor");
-    context.showShieldsResource = this.#editMode || !sheetOptions.onlyActiveResourceBars || resourceIsActive("shields");
-    context.showBarriersResource = this.#editMode || !sheetOptions.onlyActiveResourceBars || resourceIsActive("barriers");
-    context.showPartyList = sheetOptions.showPartyList;
+    context.showArmorResource = this.#editMode || sheetOptions.showAllResourceBars || sheetOptions.showArmorResourceBar || resourceIsActive("armor");
+    context.showShieldsResource = this.#editMode || sheetOptions.showAllResourceBars || sheetOptions.showShieldsResourceBar || resourceIsActive("shields");
+    context.showBarriersResource = this.#editMode || sheetOptions.showAllResourceBars || sheetOptions.showBarriersResourceBar || resourceIsActive("barriers");
+    context.showPartyList = !sheetOptions.hidePartyList;
     context.sheetOptions = sheetOptions;
     context.portraitCrop = {
       x: Number(system.portraitCrop?.x ?? 50),
@@ -1050,7 +1291,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         label: "Movement",
         value: "0 m",
         rule: "Movement will incorporate encumbrance, species, and perk/flaw modifiers."
-      }
+      },
+      { label: "Mana Capacity", value: Math.max(0, Number(system.resources?.mana?.max) || 0), rule: "Maximum Mana capacity." },
+      { label: "Stamina Capacity", value: Math.max(0, Number(system.resources?.stamina?.max) || 0), rule: "Maximum Stamina capacity." }
     ];
     context.saves = [
       { label: "Fortitude", path: "system.saves.fortitude", value: Math.max(0, Number(system.saves?.fortitude) || 0) },
@@ -1066,6 +1309,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       : this.section === "actions" ? ACTIONS_SUBTABS
       : this.section === "inventory" ? INVENTORY_SUBTABS
       : this.section === "datapad" ? ABOUT_SUBTABS
+      : this.section === "settings" ? SETTINGS_SUBTABS
       : null;
     context.subNavList = subList;
     context.subTabIndex = subList ? subList.indexOf(this.section === "datapad" ? this.subTabs.about : this.subTabs[this.section]) : -1;
@@ -1151,9 +1395,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.partyOverview = buildPartyOverview(party, { currentHero: actor });
     context.partyMembers = getPartyMembers(party)
       .filter(member => member.id !== actor.id)
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
       .map(member => {
         const resources = member.system.resources;
         const linked = Boolean(system.networkLinked && member.system.networkLinked);
+        const panState = linked ? "on" : "off";
         const percent = member.system.percent ?? {};
         return {
           id: member.id,
@@ -1161,6 +1407,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
           displayName: truncateText(member.name, PARTY_NAME_MAX_LENGTH),
           img: member.system.appearanceImage || member.img,
           linked,
+          panState,
           health: linked ? `${resources.health.value} / ${resources.health.max}` : healthStatus(percent.health ?? 0),
           armor: linked ? `${resources.armor.value} / ${resources.armor.max}` : armorStatus(percent.armor ?? 0),
           shields: linked ? `${(resources.shields ?? resources.shield)?.value || 0} / ${(resources.shields ?? resources.shield)?.max || 0}` : shieldStatus(resources.shields ?? resources.shield),
@@ -1235,7 +1482,34 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       for (const key of group.attributes) normalizeNumber(`system.attributes.${group.key}.${key}`);
     }
 
+    const normalizeSheetOption = (key, fallback) => {
+      const path = `system.sheetOptions.${key}`;
+      const hasFlat = Object.hasOwn(object, path);
+      const hasNested = foundry.utils.hasProperty(object, path);
+      if (!hasFlat && !hasNested) return;
+      const value = normalizeUiColor(hasFlat ? object[path] : foundry.utils.getProperty(object, path), fallback);
+      if (hasFlat) object[path] = value;
+      foundry.utils.setProperty(object, path, value);
+    };
+    normalizeSheetOption("categoryHighlightColor", "#a855f7");
+    normalizeSheetOption("uiColor", "#101216");
+    normalizeSheetOption("panOffColor", "#c084fc");
+    normalizeSheetOption("panOnColor", "#b9f6ca");
+    normalizeSheetOption("panInterferenceColor", "#fbbf24");
+    normalizeSheetOption("characterBorderColor", "#66717d");
+    normalizeSheetOption("manaTextColor", "#60a5fa");
+    normalizeSheetOption("staminaTextColor", "#f59e0b");
+    normalizeSheetOption("levelUpColor", "#22d3ee");
+    normalizeSheetOption("totalXpColor", "#12141c");
+    normalizeSheetOption("levelUpGlowColor", "#22d3ee");
+
     const submitData = super._prepareSubmitData(event, form, formData);
+    if (foundry.utils.hasProperty(submitData, "name")) {
+      const submittedName = String(foundry.utils.getProperty(submitData, "name") ?? "");
+      if (submittedName !== this.actor.name) {
+        foundry.utils.setProperty(submitData, "prototypeToken.name", submittedName);
+      }
+    }
     const submittedLevel = foundry.utils.hasProperty(submitData, "system.level")
       ? Number(foundry.utils.getProperty(submitData, "system.level"))
       : Number(this.actor.system?.level ?? 1);
@@ -1306,6 +1580,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const list = section === "character" ? CHARACTER_SUBTABS
       : section === "actions" ? ACTIONS_SUBTABS
       : section === "inventory" ? INVENTORY_SUBTABS
+      : section === "settings" ? SETTINGS_SUBTABS
       : fromDetailsPanel ? DETAILS_SUBTABS
       : ABOUT_SUBTABS;
     const currentTab = fromDetailsPanel && !DETAILS_SUBTABS.includes(this.subTabs[section]) ? "party" : this.subTabs[section];
@@ -1332,6 +1607,28 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const row = target.closest(".inventory-filter-row");
     row?.classList.toggle("open", this.inventoryFiltersOpen);
     row?.querySelector(".inventory-filter-drawer")?.classList.toggle("open", this.inventoryFiltersOpen);
+  }
+
+  static async #onToggleSheetOption(event, target) {
+    event.preventDefault();
+    const key = target.dataset.sheetOption;
+    if (!["showAllResourceBars", "showArmorResourceBar", "showShieldsResourceBar", "showBarriersResourceBar", "hidePartyList"].includes(key)) return;
+    const value = !Boolean(this.actor.system.sheetOptions?.[key]);
+    await this.actor.update({ [`system.sheetOptions.${key}`]: value }, {
+      render: false,
+      veilrunnerPreserveMainPosition: true
+    });
+    target.classList.toggle("is-active", value);
+    target.setAttribute("aria-pressed", String(value));
+    target.querySelector(".ui-toggle-check")?.classList.toggle("is-active", value);
+    if (key === "hidePartyList") this.element?.querySelector(".party-view")?.toggleAttribute("hidden", value);
+    else this.#syncResourceBarVisibility();
+  }
+
+  static async #onTogglePan(event) {
+    event.preventDefault();
+    if (!this.actor.isOwner) return ui.notifications.warn("You do not have permission to change PAN status.");
+    await this.actor.update({ "system.networkLinked": !Boolean(this.actor.system.networkLinked) });
   }
 
   static #onSetInventoryWeaponFilter(event, target) {
@@ -1534,6 +1831,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const existingCrop = this.actor.system.portraitCrop ?? {};
     const crop = normalizePortraitCrop(useExistingCrop ? existingCrop : undefined);
     const safePath = foundry.utils.escapeHTML(path);
+    const sheetOptions = this.actor.system.sheetOptions ?? {};
+    const editorColorVision = ["default", "protanopia", "deuteranopia", "tritanopia"].includes(sheetOptions.colorVision)
+      ? sheetOptions.colorVision
+      : "default";
+    const storedEditorUiColor = normalizeUiColor(sheetOptions.uiColor, "#101216");
+    const editorUiColor = storedEditorUiColor.toLowerCase() === "#a855f7" ? "#101216" : storedEditorUiColor;
+    const editorHighlightColor = normalizeUiColor(sheetOptions.categoryHighlightColor, "#a855f7");
     const editorState = { dialog: null };
     VeilrunnerHeroSheet.#portraitEditorsByUser.set(userId, editorState);
     const cleanupEditor = () => {
@@ -1544,7 +1848,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
 
     try {
       const prompt = foundry.applications.api.DialogV2.prompt({
-        classes: ["veilrunner", "vr-portrait-editor"],
+        classes: ["veilrunner", "vr-portrait-editor", `color-vision-${editorColorVision}`],
         window: { title: game.i18n.localize("VEILRUNNER.PortraitEditor") },
         // The preview needs enough width to keep its vertical and horizontal
         // pan controls directly beside/below it, with the other controls below.
@@ -1552,9 +1856,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         rejectClose: false,
         render: (event, dialog) => {
           editorState.dialog = dialog;
+          dialog.element?.style.setProperty("--vr-ui-color", editorUiColor);
+          dialog.element?.style.setProperty("--vr-accent", editorHighlightColor);
           activatePortraitCrop(event, dialog);
         },
-        content: `<div class="veilrunner vr-portrait-crop-dialog">
+        content: `<div class="veilrunner vr-portrait-crop-dialog" style="--vr-ui-color:${editorUiColor};--vr-accent:${editorHighlightColor}">
           <p>${game.i18n.localize("VEILRUNNER.PortraitEditorHint")}</p>
           <div class="vr-portrait-crop-stage">
             <div class="vr-portrait-crop-preview" style="--crop-x:${crop.x}%;--crop-y:${crop.y}%;--crop-zoom:${crop.zoom};--crop-rotation:${crop.rotation}deg;--crop-flip-x:${crop.flipX ? -1 : 1}"><img src="${safePath}" alt="" /></div>

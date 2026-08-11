@@ -1,4 +1,4 @@
-<section class="main-panel">
+<section class="main-panel" style="--vr-accent: {{sheetOptions.categoryHighlightColor}}; --vr-pan-off: {{sheetOptions.panOffColor}}; --vr-pan-on: {{sheetOptions.panOnColor}}; --vr-pan-interference: {{sheetOptions.panInterferenceColor}}; --vr-character-border: {{sheetOptions.characterBorderColor}}; --vr-mana-text: {{sheetOptions.manaTextColor}}; --vr-stamina-text: {{sheetOptions.staminaTextColor}}; --vr-level-up: {{sheetOptions.levelUpColor}}; --vr-total-xp: {{sheetOptions.totalXpColor}}; --vr-level-up-glow: {{sheetOptions.levelUpGlowColor}}; --vr-level-brightness: {{sheetOptions.levelUpBrightness}}; --vr-level-intensity: {{sheetOptions.levelUpGlowIntensity}}; --vr-level-rate-duration: {{sheetOptions.levelUpRateDuration}}s;">
   {{#unless equipmentOpen}}
     <button type="button" class="drawer-handle handle-left" data-action="toggleEquipment" title="{{localize 'VEILRUNNER.Equipment'}}">
     </button>
@@ -11,37 +11,31 @@
           <img src="{{portraitImage}}" alt="{{actor.name}}" />
 
           <div class="hero-pool hero-pool-left">
-            <span class="hero-pool-icon mana" title="{{localize 'VEILRUNNER.Mana'}}">
-              <i class="fa-solid fa-wand-sparkles"></i>
-            </span>
-            <div class="bar-track vertical hud mana">
-              <div class="bar-fill mana" style="height: {{system.percent.mana}}%"></div>
-            </div>
-            <span class="hero-pool-value">
+            <span class="hero-pool-current" title="{{localize 'VEILRUNNER.Stamina'}}">
               {{#if editMode}}
-                <input type="number" name="system.resources.mana.value" value="{{system.resources.mana.value}}" />
-                <small>/ {{#if isGM}}<input type="number" name="system.resources.mana.max" value="{{system.resources.mana.max}}" />{{else}}{{system.resources.mana.max}}{{/if}}</small>
+                <input type="number" name="system.resources.stamina.value" value="{{system.resources.stamina.value}}" />
               {{else}}
-                {{system.resources.mana.value}}<br /><small>{{system.resources.mana.max}}</small>
+                {{system.resources.stamina.value}}
               {{/if}}
-            </span>
-          </div>
-
-          <div class="hero-pool hero-pool-right">
-            <span class="hero-pool-icon stamina" title="{{localize 'VEILRUNNER.Stamina'}}">
-              <i class="fa-solid fa-bolt-lightning"></i>
             </span>
             <div class="bar-track vertical hud stamina">
               <div class="bar-fill stamina" style="height: {{system.percent.stamina}}%"></div>
             </div>
-            <span class="hero-pool-value">
+            <span class="hero-pool-label">{{localize 'VEILRUNNER.Stamina'}}</span>
+          </div>
+
+          <div class="hero-pool hero-pool-right">
+            <span class="hero-pool-current" title="{{localize 'VEILRUNNER.Mana'}}">
               {{#if editMode}}
-                <input type="number" name="system.resources.stamina.value" value="{{system.resources.stamina.value}}" />
-                <small>/ {{#if isGM}}<input type="number" name="system.resources.stamina.max" value="{{system.resources.stamina.max}}" />{{else}}{{system.resources.stamina.max}}{{/if}}</small>
+                <input type="number" name="system.resources.mana.value" value="{{system.resources.mana.value}}" />
               {{else}}
-                {{system.resources.stamina.value}}<br /><small>{{system.resources.stamina.max}}</small>
+                {{system.resources.mana.value}}
               {{/if}}
             </span>
+            <div class="bar-track vertical hud mana">
+              <div class="bar-fill mana" style="height: {{system.percent.mana}}%"></div>
+            </div>
+            <span class="hero-pool-label">{{localize 'VEILRUNNER.Mana'}}</span>
           </div>
 
           <div class="inspiration-dots">
@@ -138,8 +132,7 @@
           </div>
         </div>
 
-        {{#if showArmorResource}}
-        <div class="stat stat-bar">
+        <div class="stat stat-bar" data-resource-bar="armor" {{#unless showArmorResource}}hidden{{/unless}}>
           <label><i class="fa-solid fa-shield-halved resource-icon armor"></i> {{localize 'VEILRUNNER.Armor'}}</label>
           <div class="resource-bar armor">
             <div class="bar-track horizontal">
@@ -157,10 +150,7 @@
             </div>
           </div>
         </div>
-        {{/if}}
-
-        {{#if showShieldsResource}}
-        <div class="stat stat-bar">
+        <div class="stat stat-bar" data-resource-bar="shields" {{#unless showShieldsResource}}hidden{{/unless}}>
           <label><i class="fa-solid fa-shield resource-icon shields"></i> {{localize 'VEILRUNNER.Shields'}}</label>
           <div class="resource-bar shields">
             <div class="bar-track horizontal">
@@ -178,10 +168,7 @@
             </div>
           </div>
         </div>
-        {{/if}}
-
-        {{#if showBarriersResource}}
-        <div class="stat stat-bar">
+        <div class="stat stat-bar" data-resource-bar="barriers" {{#unless showBarriersResource}}hidden{{/unless}}>
           <label><i class="fa-solid fa-hexagon resource-icon barriers"></i> {{localize 'VEILRUNNER.Barriers'}}</label>
           <div class="resource-bar barriers">
             <div class="bar-track horizontal">
@@ -199,23 +186,21 @@
             </div>
           </div>
         </div>
-        {{/if}}
       </section>
       {{#if showPartyList}}
       <section class="party-view">
         <div class="party-heading">
-          <span><i class="fa-solid fa-users"></i> {{localize 'VEILRUNNER.Party'}}</span>
-          <span class="party-pan-status {{#if panActive}}on{{else}}off{{/if}}" title="{{localize 'VEILRUNNER.PAN.Label'}} {{panStatus}}">
+          <button type="button" class="party-pan-status {{#if panActive}}on{{else}}off{{/if}}" data-action="togglePan" title="{{localize 'VEILRUNNER.PAN.Label'}} {{panStatus}}">
             <i class="fa-solid fa-tower-broadcast"></i>
             <span>{{localize 'VEILRUNNER.PAN.Label'}} {{panStatus}}</span>
-          </span>
+          </button>
         </div>
         <div class="party-member-list">
           {{#each partyMembers as |member|}}
-            <article class="party-member {{#if member.linked}}linked{{/if}}">
+            <article class="party-member pan-{{member.panState}}">
               <img src="{{member.img}}" alt="{{member.name}}" />
               <div class="party-member-data">
-                <strong title="{{member.name}}">{{member.displayName}}</strong>
+                <strong class="party-member-name" data-actor-id="{{member.id}}" title="{{member.name}}">{{member.displayName}}</strong>
                 <div class="party-member-resources">
                   <div class="party-resource-column">
                     <span class="party-resource">
@@ -358,6 +343,15 @@
           <button type="button" class="sub-nav-btn {{#if (eq subTabs.about "customEffects")}}active{{/if}}"
              data-action="setSubTab" data-section="about" data-tab="customEffects">
             <i class="fa-solid fa-hexagon-nodes"></i><span>{{localize 'VEILRUNNER.CustomEffects'}}</span>
+          </button>
+        {{else if (eq section "settings")}}
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.settings "ui")}}active{{/if}}"
+             data-action="setSubTab" data-section="settings" data-tab="ui">
+            <i class="fa-solid fa-palette"></i><span>{{localize 'VEILRUNNER.UserInterface'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.settings "other")}}active{{/if}}"
+             data-action="setSubTab" data-section="settings" data-tab="other">
+            <i class="fa-solid fa-sliders"></i><span>{{localize 'VEILRUNNER.OtherFunctions'}}</span>
           </button>
         {{/if}}
       </nav>
@@ -535,8 +529,7 @@
               </div>
             </div>
           {{else if (eq subTabs.character "details")}}
-            <div class="overview-panel">
-              <div class="overview-identity">
+            <div class="overview-identity">
                 {{#if editMode}}
                   <div class="character-details-box">
                     <div class="character-details-heading">{{localize 'VEILRUNNER.Details'}}</div>
@@ -802,8 +795,6 @@
                     </div>
                   {{/if}}
                 {{/if}}
-              </div>
-              <p class="overview-hint">{{localize 'VEILRUNNER.OverviewHint'}}</p>
             </div>
           {{else if (eq subTabs.character "biography")}}
             <div class="bio-content">
@@ -962,6 +953,71 @@
           {{/unless}}
 
         {{else if (eq section "settings")}}
+          {{#if (eq subTabs.settings "ui")}}
+          <div class="setting-panel ui-settings-panel">
+            <section class="settings-group">
+              <h4>{{localize 'VEILRUNNER.UIColorCustomization'}}</h4>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.UIStyle'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.uiColor" value="{{sheetOptions.uiColor}}" data-ui-preview="uiColor" /><button type="button" data-reset-ui-color="uiColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CategoryHighlightColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.categoryHighlightColor" value="{{sheetOptions.categoryHighlightColor}}" data-ui-preview="categoryHighlightColor" /><button type="button" data-reset-ui-color="categoryHighlightColor">Default</button></span></div>
+              <label>{{localize 'VEILRUNNER.ColorBlindMode'}}
+                <select name="system.sheetOptions.colorVision" data-ui-preview="colorVision">
+                  <option value="default" {{#if (eq sheetOptions.colorVision "default")}}selected{{/if}}>{{localize 'VEILRUNNER.ColorVisionDefault'}}</option>
+                  <option value="protanopia" {{#if (eq sheetOptions.colorVision "protanopia")}}selected{{/if}}>{{localize 'VEILRUNNER.Protanopia'}}</option>
+                  <option value="deuteranopia" {{#if (eq sheetOptions.colorVision "deuteranopia")}}selected{{/if}}>{{localize 'VEILRUNNER.Deuteranopia'}}</option>
+                  <option value="tritanopia" {{#if (eq sheetOptions.colorVision "tritanopia")}}selected{{/if}}>{{localize 'VEILRUNNER.Tritanopia'}}</option>
+                </select>
+              </label>
+              <div class="theme-reset-row">
+                <span>{{localize 'VEILRUNNER.ResetThemesToDefault'}}</span>
+                <button type="button" class="theme-reset-btn" data-reset-theme>{{localize 'VEILRUNNER.ResetTheme'}}</button>
+              </div>
+            </section>
+
+            <section class="settings-group">
+              <h4>{{localize 'VEILRUNNER.CharacterColumn'}}</h4>
+              <h5>{{localize 'VEILRUNNER.CharacterPortrait'}}</h5>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CharacterBorderColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.characterBorderColor" value="{{sheetOptions.characterBorderColor}}" data-ui-preview="characterBorderColor" /><button type="button" data-reset-ui-color="characterBorderColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.ManaTextColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.manaTextColor" value="{{sheetOptions.manaTextColor}}" data-ui-preview="manaTextColor" /><button type="button" data-reset-ui-color="manaTextColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.StaminaTextColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.staminaTextColor" value="{{sheetOptions.staminaTextColor}}" data-ui-preview="staminaTextColor" /><button type="button" data-reset-ui-color="staminaTextColor">Default</button></span></div>
+              <h5>{{localize 'VEILRUNNER.LevellingAndXP'}}</h5>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.XPIndicatorColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.levelUpColor" value="{{sheetOptions.levelUpColor}}" data-ui-preview="levelUpColor" /><button type="button" data-reset-ui-color="levelUpColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.TotalXPColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.totalXpColor" value="{{sheetOptions.totalXpColor}}" data-ui-preview="totalXpColor" /><button type="button" data-reset-ui-color="totalXpColor">Default</button></span></div>
+              <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorBrightness'}}</span><span class="xp-slider-control"><i class="fa-solid fa-moon" title="Dim"></i><input type="range" name="system.sheetOptions.levelUpBrightness" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpBrightness}}" data-ui-preview="levelUpBrightness" /><i class="fa-solid fa-sun" title="Bright"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpBrightnessDescriptor}}" data-ui-value="levelUpBrightness" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpBrightness" title="Reset to 1.00">Default</button></span></label>
+              <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorRate'}}</span><span class="xp-slider-control"><i class="fa-solid fa-turtle" title="Slow"></i><input type="range" name="system.sheetOptions.levelUpIntensity" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpRate}}" data-ui-preview="levelUpIntensity" /><i class="fa-solid fa-bolt" title="Fast"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpRateDescriptor}}" data-ui-value="levelUpIntensity" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpIntensity" title="Reset to 1.00">Default</button></span></label>
+              <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorIntensity'}}</span><span class="xp-slider-control"><i class="fa-solid fa-circle" title="Low intensity"></i><input type="range" name="system.sheetOptions.levelUpGlowIntensity" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpGlowIntensity}}" data-ui-preview="levelUpGlowIntensity" /><i class="fa-solid fa-burst" title="High intensity"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpGlowIntensityDescriptor}}" data-ui-value="levelUpGlowIntensity" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpGlowIntensity" title="Reset to 1.00">Default</button></span></label>
+              <h5>{{localize 'VEILRUNNER.ResourceBarType'}}</h5>
+              <p>{{localize 'VEILRUNNER.ResourceBarTypeHint'}}</p>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showAllResourceBars}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showAllResourceBars" aria-pressed="{{#if sheetOptions.showAllResourceBars}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-layer-group"></i> {{localize 'VEILRUNNER.ShowAllResourceBars'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showAllResourceBars}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showArmorResourceBar}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showArmorResourceBar" aria-pressed="{{#if sheetOptions.showArmorResourceBar}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-shield-halved"></i> {{localize 'VEILRUNNER.ShowArmorResourceBar'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showArmorResourceBar}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showShieldsResourceBar}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showShieldsResourceBar" aria-pressed="{{#if sheetOptions.showShieldsResourceBar}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-shield"></i> {{localize 'VEILRUNNER.ShowShieldsResourceBar'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showShieldsResourceBar}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showBarriersResourceBar}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showBarriersResourceBar" aria-pressed="{{#if sheetOptions.showBarriersResourceBar}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-hexagon"></i> {{localize 'VEILRUNNER.ShowBarriersResourceBar'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showBarriersResourceBar}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+            </section>
+
+            <section class="settings-group">
+              <h4>{{localize 'VEILRUNNER.PartyList'}}</h4>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.hidePartyList}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="hidePartyList" aria-pressed="{{#if sheetOptions.hidePartyList}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-users-slash"></i> {{localize 'VEILRUNNER.ShowPartyList'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.hidePartyList}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <h5>{{localize 'VEILRUNNER.PANIndicatorColors'}}</h5>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANOff'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panOffColor" value="{{sheetOptions.panOffColor}}" data-ui-preview="panOffColor" /><button type="button" data-reset-ui-color="panOffColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANOn'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panOnColor" value="{{sheetOptions.panOnColor}}" data-ui-preview="panOnColor" /><button type="button" data-reset-ui-color="panOnColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANInterference'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panInterferenceColor" value="{{sheetOptions.panInterferenceColor}}" data-ui-preview="panInterferenceColor" /><button type="button" data-reset-ui-color="panInterferenceColor">Default</button></span></div>
+            </section>
+          </div>
+          {{else}}
           <div class="setting-panel">
             <button type="button" class="settings-action-btn" data-action="openCharacterCreation">
               <i class="fa-solid fa-user-plus"></i>
@@ -973,17 +1029,8 @@
               <span><i class="fa-solid fa-tower-broadcast"></i> {{localize 'VEILRUNNER.NearbyNetwork'}}</span>
             </label>
             <p>{{localize 'VEILRUNNER.NearbyNetworkHint'}}</p>
-            <label class="network-toggle">
-              <input type="checkbox" name="system.sheetOptions.showPartyList" {{checked sheetOptions.showPartyList}} />
-              <span><i class="fa-solid fa-users"></i> {{localize 'VEILRUNNER.ShowPartyList'}}</span>
-            </label>
-            <p>{{localize 'VEILRUNNER.ShowPartyListHint'}}</p>
-            <label class="network-toggle">
-              <input type="checkbox" name="system.sheetOptions.onlyActiveResourceBars" {{checked sheetOptions.onlyActiveResourceBars}} />
-              <span><i class="fa-solid fa-shield"></i> {{localize 'VEILRUNNER.OnlyActiveResourceBars'}}</span>
-            </label>
-            <p>{{localize 'VEILRUNNER.OnlyActiveResourceBarsHint'}}</p>
           </div>
+          {{/if}}
 
         {{/if}}
       </div>

@@ -19,7 +19,6 @@ import {
   clampResourcePools
 } from "../fields.mjs";
 import { xpForLevel } from "../xp.mjs";
-import { attributePointsForLevel, skillPointsForLevel, talentPointsForLevel } from "../progression.mjs";
 
 const { StringField, NumberField, ArrayField, SchemaField } = foundry.data.fields;
 
@@ -73,7 +72,26 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
       portraitCrop: portraitCropSchema(),
       sheetOptions: new SchemaField({
         showPartyList: booleanFlag(true),
-        onlyActiveResourceBars: booleanFlag(false)
+        hidePartyList: booleanFlag(false),
+        showAllResourceBars: booleanFlag(false),
+        showArmorResourceBar: booleanFlag(false),
+        showShieldsResourceBar: booleanFlag(false),
+        showBarriersResourceBar: booleanFlag(false),
+        colorVision: new StringField({ required: true, blank: false, initial: "default" }),
+        uiColor: new StringField({ required: true, blank: false, initial: "#101216" }),
+        categoryHighlightColor: new StringField({ required: true, blank: false, initial: "#a855f7" }),
+        panOffColor: new StringField({ required: true, blank: false, initial: "#c084fc" }),
+        panOnColor: new StringField({ required: true, blank: false, initial: "#b9f6ca" }),
+        panInterferenceColor: new StringField({ required: true, blank: false, initial: "#fbbf24" }),
+        characterBorderColor: new StringField({ required: true, blank: false, initial: "#66717d" }),
+        manaTextColor: new StringField({ required: true, blank: false, initial: "#60a5fa" }),
+        staminaTextColor: new StringField({ required: true, blank: false, initial: "#f59e0b" }),
+        levelUpColor: new StringField({ required: true, blank: false, initial: "#22d3ee" }),
+        totalXpColor: new StringField({ required: true, blank: false, initial: "#12141c" }),
+        levelUpGlowColor: new StringField({ required: true, blank: false, initial: "#22d3ee" }),
+        levelUpBrightness: new NumberField({ required: true, min: 0.25, max: 2, initial: 1, nullable: false }),
+        levelUpIntensity: new NumberField({ required: true, min: 0.25, max: 2, initial: 1, nullable: false }),
+        levelUpGlowIntensity: new NumberField({ required: true, min: 0.25, max: 2, initial: 1, nullable: false })
       }),
       networkLinked: booleanFlag(false),
       resources: resourcesSchema(),
@@ -118,18 +136,20 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
       mental: ["intelligence", "wisdom", "focus", "logic"],
       social: ["charisma", "perception"]
     })) {
-      source.attributes ??= {};
-      source.attributes[group] ??= {};
-      for (const key of keys) source.attributes[group][key] = Math.max(1, Number(source.attributes[group][key]) || 1);
+      const attributes = source.attributes?.[group];
+      if (!attributes) continue;
+      for (const key of keys) {
+        if (attributes[key] !== undefined) attributes[key] = Math.max(1, Number(attributes[key]) || 1);
+      }
     }
-    source.saves ??= {};
-    for (const save of ["fortitude", "willpower", "reflex"]) source.saves[save] = Math.max(0, Number(source.saves[save]) || 0);
-    const poolBudgets = {
-      attributePoints: attributePointsForLevel(source.level),
-      talentPoints: talentPointsForLevel(source.level),
-      skillPoints: skillPointsForLevel(source.level)
-    };
-    for (const [pool, budget] of Object.entries(poolBudgets)) source[pool] ??= { available: budget, total: budget };
+    if (source.saves) {
+      for (const save of ["fortitude", "willpower", "reflex"]) {
+        if (source.saves[save] !== undefined) source.saves[save] = Math.max(0, Number(source.saves[save]) || 0);
+      }
+    }
+    // Data-model migrations also receive partial update payloads. Do not add
+    // missing point pools here: the schema supplies initial values for a new
+    // actor, while adding them to a UI-style update overwrites saved data.
     return source;
   }
 }
