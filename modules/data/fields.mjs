@@ -172,6 +172,17 @@ export function characterGenerationSchema() {
   });
 }
 
+/** Purchased, data-driven talent tree state. Catalog IDs are stable public data. */
+export function talentTreeSchema() {
+  return new SchemaField({
+    branches: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+    leaves: new ArrayField(new SchemaField({
+      id: new StringField({ required: true, blank: false, initial: "" }),
+      rank: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false })
+    }), { initial: [] })
+  });
+}
+
 /** Combat resources. */
 export function resourcesSchema() {
   return new SchemaField({

@@ -44,6 +44,15 @@
       "flags": {}
     },
     {
+      "name": "actions-test-library",
+      "label": "Actions Test Library",
+      "system": "Veilrunner",
+      "path": "packs/actions-test-library.db",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
       "name": "species",
       "label": "Species Library",
       "system": "Veilrunner",

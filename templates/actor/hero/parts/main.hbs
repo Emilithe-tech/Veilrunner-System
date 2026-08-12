@@ -1,9 +1,19 @@
 <section class="main-panel" style="--vr-accent: {{sheetOptions.categoryHighlightColor}}; --vr-pan-off: {{sheetOptions.panOffColor}}; --vr-pan-on: {{sheetOptions.panOnColor}}; --vr-pan-interference: {{sheetOptions.panInterferenceColor}}; --vr-character-border: {{sheetOptions.characterBorderColor}}; --vr-mana-text: {{sheetOptions.manaTextColor}}; --vr-stamina-text: {{sheetOptions.staminaTextColor}}; --vr-level-up: {{sheetOptions.levelUpColor}}; --vr-total-xp: {{sheetOptions.totalXpColor}}; --vr-level-up-glow: {{sheetOptions.levelUpGlowColor}}; --vr-level-brightness: {{sheetOptions.levelUpBrightness}}; --vr-level-intensity: {{sheetOptions.levelUpGlowIntensity}}; --vr-level-rate-duration: {{sheetOptions.levelUpRateDuration}}s;">
   {{#unless equipmentOpen}}
-    <button type="button" class="drawer-handle handle-left" data-action="toggleEquipment" title="{{localize 'VEILRUNNER.Equipment'}}">
-    </button>
+    <div class="drawer-handle handle-left" role="group" aria-label="{{localize 'VEILRUNNER.Equipment'}}">
+      <button type="button" class="drawer-handle-segment" data-action="openEquipmentTab" data-tab="equipped" title="{{localize 'VEILRUNNER.Equipment'}}" aria-label="{{localize 'VEILRUNNER.Equipment'}}">
+        <i class="fa-solid fa-shirt" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="drawer-handle-segment" data-action="openEquipmentTab" data-tab="appearance" title="{{localize 'VEILRUNNER.Appearance'}}" aria-label="{{localize 'VEILRUNNER.Appearance'}}">
+        <i class="fa-solid fa-user" aria-hidden="true"></i>
+      </button>
+    </div>
   {{/unless}}
-  <button type="button" class="drawer-handle handle-right" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Details'}}"></button>
+  <div class="drawer-handle handle-right" role="group" aria-label="{{localize 'VEILRUNNER.Details'}}">
+    <button type="button" class="drawer-handle-segment" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Details'}}" aria-label="{{localize 'VEILRUNNER.Details'}}">
+      <i class="fa-solid fa-list" aria-hidden="true"></i>
+    </button>
+  </div>
   <div class="hero-row">
     <div class="hero-column">
       <div class="hero-image-frame">
@@ -108,9 +118,9 @@
       <section class="stat-grid-compact">
         <div class="stat stat-bar health-bar">
           <label><i class="fa-solid fa-heart-pulse resource-icon health"></i> {{localize 'VEILRUNNER.Health'}}</label>
-          <div class="resource-bar health">
+          <div class="resource-bar health" style="--resource-color: {{healthColor}};">
             <div class="bar-track horizontal">
-              <div class="bar-fill health" style="width: {{healthPercent}}%; background: {{healthColor}}"></div>
+              <div class="bar-fill health" style="width: {{healthPercent}}%;"></div>
               {{#if tempHealthPercent}}
                 <div class="bar-fill temp-health" style="left: {{healthPercent}}%; width: {{tempHealthPercent}}%;"></div>
               {{/if}}
@@ -200,28 +210,37 @@
             <article class="party-member pan-{{member.panState}}">
               <img src="{{member.img}}" alt="{{member.name}}" />
               <div class="party-member-data">
-                <strong class="party-member-name" data-actor-id="{{member.id}}" title="{{member.name}}">{{member.displayName}}</strong>
+                <div class="party-member-title">
+                  <strong class="party-member-name" data-actor-id="{{member.id}}" title="{{member.name}}">{{member.displayName}}</strong>
+                  <button type="button" class="party-member-sheet-open" data-actor-id="{{member.id}}" title="{{localize 'VEILRUNNER.OpenCharacterSheet'}}" aria-label="{{localize 'VEILRUNNER.OpenCharacterSheet'}}">
+                    <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+                  </button>
+                </div>
                 <div class="party-member-resources">
-                  <div class="party-resource-column">
-                    <span class="party-resource">
-                      <span class="party-resource-label"><i class="fa-solid fa-heart-pulse resource-icon health"></i> {{localize 'VEILRUNNER.Health'}}</span>
-                      <span class="party-resource-status" title="{{member.health}}">{{member.health}}</span>
-                    </span>
-                    <span class="party-resource">
-                      <span class="party-resource-label"><i class="fa-solid fa-shield-halved resource-icon armor"></i> {{localize 'VEILRUNNER.Armor'}}</span>
-                      <span class="party-resource-status" title="{{member.armor}}">{{member.armor}}</span>
-                    </span>
-                  </div>
-                  <div class="party-resource-column">
-                    <span class="party-resource">
-                      <span class="party-resource-label"><i class="fa-solid fa-shield resource-icon shields"></i> {{localize 'VEILRUNNER.Shields'}}</span>
-                      <span class="party-resource-status" title="{{member.shields}}">{{member.shields}}</span>
-                    </span>
-                    <span class="party-resource">
-                      <span class="party-resource-label"><i class="fa-solid fa-hexagon resource-icon barriers"></i> {{localize 'VEILRUNNER.Barriers'}}</span>
-                      <span class="party-resource-status" title="{{member.barriers}}">{{member.barriers}}</span>
-                    </span>
-                  </div>
+                  {{#if member.showHealth}}
+                  <span class="party-resource">
+                    <span class="party-resource-label"><i class="fa-solid fa-heart-pulse resource-icon health"></i> {{localize 'VEILRUNNER.Health'}}</span>
+                    <span class="party-resource-status" title="{{member.health}}">{{member.health}}</span>
+                  </span>
+                  {{/if}}
+                  {{#if member.showArmor}}
+                  <span class="party-resource">
+                    <span class="party-resource-label"><i class="fa-solid fa-shield-halved resource-icon armor"></i> {{localize 'VEILRUNNER.Armor'}}</span>
+                    <span class="party-resource-status" title="{{member.armor}}">{{member.armor}}</span>
+                  </span>
+                  {{/if}}
+                  {{#if member.showShields}}
+                  <span class="party-resource">
+                    <span class="party-resource-label"><i class="fa-solid fa-shield resource-icon shields"></i> {{localize 'VEILRUNNER.Shields'}}</span>
+                    <span class="party-resource-status" title="{{member.shields}}">{{member.shields}}</span>
+                  </span>
+                  {{/if}}
+                  {{#if member.showBarriers}}
+                  <span class="party-resource">
+                    <span class="party-resource-label"><i class="fa-solid fa-hexagon resource-icon barriers"></i> {{localize 'VEILRUNNER.Barriers'}}</span>
+                    <span class="party-resource-status" title="{{member.barriers}}">{{member.barriers}}</span>
+                  </span>
+                  {{/if}}
                 </div>
               </div>
             </article>
@@ -805,123 +824,73 @@
           {{/if}}
 
         {{else if (eq section "actions")}}
-
-          {{#if (eq subTabs.actions "favorites")}}
-            <ul class="action-list">
-              {{#each favoriteItems as |item|}}
-                <li class="action-row" data-item-id="{{item.id}}">
-                  <button type="button" class="action-row-btn" data-action="rollAction">
-                    {{#if (eq item.type "ability")}}
-                      <span class="ability-icon"><img src="{{item.img}}" alt="" /></span>
-                    {{else}}
-                      <span class="action-icon type-{{item.system.actionType}}"><img src="{{item.img}}" alt="" /></span>
-                    {{/if}}
-                    <div class="action-text">
-                      <span class="action-name">{{item.name}}</span>
-                      {{#if (eq item.type "ability")}}
-                        <span class="action-sub">{{item.system.description}}</span>
-                      {{else}}
-                        <span class="action-sub">{{localize (concat "VEILRUNNER.ActionType." item.system.actionType)}}</span>
-                      {{/if}}
-                    </div>
-                    <span class="action-cost">{{#if (eq item.type "ability")}}{{item.system.recharge}}{{else}}{{item.system.cost}}{{/if}}</span>
-                    <i class="fa-solid fa-chevron-left"></i>
-                  </button>
-                </li>
+          <section class="actions-workspace {{actionWorkspace.view}}">
+            <div class="actions-workspace-list">
+              <header class="actions-workspace-header">
+                <div class="actions-workspace-controls">
+                  {{#if (eq actionWorkspace.view "card")}}
+                    <label class="actions-sort-select">
+                      <select data-action="setActionCardSort" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.Sort'}}">
+                        <option value="type" {{#if (eq actionWorkspace.cardSort "type")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortType'}}</option>
+                        <option value="name-asc" {{#if (eq actionWorkspace.cardSort "name-asc")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortAZ'}}</option>
+                        <option value="name-desc" {{#if (eq actionWorkspace.cardSort "name-desc")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortZA'}}</option>
+                        <option value="cost" {{#if (eq actionWorkspace.cardSort "cost")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortCost'}}</option>
+                      </select>
+                    </label>
+                  {{/if}}
+                  <button type="button" class="actions-view-btn {{#if (eq actionWorkspace.view "card")}}active{{/if}}" data-action="setActionView" data-view="card" title="{{localize 'VEILRUNNER.ActionWorkspace.CardMode'}}"><i class="fa-solid fa-table-cells-large"></i></button>
+                  <button type="button" class="actions-view-btn {{#if (eq actionWorkspace.view "list")}}active{{/if}}" data-action="setActionView" data-view="list" title="{{localize 'VEILRUNNER.ActionWorkspace.ListMode'}}"><i class="fa-solid fa-list"></i></button>
+                </div>
+              </header>
+              {{#if (eq actionWorkspace.view "card")}}
+                <div class="actions-card-grid">
+                  {{#each actionWorkspace.items as |item|}}
+                    <article class="actions-card" data-item-id="{{item.id}}">
+                      <span class="actions-card-count">{{item.actionCount}}</span>
+                      <span class="actions-card-type">{{item.typeLabel}}</span>
+                      <img src="{{item.img}}" alt="" />
+                      <h3>{{item.name}}</h3>
+                      <div class="actions-item-buttons">
+                        <button type="button" data-action="sendActionToChat" title="{{localize 'VEILRUNNER.ActionWorkspace.SendToChat'}}"><i class="fa-solid fa-message"></i></button>
+                        <button type="button" data-action="showActionDetails" title="{{localize 'VEILRUNNER.ActionWorkspace.Details'}}"><i class="fa-solid fa-circle-info"></i></button>
+                        <button type="button" data-action="rollAction" title="{{localize 'VEILRUNNER.ActionWorkspace.Roll'}}"><i class="fa-solid fa-dice-d20"></i></button>
+                      </div>
+                    </article>
+                  {{else}}
+                    <p class="empty-row">{{localize actionWorkspace.emptyLabel}}</p>
+                  {{/each}}
+                </div>
               {{else}}
-                <li class="empty-row">{{localize 'VEILRUNNER.NoFavorites'}}</li>
-              {{/each}}
-            </ul>
-          {{else if (eq subTabs.actions "actions")}}
-            <ul class="action-list">
-              {{#each standardActions as |item|}}
-                <li class="action-row" data-item-id="{{item.id}}">
-                  <button type="button" class="action-row-btn" data-action="rollAction">
-                    <span class="action-icon type-{{item.system.actionType}}"><img src="{{item.img}}" alt="" /></span>
-                    <div class="action-text">
-                      <span class="action-name">{{item.name}}</span>
-                      <span class="action-sub">{{localize (concat "VEILRUNNER.ActionType." item.system.actionType)}}</span>
-                    </div>
-                    <span class="action-cost">{{item.system.cost}}</span>
-                    <i class="fa-solid fa-chevron-left"></i>
-                  </button>
-                </li>
-              {{else}}
-                <li class="empty-row">{{localize 'VEILRUNNER.NoActions'}}</li>
-              {{/each}}
-            </ul>
-          {{else if (eq subTabs.actions "abilities")}}
-            <ul class="ability-list">
-              {{#each abilities as |item|}}
-                <li class="ability-row" data-item-id="{{item.id}}">
-                  <button type="button" class="action-row-btn" data-action="rollAction">
-                    <span class="ability-icon"><img src="{{item.img}}" alt="" /></span>
-                    <div class="ability-text">
-                      <span class="ability-name">{{item.name}}</span>
-                      <span class="ability-sub">{{item.system.description}}</span>
-                    </div>
-                    <span class="ability-recharge">{{item.system.recharge}}</span>
-                  </button>
-                </li>
-              {{else}}
-                <li class="empty-row">{{localize 'VEILRUNNER.NoAbilities'}}</li>
-              {{/each}}
-            </ul>
-          {{else if (eq subTabs.actions "reactions")}}
-            <ul class="action-list">
-              {{#each reactionActions as |item|}}
-                <li class="action-row" data-item-id="{{item.id}}">
-                  <button type="button" class="action-row-btn" data-action="rollAction">
-                    <span class="action-icon type-{{item.system.actionType}}"><img src="{{item.img}}" alt="" /></span>
-                    <div class="action-text">
-                      <span class="action-name">{{item.name}}</span>
-                      <span class="action-sub">{{localize (concat "VEILRUNNER.ActionType." item.system.actionType)}}</span>
-                    </div>
-                    <span class="action-cost">{{item.system.cost}}</span>
-                    <i class="fa-solid fa-chevron-left"></i>
-                  </button>
-                </li>
-              {{else}}
-                <li class="empty-row">{{localize 'VEILRUNNER.NoReactions'}}</li>
-              {{/each}}
-            </ul>
-          {{else if (eq subTabs.actions "magic")}}
-            <ul class="action-list">
-              {{#each magicActions as |item|}}
-                <li class="action-row" data-item-id="{{item.id}}">
-                  <button type="button" class="action-row-btn" data-action="rollAction">
-                    <span class="action-icon type-{{item.system.actionType}}"><img src="{{item.img}}" alt="" /></span>
-                    <div class="action-text">
-                      <span class="action-name">{{item.name}}</span>
-                      <span class="action-sub">{{localize (concat "VEILRUNNER.ActionType." item.system.actionType)}}</span>
-                    </div>
-                    <span class="action-cost">{{item.system.cost}}</span>
-                    <i class="fa-solid fa-chevron-left"></i>
-                  </button>
-                </li>
-              {{else}}
-                <li class="empty-row">{{localize 'VEILRUNNER.NoMagic'}}</li>
-              {{/each}}
-            </ul>
-          {{else if (eq subTabs.actions "tech")}}
-            <ul class="action-list">
-              {{#each techActions as |item|}}
-                <li class="action-row" data-item-id="{{item.id}}">
-                  <button type="button" class="action-row-btn" data-action="rollAction">
-                    <span class="action-icon type-{{item.system.actionType}}"><img src="{{item.img}}" alt="" /></span>
-                    <div class="action-text">
-                      <span class="action-name">{{item.name}}</span>
-                      <span class="action-sub">{{localize (concat "VEILRUNNER.ActionType." item.system.actionType)}}</span>
-                    </div>
-                    <span class="action-cost">{{item.system.cost}}</span>
-                    <i class="fa-solid fa-chevron-left"></i>
-                  </button>
-                </li>
-              {{else}}
-                <li class="empty-row">{{localize 'VEILRUNNER.NoTech'}}</li>
-              {{/each}}
-            </ul>
-          {{/if}}
+                <div class="actions-list-table">
+                  <div class="actions-list-head">
+                    <button type="button" data-action="sortActionList" data-sort-key="actions" title="{{localize 'VEILRUNNER.ActionWorkspace.ActionCount'}}" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.ActionCount'}}"><i class="fa-solid fa-list-ol" aria-hidden="true"></i></button>
+                    <button type="button" data-action="sortActionList" data-sort-key="name" title="{{localize 'VEILRUNNER.ActionWorkspace.Name'}}" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.Name'}}"><i class="fa-solid fa-tag" aria-hidden="true"></i></button>
+                    <button type="button" data-action="sortActionList" data-sort-key="type" title="{{localize actionWorkspace.typeLabel}}" aria-label="{{localize actionWorkspace.typeLabel}}"><i class="fa-solid fa-burst" aria-hidden="true"></i></button>
+                    <button type="button" data-action="sortActionList" data-sort-key="cost" title="{{localize 'VEILRUNNER.ActionWorkspace.Cost'}} / {{localize 'VEILRUNNER.ActionWorkspace.Recharge'}}" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.Cost'}} / {{localize 'VEILRUNNER.ActionWorkspace.Recharge'}}"><i class="fa-solid fa-clock" aria-hidden="true"></i></button>
+                    <span></span>
+                  </div>
+                  {{#each actionWorkspace.items as |item|}}
+                    <article class="actions-list-row" data-item-id="{{item.id}}">
+                      <span class="actions-list-count">{{item.actionCount}}</span>
+                      <strong>{{item.name}}</strong>
+                      <span class="actions-list-damage" title="{{item.damageTooltip}}">
+                        {{#if item.damageValue}}<strong>{{item.damageValue}}</strong>{{/if}}
+                        {{#if item.damageIcon}}<i class="{{item.damageIcon}}" aria-hidden="true"></i>{{/if}}
+                      </span>
+                      <span class="actions-list-recast" title="{{item.cost}}" aria-label="{{item.cost}}"><i class="fa-solid fa-clock" aria-hidden="true"></i></span>
+                      <div class="actions-item-buttons">
+                        <button type="button" data-action="sendActionToChat" title="{{localize 'VEILRUNNER.ActionWorkspace.SendToChat'}}"><i class="fa-solid fa-message"></i></button>
+                        <button type="button" data-action="showActionDetails" title="{{localize 'VEILRUNNER.ActionWorkspace.Details'}}"><i class="fa-solid fa-circle-info"></i></button>
+                        <button type="button" data-action="rollAction" title="{{localize 'VEILRUNNER.ActionWorkspace.Roll'}}"><i class="fa-solid fa-dice-d20"></i></button>
+                      </div>
+                    </article>
+                  {{else}}
+                    <p class="empty-row">{{localize actionWorkspace.emptyLabel}}</p>
+                  {{/each}}
+                </div>
+              {{/if}}
+            </div>
+          </section>
 
         {{else if (eq section "inventory")}}
           <ul class="action-list">
@@ -1011,6 +980,11 @@
                 <span><i class="fa-solid fa-users-slash"></i> {{localize 'VEILRUNNER.ShowPartyList'}}</span>
                 <span class="ui-toggle-check {{#if sheetOptions.hidePartyList}}is-active{{/if}}" aria-hidden="true"></span>
               </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showAllPartyResources}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showAllPartyResources" aria-pressed="{{#if sheetOptions.showAllPartyResources}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-bars-staggered"></i> {{localize 'VEILRUNNER.ShowAllPartyResources'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showAllPartyResources}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <p>{{localize 'VEILRUNNER.ShowAllPartyResourcesHint'}}</p>
               <h5>{{localize 'VEILRUNNER.PANIndicatorColors'}}</h5>
               <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANOff'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panOffColor" value="{{sheetOptions.panOffColor}}" data-ui-preview="panOffColor" /><button type="button" data-reset-ui-color="panOffColor">Default</button></span></div>
               <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANOn'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panOnColor" value="{{sheetOptions.panOnColor}}" data-ui-preview="panOnColor" /><button type="button" data-reset-ui-color="panOnColor">Default</button></span></div>

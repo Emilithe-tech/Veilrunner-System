@@ -1,6 +1,8 @@
 import { VEILRUNNER_PERSONA_INDEX_MODIFIERS, VEILRUNNER_PROFESSIONS } from "../data/professions.mjs";
 import { attributePointsForLevel, attributePointsGainedAtLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
 import { xpForLevel } from "../data/xp.mjs";
+import { talentTreePage, skillPointCostForLevel } from "../data/talent-tree.mjs";
+import { VEILRUNNER_STARTER_STORE } from "../data/starter-store.mjs";
 
 const ARCHETYPE_OPTIONS = ["Physique", "Armament", "Magic", "Tech", "Social"];
 const PROFESSION_ARCHETYPES = {
@@ -92,12 +94,23 @@ const STEPS = [
   { key: "background", label: "Background", icon: "fa-solid fa-scroll" },
   { key: "profession", label: "Path", icon: "fa-solid fa-id-card-clip" },
   { key: "attributes", label: "Attributes", icon: "fa-solid fa-dumbbell" },
-  { key: "qualitiesFlaws", label: "Perks & Flaws", icon: "fa-solid fa-scale-balanced" },
   { key: "talents", label: "Talents & Skills", icon: "fa-solid fa-diagram-project" },
+  { key: "qualitiesFlaws", label: "Perks & Flaws", icon: "fa-solid fa-scale-balanced" },
+  { key: "contacts", label: "Contacts", icon: "fa-solid fa-address-book" },
+  { key: "languages", label: "Languages", icon: "fa-solid fa-language" },
+  { key: "persona", label: "Persona Index", icon: "fa-solid fa-sliders" },
   { key: "credits", label: "Purchases", icon: "fa-solid fa-cart-shopping" },
-  { key: "bio", label: "Bio", icon: "fa-solid fa-book-open" },
+  { key: "bio", label: "Biography", icon: "fa-solid fa-book-open" },
   { key: "review", label: "Review", icon: "fa-solid fa-circle-check" }
 ];
+const STEP_GROUPS = Object.freeze([
+  { label: "Level of Play", keys: ["level"] },
+  { label: "Identity", keys: ["species", "origin", "background"] },
+  { label: "Build", keys: ["profession", "attributes", "talents", "qualitiesFlaws"] },
+  { label: "Details", keys: ["contacts", "languages", "persona", "credits", "bio"] },
+  { label: "Review", keys: ["review"] }
+]);
+const LEVEL_UP_STEP_KEYS = Object.freeze(["attributes", "talents", "qualitiesFlaws", "review"]);
 const existingCreators = new Map();
 
 function normalizeArchetype(value) {
@@ -205,9 +218,14 @@ function defaultState(actor) {
       || number(system.characterGeneration?.talentPointsSpent) + number(system.characterGeneration?.skillPointsSpent) + number(system.characterGeneration?.spellPointsSpent),
     talentSkillNotes: system.characterGeneration?.notes ?? "",
     talentSkillSelections: foundry.utils.deepClone(system.characterGeneration?.talentSkillSelections ?? []),
+    talentTree: foundry.utils.deepClone(system.talentTree ?? { branches: [], leaves: [] }),
     qualityFlawDialog: null,
+    contactFocus: 0,
     qualityFlawSearch: "",
-    qualityFlawView: "tier",
+    qualityFlawTypeFilter: "all",
+    qualityFlawPillarFilter: "all",
+    qualityFlawTierFilter: "all",
+    qualityFlawFocus: { kind: "quality", tier: "Minor", points: 1, pillar: "Physical" },
     talentPointsSpent: number(system.characterGeneration?.talentPointsSpent),
     talentNotes: system.characterGeneration?.notes ?? "",
     skillPointsSpent: number(system.characterGeneration?.skillPointsSpent),
@@ -224,7 +242,10 @@ function defaultState(actor) {
     appearance: "",
     personality: "",
     history: "",
-    personaIndex: foundry.utils.deepClone(system.personaIndex ?? {})
+    personaIndex: foundry.utils.deepClone(system.personaIndex ?? {}),
+    // Existing characters retain their authored Persona values; new creation
+    // previews the evolving recommendation until a player edits it.
+    personaTouched: Object.values(system.personaIndex ?? {}).some(value => number(value) !== 0)
   };
 }
 
@@ -235,25 +256,34 @@ export function registerCharacterCreation() {
   });
 }
 
-export function openCharacterCreation(actor) {
+export function openCharacterCreation(actor, { mode = "creation" } = {}) {
   const existing = existingCreators.get(actor.id);
   if (existing) {
     existing.bringToFront();
     return existing;
   }
-  const creator = new CharacterCreationOverlay(actor);
+  const creator = new CharacterCreationOverlay(actor, { mode });
   existingCreators.set(actor.id, creator);
   creator.render();
   return creator;
 }
 
 class CharacterCreationOverlay {
-  constructor(actor) {
+  constructor(actor, { mode = "creation" } = {}) {
     this.actor = actor;
+    this.mode = mode === "levelUp" ? "levelUp" : "creation";
     this.step = 0;
     this.treeCanvasOpen = false;
+    this.treePage = "skills";
     this.pathTransitioning = false;
+    this.openTreeGroups = new Set();
+    this.animateNavigation = false;
     this.state = defaultState(actor);
+    this.initialTalentTree = foundry.utils.deepClone(this.state.talentTree);
+    if (this.mode === "levelUp") {
+      this.state.startingLevel = Math.max(1, number(actor.system?.level, 1) + 1);
+      this.state.startingLevelLocked = true;
+    }
     this.referenceOptions = Object.fromEntries(Object.keys(REFERENCE_PACKS).map(key => [key, []]));
     this.root = document.createElement("div");
     this.root.className = "veilrunner vr-character-creation";
@@ -261,6 +291,7 @@ class CharacterCreationOverlay {
   }
 
   get #steps() {
+    if (this.mode === "levelUp") return STEPS.filter(step => LEVEL_UP_STEP_KEYS.includes(step.key));
     return this.state.startingLevelLocked ? STEPS.filter(step => step.key !== "level") : STEPS;
   }
 
@@ -287,12 +318,11 @@ class CharacterCreationOverlay {
   }
 
   #draw() {
-    if (this.treeCanvasOpen) {
-      this.#drawTalentSkillCanvas();
-      return;
-    }
     const steps = this.#steps;
     const current = steps[this.step];
+    if (current?.key === "persona" && !this.state.personaTouched) this.state.personaIndex = this.#personaRecommendation().values;
+    this.root.classList.toggle("vr-cc-review-mode", current?.key === "review");
+    this.root.classList.toggle("vr-cc-talent-mode", current?.key === "talents");
     this.root.innerHTML = `
       <div class="vr-cc-shell">
         <aside class="vr-cc-rail">
@@ -300,11 +330,8 @@ class CharacterCreationOverlay {
             <span>Veilrunner</span>
             <strong>Character Generation</strong>
           </div>
-          <nav class="vr-cc-steps">${steps.map((step, i) => `
-            <button type="button" class="vr-cc-step ${i === this.step ? "active" : ""} ${i < this.step ? "complete" : ""}" data-step="${i}" title="${escape(step.label)}">
-              <i class="${step.icon}"></i><span>${escape(step.label)}</span>
-            </button>
-          `).join("")}</nav>
+          <nav class="vr-cc-steps">${this.#treeNavigation(steps)}</nav>
+          <footer class="vr-cc-progress"><span>Character Generation</span><strong>${this.step + 1} / ${steps.length}</strong><progress max="${steps.length}" value="${this.step + 1}"></progress></footer>
         </aside>
         <main class="vr-cc-main">
           <header class="vr-cc-header">
@@ -312,22 +339,21 @@ class CharacterCreationOverlay {
               <span>Step ${this.step + 1} of ${steps.length}</span>
               <h1>${escape(current.label)}</h1>
             </div>
-            <button type="button" class="vr-cc-icon" data-action="cancel" title="Close"><i class="fa-solid fa-xmark"></i></button>
           </header>
           <section class="vr-cc-panel">${this.#stepContent(current.key)}</section>
-          <footer class="vr-cc-footer">
-            <button type="button" class="vr-cc-btn" data-action="previous" ${this.step === 0 ? "disabled" : ""}><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
-            <div class="vr-cc-footer-status">${escape(this.#summaryLine())}</div>
-            ${this.step === steps.length - 1
-              ? `<button type="button" class="vr-cc-btn primary" data-action="confirm"><i class="fa-solid fa-check"></i><span>Confirm</span></button>`
-              : `<button type="button" class="vr-cc-btn primary" data-action="next"><span>Next</span><i class="fa-solid fa-arrow-right"></i></button>`}
-          </footer>
         </main>
-        <aside class="vr-cc-info">
-          ${this.#infoPanelContent(current.key)}
-        </aside>
+        ${current.key === "talents" ? "" : `<aside class="vr-cc-info">${this.#infoPanelContent(current.key)}</aside>`}
+        <footer class="vr-cc-footer vr-cc-flow-footer">
+          <button type="button" class="vr-cc-btn" data-action="previous" ${this.step === 0 ? "disabled" : ""}><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
+          <div class="vr-cc-footer-status">${escape(this.#summaryLine())}</div>
+          ${this.step === steps.length - 1
+            ? `<button type="button" class="vr-cc-btn primary" data-action="confirm"><i class="fa-solid fa-check"></i><span>Confirm</span></button>`
+            : `<button type="button" class="vr-cc-btn primary" data-action="next"><span>Next</span><i class="fa-solid fa-arrow-right"></i></button>`}
+        </footer>
+        ${current.key === "review" ? "" : `<aside class="vr-cc-live-build">${this.#liveBuild()}</aside>`}
       </div>
       ${this.#qualityFlawDialogMarkup()}`;
+    this.animateNavigation = false;
   }
 
   #refreshInfoPanel() {
@@ -344,6 +370,9 @@ class CharacterCreationOverlay {
     if (key === "qualitiesFlaws") return this.#qualitiesFlawsStep();
     if (key === "talents") return this.#talentsAndSkillsStep();
     if (key === "credits") return this.#creditsStep();
+    if (key === "contacts") return this.#contactsStep();
+    if (key === "languages") return this.#textareaOnly("languages", "Languages", "One language per line, or comma separated.");
+    if (key === "persona") return this.#personaStep();
     if (key === "bio") return this.#bioStep();
     return this.#reviewStep();
   }
@@ -426,6 +455,45 @@ class CharacterCreationOverlay {
       ${discipline.background ? `<div class="vr-cc-discipline-background"><strong>Background</strong><p>${escape(discipline.background)}</p></div>` : ""}` : ""}`;
   }
 
+  #refreshLiveBuild() {
+    const panel = this.root.querySelector(".vr-cc-live-build");
+    if (panel) panel.innerHTML = this.#liveBuild();
+  }
+
+  #refreshLivePersonaPips() {
+    for (const axis of PERSONA_AXES) {
+      const value = clampPersona(this.state.personaIndex?.[axis.key]);
+      const leftPips = Math.floor(Math.max(0, -value) / 10);
+      const rightPips = Math.floor(Math.max(0, value) / 10);
+      for (const pips of this.root.querySelectorAll(`[data-persona-axis="${axis.key}"]`)) {
+        pips.style.setProperty("--vr-persona-position", `${((value + 100) / 2).toFixed(1)}%`);
+        pips.setAttribute("aria-label", `${axis.left} to ${axis.right}: ${value}`);
+        pips.querySelectorAll(".left i").forEach((pip, index) => pip.classList.toggle("active", index >= 10 - leftPips));
+        pips.querySelectorAll(".right i").forEach((pip, index) => pip.classList.toggle("active", index < rightPips));
+      }
+    }
+  }
+
+  #personaPips(axis, value) {
+    const leftPips = Math.floor(Math.max(0, -value) / 10);
+    const rightPips = Math.floor(Math.max(0, value) / 10);
+    return `<span class="vr-cc-persona-pips" data-persona-axis="${axis.key}" style="--vr-persona-position: ${((value + 100) / 2).toFixed(1)}%" aria-label="${escape(`${axis.left} to ${axis.right}: ${value}`)}"><span class="vr-cc-persona-pip-side left">${Array.from({ length: 10 }, (_, index) => `<i class="${index >= 10 - leftPips ? "active" : ""}"></i>`).join("")}</span><b aria-hidden="true"></b><span class="vr-cc-persona-pip-side right">${Array.from({ length: 10 }, (_, index) => `<i class="${index < rightPips ? "active" : ""}"></i>`).join("")}</span><em aria-hidden="true"></em></span>`;
+  }
+
+  #treeNavigation(steps) {
+    const visible = new Set(steps.map(step => step.key));
+    return STEP_GROUPS.filter(group => group.keys.some(key => visible.has(key))).map(group => {
+      const groupSteps = group.keys.filter(key => visible.has(key));
+      const open = groupSteps.includes(steps[this.step]?.key) || this.openTreeGroups.has(group.label);
+      const children = group.keys.filter(key => visible.has(key)).map(key => {
+        const index = steps.findIndex(step => step.key === key);
+        const step = steps[index];
+        return `<button type="button" class="vr-cc-step child ${index === this.step ? "active" : ""} ${index < this.step ? "complete" : ""}" data-step="${index}"><i class="${step.icon}"></i><span>${escape(step.label)}</span></button>`;
+      }).join("");
+      return `<section class="vr-cc-tree-group"><button type="button" class="vr-cc-tree-trunk" data-tree-group="${escape(group.label)}" aria-expanded="${open}"><i class="fa-solid fa-chevron-${open ? "down" : "right"}"></i><span>${escape(group.label)}</span></button><div class="vr-cc-tree-branches ${open ? "open" : ""} ${open && this.animateNavigation ? "animate" : ""}">${children}</div></section>`;
+    }).join("");
+  }
+
   async #loadReferenceOptions() {
     const entries = await Promise.all(Object.entries(REFERENCE_PACKS).map(async ([key, packId]) => {
       const pack = game.packs.get(packId);
@@ -501,6 +569,7 @@ class CharacterCreationOverlay {
   #levelStep() {
     const selected = number(this.state.startingLevel);
     return `<div class="vr-cc-reference-cards vr-cc-level-cards">
+      <label class="vr-cc-field vr-cc-name-at-level"><span>Character Name <small>(optional)</small></span><input name="name" type="text" value="${escape(this.state.name)}" placeholder="You can add this later" /></label>
       <p class="vr-cc-reference-cards-intro">Choose a starting level before selecting a species. This sets the MVP Attribute, Talent, and Skill Point pools.</p>
       <section class="vr-cc-reference-card-category"><h2>Starting Level</h2><div class="vr-cc-reference-card-options">
         ${LEVEL_OPTIONS.map(option => `<button type="button" class="vr-cc-reference-card ${option.level === selected ? "active" : ""}" data-level-choice="${option.level}" aria-pressed="${option.level === selected}">
@@ -519,30 +588,7 @@ class CharacterCreationOverlay {
   }
 
   async #applyStartingLevel() {
-    const level = Math.max(1, number(this.state.startingLevel, 1));
-    const attributeBudget = attributePointsForLevel(level);
-    const talentBudget = talentPointsForLevel(level);
-    const skillBudget = skillPointsForLevel(level);
-    const attributeSpent = this.#attributePointCost();
-    const talentSpent = Math.min(talentBudget, Math.max(0, number(this.state.talentPointsSpent)));
-    const skillSpent = Math.min(skillBudget, Math.max(0, number(this.state.skillPointsSpent)));
-
-    await this.actor.update({
-      "system.level": level,
-      "system.experience.max": xpForLevel(level),
-      "system.attributes": this.state.attributes,
-      "system.attributePoints.total": attributeBudget,
-      "system.attributePoints.available": Math.max(0, attributeBudget - attributeSpent),
-      "system.talentPoints.total": talentBudget,
-      "system.talentPoints.available": Math.max(0, talentBudget - talentSpent),
-      "system.skillPoints.total": skillBudget,
-      "system.skillPoints.available": Math.max(0, skillBudget - skillSpent),
-      "system.characterGeneration.startingLevel": level,
-      "system.characterGeneration.attributePointsSpent": attributeSpent,
-      "system.characterGeneration.talentPointsSpent": talentSpent,
-      "system.characterGeneration.skillPointsSpent": skillSpent,
-      "system.characterGeneration.talentSkillPointsSpent": talentSpent + skillSpent
-    });
+    // Draft-only by design. Actor data is written atomically from Review → Confirm.
   }
 
   #selectedReference(key) {
@@ -596,39 +642,61 @@ class CharacterCreationOverlay {
   }
 
   #qualitiesFlawsStep() {
-    const view = this.state.qualityFlawView === "pillar" ? "pillar" : "tier";
     const query = String(this.state.qualityFlawSearch ?? "").trim().toLowerCase();
+    const type = ["all", "quality", "flaw"].includes(this.state.qualityFlawTypeFilter) ? this.state.qualityFlawTypeFilter : "all";
+    const pillar = ["all", ...QUALITY_FLAW_PILLARS].includes(this.state.qualityFlawPillarFilter) ? this.state.qualityFlawPillarFilter : "all";
+    const tierFilter = ["all", ...QUALITY_FLAW_TIERS].includes(this.state.qualityFlawTierFilter) ? this.state.qualityFlawTierFilter : "all";
     const matches = (...values) => !query || values.some(value => String(value).toLowerCase().includes(query));
-    const rows = view === "tier"
-      ? QUALITY_FLAW_TIERS.map((tier, index) => ({ label: `${tier} — ${index + 1} ${index ? "Points" : "Point"}`, tier, points: index + 1 }))
-      : QUALITY_FLAW_PILLARS.map(pillar => ({ label: pillar, tier: "Minor", points: 1, pillar }));
-    const visibleRows = rows.filter(row => matches(row.label, "custom perk", "custom flaw"));
+    const visibleRows = QUALITY_FLAW_TIERS.flatMap((tier, index) => ["quality", "flaw"].map(kind => ({ kind, tier, points: index + 1, pillar: pillar === "all" ? "" : pillar })))
+      .filter(row => (type === "all" || row.kind === type) && (tierFilter === "all" || row.tier === tierFilter) && matches(row.tier, row.pillar, `custom ${row.kind === "quality" ? "perk" : "flaw"}`));
+    const pill = (action, value, label, active) => `<button type="button" class="vr-cc-qf-pill ${active ? "active" : ""}" data-action="${action}" data-qf-filter="${value}" aria-pressed="${active}">${escape(label)}</button>`;
     return `<div class="vr-cc-qf-toolbar">
         <label class="vr-cc-qf-search"><i class="fa-solid fa-magnifying-glass"></i><input name="qualityFlawSearch" type="search" value="${escape(this.state.qualityFlawSearch)}" placeholder="Search perks and flaws" aria-label="Search perks and flaws" /></label>
-        <button type="button" class="vr-cc-btn" data-action="toggle-qf-view"><i class="fa-solid ${view === "tier" ? "fa-table-cells-large" : "fa-layer-group"}"></i><span>${view === "tier" ? "Pillar Mode" : "Tier Mode"}</span></button>
+      </div>
+      <div class="vr-cc-qf-filters" aria-label="Perk and flaw filters">
+        <div><span>Type</span>${pill("set-qf-type", "all", "All", type === "all")}${pill("set-qf-type", "quality", "Perks", type === "quality")}${pill("set-qf-type", "flaw", "Flaws", type === "flaw")}</div>
+        <div><span>Pillar</span>${pill("set-qf-pillar", "all", "All Pillars", pillar === "all")}${QUALITY_FLAW_PILLARS.map(value => pill("set-qf-pillar", value, value, pillar === value)).join("")}</div>
+        <div><span>Tier</span>${pill("set-qf-tier", "all", "All Tiers", tierFilter === "all")}${QUALITY_FLAW_TIERS.map((value, index) => pill("set-qf-tier", value, `${index + 1} PT`, tierFilter === value)).join("")}</div>
       </div>
       <div class="vr-cc-qf-grid">
-        <div class="vr-cc-qf-column-headings"><h2>Perks</h2><h2>Flaws</h2></div>
         ${visibleRows.length ? visibleRows.map(row => `<section class="vr-cc-qf-tier-row">
-          <h3>${escape(row.label)}</h3>
           <div class="vr-cc-qf-tier-options">
-            ${this.#qualityFlawChoiceCard("quality", row.tier, row.points, row.pillar)}
-            ${this.#qualityFlawChoiceCard("flaw", row.tier, row.points, row.pillar)}
+            ${this.#qualityFlawChoiceCard(row.kind, row.tier, row.points, row.pillar)}
           </div>
-        </section>`).join("") : `<p class="vr-cc-qf-empty">No perks or flaws match that search.</p>`}
+        </section>`).join("") : `<p class="vr-cc-qf-empty">No perks or flaws match those filters.</p>`}
       </div>`;
   }
 
   #qualityFlawChoiceCard(kind, tier, points, pillar = "") {
-    return `<article class="vr-cc-qf-choice-card ${kind}">
-        <span class="vr-cc-qf-choice-icon"><i class="fa-solid ${kind === "quality" ? "fa-sparkles" : "fa-triangle-exclamation"}"></i></span>
+    const focus = this.state.qualityFlawFocus ?? {};
+    const focused = focus.kind === kind && focus.tier === tier && focus.points === points && focus.pillar === pillar;
+    return `<article class="vr-cc-qf-choice-card ${kind} ${focused ? "focused" : ""}">
+        <button type="button" class="vr-cc-qf-choice-focus" data-action="focus-qf-choice" data-qf-kind="${kind}" data-qf-tier="${tier}" data-qf-points="${points}" data-qf-pillar="${pillar}" aria-label="Inspect custom ${kind === "quality" ? "perk" : "flaw"}"></button>
+        <header><span class="vr-cc-qf-choice-icon"><i class="fa-solid ${kind === "quality" ? "fa-sparkles" : "fa-triangle-exclamation"}"></i></span><strong>${points} PT</strong></header>
         <strong>Custom ${kind === "quality" ? "Perk" : "Flaw"}</strong>
+        <small>${escape(tier)} - ${escape(pillar || "Choose pillar")}</small>
         <button type="button" class="vr-cc-btn" data-action="open-qf-dialog" data-qf-kind="${kind}" data-qf-tier="${tier}" data-qf-points="${points}" ${pillar ? `data-qf-pillar="${pillar}"` : ""}>Select</button>
       </article>`;
   }
 
   #qualityFlawQuota(audit = this.#qualityFlawAudit()) {
     return `<section class="vr-cc-qf-quota"><strong>Perk & Flaw Quota</strong><span>Perks ${audit.qualityPoints}/10 | Flaws ${audit.flawPoints}/20 minimum | Minor ${audit.minorPoints}/8 | Resolve potential: ${audit.resolvePotential}</span></section>`;
+  }
+
+  #qualityFlawTracker() {
+    const audit = this.#qualityFlawAudit();
+    const pillarBar = pillar => {
+      const points = audit.pillarPoints[pillar] ?? 0;
+      return `<div class="vr-cc-qf-pillar"><span>${escape(pillar)}</span><progress max="10" value="${points}"></progress><strong>${points}/10</strong></div>`;
+    };
+    return `<header class="vr-cc-live-header"><div><span>Live Rules & Math</span><h2>Perks & Flaws</h2></div></header>
+      <div class="vr-cc-live-scroll vr-cc-qf-tracker">
+        ${this.#qualityFlawQuota(audit)}
+        <section class="vr-cc-qf-rules"><h3>Limits</h3><ul><li>Minor entries: ${audit.minorPoints}/8 pts</li><li>Perks: ${audit.qualityPoints}/10 pts</li><li>Flaws: ${audit.flawPoints}/20 pts minimum</li></ul></section>
+        <section class="vr-cc-qf-pillar-breakdown"><h3>Pillar Breakdown</h3>${QUALITY_FLAW_PILLARS.map(pillarBar).join("")}</section>
+        ${this.#qualityFlawTaken("quality", "Selected Perks", this.state.qualitiesTaken)}
+        ${this.#qualityFlawTaken("flaw", "Selected Flaws", this.state.flawsTaken)}
+      </div>`;
   }
 
   #qualityFlawTaken(kind, label, entries) {
@@ -660,7 +728,9 @@ class CharacterCreationOverlay {
     const minorPoints = [...(this.state.qualitiesTaken ?? []), ...(this.state.flawsTaken ?? [])]
       .filter(entry => entry.tier === "Minor").reduce((sum, entry) => sum + Math.max(0, number(entry.points)), 0);
     const exceedsPillar = (entries, entry) => total(entries.filter(item => String(item.pillar).trim().toLowerCase() === String(entry.pillar).trim().toLowerCase())) + Math.max(0, number(entry.points)) > 10;
-    return { qualityPoints, flawPoints, minorPoints, resolvePotential: Math.floor(flawPoints / 5), exceedsPillar };
+    const allEntries = [...(this.state.qualitiesTaken ?? []), ...(this.state.flawsTaken ?? [])];
+    const pillarPoints = Object.fromEntries(QUALITY_FLAW_PILLARS.map(pillar => [pillar, total(allEntries.filter(entry => entry.pillar === pillar))]));
+    return { qualityPoints, flawPoints, minorPoints, resolvePotential: Math.floor(flawPoints / 5), pillarPoints, exceedsPillar };
   }
 
   #infoPanelContent(key) {
@@ -708,17 +778,13 @@ class CharacterCreationOverlay {
       return `<div class="vr-cc-info-heading"><span>Information</span><h2>${escape(title)}</h2></div>
         <div class="vr-cc-reference"><strong>${escape((reference?.name ?? this.state[key]) || `Select ${title}`)}</strong>
         <p>${escape(description || fallbackDescription)}</p>
-        ${modifiers.length ? `<p><b>Persona modifiers:</b> ${escape(modifiers.join(", "))}</p>` : ""}</div>
-        <div class="vr-cc-info-summary"><dt>Current</dt><dd>${escape(this.#summaryLine())}</dd></div>`;
+        ${modifiers.length ? `<p><b>Persona modifiers:</b> ${escape(modifiers.join(", "))}</p>` : ""}</div>`;
     }
 
     if (key === "profession") {
       return `<div class="vr-cc-info-heading">
         <span>Information</span>
         <h2>Path</h2>
-      </div>
-      <div class="vr-cc-info-summary">
-        <dt>Current</dt><dd>${escape(selectedPath || "No path selected")}</dd>
       </div>
       <div class="vr-cc-reference">${this.#professionReference()}</div>`;
     }
@@ -737,18 +803,23 @@ class CharacterCreationOverlay {
       </div>`;
     }
 
+    if (key === "persona") {
+      return `<div class="vr-cc-info-heading"><span>Persona Index</span><h2>Ten-point markers</h2></div><div class="vr-cc-reference vr-cc-persona-guide"><p>Each illuminated segment is 10 points. The marker shows the current position; negative values move toward the left label and positive values toward the right label.</p>${PERSONA_AXES.map(axis => {
+        const value = clampPersona(this.state.personaIndex?.[axis.key]);
+        const direction = value === 0 ? "Balanced" : `${Math.abs(value)} toward ${value < 0 ? axis.left : axis.right}`;
+        return `<div><strong>${escape(axis.left)} / ${escape(axis.right)}</strong><span>-100 Â· -90 Â· -80 Â· -70 Â· -60 Â· -50 Â· -40 Â· -30 Â· -20 Â· -10 Â· 0 Â· +10 Â· +20 Â· +30 Â· +40 Â· +50 Â· +60 Â· +70 Â· +80 Â· +90 Â· +100</span><small>Current: ${escape(direction)}</small></div>`;
+      }).join("")}</div>`;
+    }
+
     if (key === "qualitiesFlaws") {
-      return `<div class="vr-cc-info-heading"><span>Selected</span><h2>Perks & Flaws</h2></div>
-        <div class="vr-cc-qf-selected">
-          ${this.#qualityFlawQuota()}
-          <section class="vr-cc-qf-rules"><h3>Rules</h3><ul>
-            <li>No more than 8 points toward Minor entries.</li>
-            <li>No more than 10 points per pillar: Physical, Social, Magical, or Technical.</li>
-            <li>Must take at least 20 points in Flaws.</li>
-            <li>Must not exceed 10 points in Perks.</li>
-          </ul></section>
-          ${this.#qualityFlawTaken("quality", "Selected Perks", this.state.qualitiesTaken)}
-          ${this.#qualityFlawTaken("flaw", "Selected Flaws", this.state.flawsTaken)}
+      const focus = this.state.qualityFlawFocus ?? { kind: "quality", tier: "Minor", points: 1, pillar: "Physical" };
+      const typeLabel = focus.kind === "flaw" ? "Flaw" : "Perk";
+      return `<div class="vr-cc-info-heading"><span>Item Inspector</span><h2>Custom ${typeLabel}</h2></div>
+        <div class="vr-cc-reference vr-cc-qf-inspector">
+          <div class="vr-cc-qf-inspector-badge">${escape(focus.points)} PT · ${escape(focus.tier)}</div>
+          <h3>${escape(focus.pillar)} ${typeLabel}</h3>
+          <p>Select opens the editable entry form. Add the finalized mechanical triggers, prerequisites, and lore description there; this system does not invent missing rule text.</p>
+          <p><b>Rule context:</b> each pillar is limited to 10 points. Minor entries collectively cannot exceed 8 points.</p>
         </div>`;
     }
 
@@ -760,39 +831,25 @@ class CharacterCreationOverlay {
     <div class="vr-cc-reference">
       <strong>${escape(title)}</strong>
       <p>${escape(body)}</p>
-    </div>
-    <div class="vr-cc-info-summary">
-      <dt>Current</dt><dd>${escape(this.#summaryLine())}</dd>
     </div>`;
   }
 
   #talentsAndSkillsStep() {
-    const selections = this.state.talentSkillSelections ?? [];
-    const talentBudget = talentPointsForLevel(this.state.startingLevel);
-    const skillBudget = skillPointsForLevel(this.state.startingLevel);
-    const talentSpent = Math.min(talentBudget, Math.max(0, number(this.state.talentPointsSpent)));
-    const skillSpent = Math.min(skillBudget, Math.max(0, number(this.state.skillPointsSpent)));
-    return `<div class="vr-cc-grid two">
-      <section class="vr-cc-tree-launch wide">
-        <div>
-          <span>Tree Canvas</span>
-          <h2>Skill and Spell Trees</h2>
-          <p>${escape(selections.length ? selections.join(", ") : "No tree selections confirmed yet.")}</p>
-        </div>
-        <button type="button" class="vr-cc-btn primary" data-action="open-tree-canvas">
-          <i class="fa-solid fa-diagram-project"></i><span>Open Tree Canvas</span>
-        </button>
-      </section>
-      <label class="vr-cc-field tall"><span>Talent and skill notes</span><textarea name="talentSkillNotes" placeholder="Record chosen talents, skill ranks, spell choices, and prerequisites.">${escape(this.state.talentSkillNotes)}</textarea></label>
-      <div class="vr-cc-grid two">
-        <label class="vr-cc-field"><span>Talent Points (TP) - ${Math.max(0, talentBudget - talentSpent)} available</span><input name="talentPointsSpent" type="number" min="0" max="${talentBudget}" value="${talentSpent}" /></label>
-        <label class="vr-cc-field"><span>Skill Points (SP) - ${Math.max(0, skillBudget - skillSpent)} available</span><input name="skillPointsSpent" type="number" min="0" max="${skillBudget}" value="${skillSpent}" /></label>
-      </div>
-    </div>`;
+    return this.#talentCanvas();
+  }
+
+  #talentCanvas() {
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    const trees = talentTreePage(page);
+    const board = trees.length
+      ? trees.map(tree => `<section class="vr-cc-tree-column"><h2>${escape(tree.name)}</h2>${(tree.branches ?? []).map(branch => this.#treeBranchMarkup(branch)).join("")}</section>`).join("")
+      : `<section class="vr-cc-tree-empty"><h2>${page === "magic" ? "Magic" : "Skills"} catalog not yet populated</h2><p>This canvas is ready for approved branches, leaves, prerequisites, and level requirements. No rules have been invented.</p></section>`;
+    return `<section class="vr-cc-talent-canvas"><header class="vr-cc-talent-summary"><div><span>Talent Points</span><strong>${this.#treeAvailable("talent")} available</strong></div><div><span>Skill Points</span><strong>${this.#treeAvailable("skill")} available</strong></div><div><span>Rank cost</span><strong>${skillPointCostForLevel(this.state.startingLevel)} SP</strong></div></header><main class="vr-cc-tree-board">${board}</main><footer class="vr-cc-talent-switch"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}"><i class="fa-solid fa-crosshairs"></i><span>Skills</span></button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}"><i class="fa-solid fa-wand-sparkles"></i><span>Magic</span></button></footer></section>`;
   }
 
   #drawTalentSkillCanvas() {
-    const selected = new Set(this.state.talentSkillSelections ?? []);
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    const trees = talentTreePage(page);
     this.root.innerHTML = `
       <div class="vr-cc-tree-canvas">
         <header class="vr-cc-tree-header">
@@ -802,47 +859,29 @@ class CharacterCreationOverlay {
           </div>
           <button type="button" class="vr-cc-icon" data-action="close-tree-canvas" title="Return"><i class="fa-solid fa-arrow-left"></i></button>
         </header>
-        <main class="vr-cc-tree-board">
-          ${TREE_COLUMNS.map(column => `<section class="vr-cc-tree-column">
-            <h2><i class="${column.icon}"></i><span>${escape(column.label)}</span></h2>
-            <div class="vr-cc-tree-nodes">
-              ${column.nodes.map((node, index) => {
-                const value = `${column.label}: ${node}`;
-                const active = selected.has(value);
-                return `<button type="button" class="vr-cc-tree-node ${active ? "active" : ""}" data-tree-toggle="${escape(value)}">
-                  <span>${escape(node)}</span>
-                  <small>Tier ${index < 2 ? 1 : index < 4 ? 2 : 3}</small>
-                </button>`;
-              }).join("")}
-            </div>
-          </section>`).join("")}
-        </main>
+        <nav class="vr-cc-tree-tabs"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}">Skills</button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}">Magic</button></nav>
+        <main class="vr-cc-tree-board">${trees.length ? trees.map(tree => `<section class="vr-cc-tree-column"><h2>${escape(tree.name)}</h2>${(tree.branches ?? []).map(branch => this.#treeBranchMarkup(branch)).join("")}</section>`).join("") : `<section class="vr-cc-tree-empty"><h2>${page === "magic" ? "Magic" : "Skills"} catalog not yet populated</h2><p>This canvas is ready for approved branches, leaves, prerequisites, and level requirements. No rules have been invented.</p></section>`}</main>
         <footer class="vr-cc-tree-footer">
-          <div>${selected.size} selected</div>
+          <div>${(this.state.talentTree?.leaves ?? []).length} leaves purchased</div>
           <button type="button" class="vr-cc-btn primary" data-action="confirm-tree-canvas"><i class="fa-solid fa-check"></i><span>Confirm Selections</span></button>
         </footer>
       </div>`;
   }
 
   #creditsStep() {
-    return `<div class="vr-cc-grid two">
-      <label class="vr-cc-field"><span>Purchase Budget Remaining</span><input name="credits" type="number" min="0" value="${escape(this.state.credits)}" /></label>
-      <label class="vr-cc-field"><span>Purchase Budget Spent</span><input name="creditsSpent" type="number" min="0" value="${escape(this.state.creditsSpent)}" /></label>
-      <label class="vr-cc-field tall wide"><span>Purchases</span><textarea name="purchases" placeholder="Weapons, armor, gear, services, or campaign-specific purchases.">${escape(this.state.purchases)}</textarea></label>
-    </div>`;
+    const products = VEILRUNNER_STARTER_STORE;
+    return `<section class="vr-cc-storefront"><header><span>Starter Storefront</span><h2>Purchases</h2><p>${escape(String(this.state.credits ?? 0))} credits available. Inventory is created only when character generation is confirmed.</p></header>${products.length ? `<div class="vr-cc-store-grid"></div>` : `<div class="vr-cc-store-empty"><i class="fa-solid fa-store"></i><h3>Starter catalog not yet populated</h3><p>Approved products, prices, descriptions, and item definitions will appear here. No inventory has been invented.</p></div>`}</section>`;
   }
 
   #contactsStep() {
-    const contacts = this.state.contacts.length ? this.state.contacts : [{ name: "", role: "", disposition: "", notes: "" }];
-    return `<div class="vr-cc-list">
-      ${contacts.map((contact, i) => `<article class="vr-cc-contact">
-        <label><span>Name</span><input name="contacts.${i}.name" value="${escape(contact.name)}" /></label>
-        <label><span>Role</span><input name="contacts.${i}.role" value="${escape(contact.role)}" /></label>
-        <label><span>Disposition</span><input name="contacts.${i}.disposition" value="${escape(contact.disposition)}" /></label>
-        <label><span>Notes</span><input name="contacts.${i}.notes" value="${escape(contact.notes)}" /></label>
-      </article>`).join("")}
-      <button type="button" class="vr-cc-btn" data-action="add-contact"><i class="fa-solid fa-plus"></i><span>Add Contact</span></button>
-    </div>`;
+    const contacts = this.state.contacts ?? [];
+    const selected = Math.min(Math.max(0, number(this.state.contactFocus)), Math.max(0, contacts.length - 1));
+    const contact = contacts[selected];
+    return `<section class="vr-cc-contacts"><header><span>Starting Contacts</span><h2>Choose a card, then enter that contact's details.</h2></header>
+      <div class="vr-cc-contact-cards">${contacts.map((entry, index) => `<button type="button" class="vr-cc-reference-card ${index === selected ? "active" : ""}" data-contact-choice="${index}"><span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-solid fa-address-book"></i></span><span class="vr-cc-choice-name">${escape(entry.name || entry.role || `Contact ${index + 1}`)}</span></button>`).join("")}
+        <button type="button" class="vr-cc-reference-card vr-cc-contact-add" data-action="add-contact"><span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-solid fa-plus"></i></span><span class="vr-cc-choice-name">Add Contact</span></button></div>
+      ${contact ? `<article class="vr-cc-contact"><label><span>Name</span><input name="contacts.${selected}.name" value="${escape(contact.name)}" /></label><label><span>Role</span><input name="contacts.${selected}.role" value="${escape(contact.role)}" /></label><label><span>Disposition</span><input name="contacts.${selected}.disposition" value="${escape(contact.disposition)}" /></label><label><span>Notes</span><input name="contacts.${selected}.notes" value="${escape(contact.notes)}" /></label></article>` : `<p class="vr-cc-contact-empty">Select Add Contact to create your first contact card.</p>`}
+    </section>`;
   }
 
   #bioStep() {
@@ -851,10 +890,53 @@ class CharacterCreationOverlay {
         ${this.#field("name", "Character Name")}${this.#field("pronouns", "Pronouns")}${this.#field("age", "Age")}${this.#field("size", "Size")}
         ${this.#textareaOnly("appearance", "Appearance", "Visual details, style, notable gear.")}${this.#textareaOnly("personality", "Personality", "Mannerisms, values, first impressions.")}${this.#textareaOnly("history", "History", "Important past events and current motives.")}
       </div></section>
-      <section><h2>Contacts</h2>${this.#contactsStep()}</section>
-      <section><h2>Known Languages</h2>${this.#textareaOnly("languages", "Languages", "One language per line, or comma separated.")}</section>
-      <section><h2>Persona Index</h2>${this.#personaStep()}</section>
     </div>`;
+  }
+
+  #treeBranchMarkup(branch) {
+    const unlocked = (this.state.talentTree?.branches ?? []).includes(branch.id);
+    const requirements = branch.requires ?? [];
+    const met = requirements.every(id => (this.state.talentTree?.branches ?? []).includes(id));
+    return `<section class="vr-cc-tree-branch"><header><div><h3>${escape(branch.name)}</h3><p>${escape(branch.description ?? "")}</p></div><button type="button" class="vr-cc-btn" data-tree-branch="${escape(branch.id)}" ${unlocked || !met ? "disabled" : ""}>${unlocked ? "Unlocked" : `Unlock · ${Math.max(1, number(branch.talentCost, 1))} TP`}</button></header>${requirements.length ? `<small>Requires branches: ${escape(requirements.join(", "))}</small>` : ""}<div class="vr-cc-tree-nodes">${(branch.leaves ?? []).map(leaf => this.#treeLeafMarkup(branch, leaf, unlocked)).join("")}</div></section>`;
+  }
+
+  #treeLeafMarkup(branch, leaf, branchUnlocked) {
+    const entry = (this.state.talentTree?.leaves ?? []).find(candidate => candidate.id === leaf.id);
+    const requirementsMet = (leaf.requires ?? []).every(id => (this.state.talentTree?.leaves ?? []).some(candidate => candidate.id === id));
+    const levelMet = this.state.startingLevel >= Math.max(1, number(leaf.requiredLevel, 1));
+    const canUnlock = branchUnlocked && requirementsMet && levelMet;
+    const rankCost = skillPointCostForLevel(this.state.startingLevel);
+    return `<article class="vr-cc-tree-node ${entry ? "active" : ""}"><strong>${escape(leaf.name)}</strong><p>${escape(leaf.description ?? "")}</p><small>${entry ? `Rank ${entry.rank}` : `Unlock: ${Math.max(1, number(leaf.talentCost, 1))} TP`}${leaf.requiredLevel ? ` · Level ${leaf.requiredLevel}` : ""}</small><div>${entry ? `<button type="button" class="vr-cc-btn" data-tree-rank="${escape(leaf.id)}" ${entry.rank >= Math.max(1, number(leaf.maxRank, 5)) ? "disabled" : ""}>Rank +1 · ${rankCost} SP</button>` : `<button type="button" class="vr-cc-btn" data-tree-leaf="${escape(leaf.id)}" ${canUnlock ? "" : "disabled"}>Purchase</button>`}</div></article>`;
+  }
+
+  #treeCatalogEntry(id, kind) {
+    for (const page of ["skills", "magic"]) for (const tree of talentTreePage(page)) for (const branch of tree.branches ?? []) {
+      if (kind === "branch" && branch.id === id) return { branch };
+      const leaf = (branch.leaves ?? []).find(candidate => candidate.id === id);
+      if (kind === "leaf" && leaf) return { branch, leaf };
+    }
+    return null;
+  }
+
+  #treeSpent(tree = this.state.talentTree) {
+    let talent = 0;
+    let skill = 0;
+    for (const id of tree?.branches ?? []) talent += Math.max(1, number(this.#treeCatalogEntry(id, "branch")?.branch?.talentCost, 1));
+    for (const entry of tree?.leaves ?? []) {
+      const leaf = this.#treeCatalogEntry(entry.id, "leaf")?.leaf;
+      talent += Math.max(1, number(leaf?.talentCost, 1));
+      skill += Math.max(0, number(entry.rank, 1) - 1) * skillPointCostForLevel(this.state.startingLevel);
+    }
+    return { talent, skill };
+  }
+
+  #treeAvailable(pool) {
+    const budget = pool === "talent" ? talentPointsForLevel(this.state.startingLevel) : skillPointsForLevel(this.state.startingLevel);
+    const spent = this.#treeSpent()[pool];
+    if (this.mode !== "levelUp") return Math.max(0, budget - spent);
+    const source = this.actor.system?.[`${pool}Points`] ?? {};
+    const granted = Math.max(0, budget - number(source.total));
+    return Math.max(0, number(source.available) + granted - (spent - this.#treeSpent(this.initialTalentTree)[pool]));
   }
 
   #personaStep() {
@@ -863,16 +945,14 @@ class CharacterCreationOverlay {
       ? recommendation.sources.map(source => `${source.label}: ${source.modifiers.join(", ")}`).join(" | ")
       : "Choose a reference-backed species, origin, background, or discipline to build a recommendation.";
     return `<div class="vr-cc-persona">
-      <section class="vr-cc-persona-recommendation"><div><span>Recommended Persona Index</span><p>${escape(sourceList)}</p></div><button type="button" class="vr-cc-btn" data-action="apply-persona-recommendation">Use recommendation</button></section>
+      <section class="vr-cc-persona-recommendation"><div><span>Recommended Persona Index</span><p>${escape(sourceList)}</p></div><button type="button" class="vr-cc-btn" data-action="apply-persona-recommendation">Apply recommendation</button></section>
       ${PERSONA_AXES.map(axis => {
       const value = clampPersona(this.state.personaIndex[axis.key]);
       const suggested = recommendation.values[axis.key];
       return `<label class="vr-cc-axis">
-        <span>${escape(axis.left)}</span>
-        <input name="personaIndex.${axis.key}" type="range" min="-100" max="100" value="${value}" />
-        <span>${escape(axis.right)}</span>
-        <input name="personaIndex.${axis.key}" type="number" min="-100" max="100" value="${value}" />
-        <small>Recommended: ${suggested > 0 ? "+" : ""}${suggested}</small>
+        <span class="vr-cc-axis-heading"><b>${escape(axis.left)}</b><strong>${value > 0 ? "+" : ""}${value}</strong><b>${escape(axis.right)}</b></span>
+        ${this.#personaPips(axis, value)}
+        <span class="vr-cc-axis-controls"><input name="personaIndex.${axis.key}" type="range" min="-100" max="100" value="${value}" /><input name="personaIndex.${axis.key}" type="number" min="-100" max="100" value="${value}" /><small>Recommendation: ${suggested > 0 ? "+" : ""}${suggested}</small></span>
       </label>`;
     }).join("")}</div>`;
   }
@@ -909,9 +989,9 @@ class CharacterCreationOverlay {
       ["Languages", listFromText(this.state.languages).join(", ")],
       ["Name", this.state.name]
     ];
-    return `<div class="vr-cc-review">${rows.map(([label, value]) => `
-      <div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>
-    `).join("")}</div>`;
+    return `<section class="vr-cc-review"><header><span>Review</span><h2>Character Build Summary</h2><p>Review the selections below, then confirm to create the character.</p></header><div class="vr-cc-review-card-grid">${rows.map(([label, value]) => `
+      <button type="button" class="vr-cc-review-card" data-inspect-title="${escape(label)}" data-inspect-description="${escape(String(value || "No selection yet."))}"><span>${escape(label)}</span><strong>${escape(value || "Not selected")}</strong></button>
+    `).join("")}</div></section>`;
   }
 
   #summaryLine() {
@@ -924,6 +1004,35 @@ class CharacterCreationOverlay {
       for (const attribute of group.attributes) total += number(foundry.utils.getProperty(this.state, `attributes.${group.key}.${attribute}`));
     }
     return total;
+  }
+
+  #liveBuildCards(label, entries, mapEntry = entry => entry) {
+    const cards = (entries ?? []).map(mapEntry).filter(Boolean);
+    return `<section class="vr-cc-live-section"><h3>${escape(label)}</h3><div class="vr-cc-live-card-grid">${cards.length ? cards.map(card => `<button type="button" class="vr-cc-reference-card vr-cc-live-card" data-inspect-title="${escape(card.title)}" data-inspect-description="${escape(card.description ?? "No description is available.")}" title="${escape(card.description ?? "No description is available.")}"><span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-solid fa-id-badge"></i></span><span class="vr-cc-choice-name">${escape(card.title)}</span></button>`).join("") : "<p>None selected.</p>"}</div></section>`;
+  }
+
+  #liveBuild() {
+    const name = String(this.state.name ?? "").trim() || "Your Character";
+    const identity = [["Species", this.state.species], ["Origin", this.state.origin], ["Background", this.state.background], ["Discipline", this.state.discipline]]
+      .filter(([, value]) => value).map(([title, value]) => ({ title: value, description: title }));
+    const talents = this.state.talentTree?.leaves ?? [];
+    const contacts = this.#cleanContacts();
+    const personaValues = this.state.personaTouched ? this.state.personaIndex : this.#personaRecommendation().values;
+    return `<header class="vr-cc-live-header"><img src="${escape(this.actor.img || this.actor.system?.portraitImage || "icons/svg/mystery-man.svg")}" alt="${escape(name)} portrait" /><div><span>Live Build</span><h2>${escape(name)}</h2></div><button type="button" class="vr-cc-icon" data-action="cancel" title="Close"><i class="fa-solid fa-xmark"></i></button></header>
+      <div class="vr-cc-live-scroll">
+        <section class="vr-cc-live-section"><h3>Persona Index</h3>${PERSONA_AXES.map(axis => {
+          const value = clampPersona(personaValues?.[axis.key]);
+          const leftPips = Math.floor(Math.max(0, -value) / 10);
+          const rightPips = Math.floor(Math.max(0, value) / 10);
+          return `<div class="vr-cc-live-axis"><span>${escape(axis.left)}</span><div class="vr-cc-persona-pips" data-persona-axis="${axis.key}" style="--vr-persona-position: ${((value + 100) / 2).toFixed(1)}%" aria-label="${escape(`${axis.left} to ${axis.right}: ${value}`)}"><div class="vr-cc-persona-pip-side left">${Array.from({ length: 10 }, (_, index) => `<i class="${index >= 10 - leftPips ? "active" : ""}"></i>`).join("")}</div><b aria-hidden="true"></b><div class="vr-cc-persona-pip-side right">${Array.from({ length: 10 }, (_, index) => `<i class="${index < rightPips ? "active" : ""}"></i>`).join("")}</div><em aria-hidden="true"></em></div><span>${escape(axis.right)}</span></div>`;
+        }).join("")}</section>
+        ${this.#liveBuildCards("Identity", identity)}
+        ${this.#liveBuildCards("Perks", this.state.qualitiesTaken, entry => ({ title: entry.name, description: entry.description }))}
+        ${this.#liveBuildCards("Flaws", this.state.flawsTaken, entry => ({ title: entry.name, description: entry.description }))}
+        ${this.#liveBuildCards("Talents and Skills", talents, entry => ({ title: `${entry.id} · Rank ${entry.rank}`, description: "Purchased talent or skill." }))}
+        ${this.#liveBuildCards("Contacts", contacts, entry => ({ title: entry.name || entry.role || "Contact", description: entry.notes || entry.disposition || entry.role }))}
+        <section class="vr-cc-live-section"><h3>Attribute Modifiers</h3><p>No authored attribute modifiers are currently attached to the selected reference cards.</p></section>
+      </div>`;
   }
 
   #attributePointCost() {
@@ -971,6 +1080,29 @@ class CharacterCreationOverlay {
     const button = event.target.closest("button");
     if (!button) return;
     const action = button.dataset.action;
+    if (button.dataset.treeGroup) {
+      const group = button.dataset.treeGroup;
+      if (this.openTreeGroups.has(group)) this.openTreeGroups.delete(group);
+      else this.openTreeGroups.add(group);
+      this.#draw();
+      return;
+    }
+    if (button.dataset.treeGroupStep !== undefined) {
+      this.#saveVisibleInputs();
+      this.step = number(button.dataset.treeGroupStep);
+      this.#draw();
+      return;
+    }
+    if (button.dataset.treePage) {
+      this.treePage = button.dataset.treePage === "magic" ? "magic" : "skills";
+      this.#draw();
+      return;
+    }
+    if (button.dataset.inspectTitle) {
+      const panel = this.root.querySelector(".vr-cc-info");
+      if (panel) panel.innerHTML = `<div class="vr-cc-info-heading"><span>Selection</span><h2>${escape(button.dataset.inspectTitle)}</h2></div><div class="vr-cc-reference"><p>${escape(button.dataset.inspectDescription)}</p></div>`;
+      return;
+    }
     if (Object.hasOwn(button.dataset, "step")) {
       this.#saveVisibleInputs();
       const steps = this.#steps;
@@ -980,6 +1112,7 @@ class CharacterCreationOverlay {
       }
       if (steps[this.step]?.key === "level" && number(button.dataset.step) > this.step) await this.#applyStartingLevel();
       this.step = number(button.dataset.step);
+      this.animateNavigation = true;
       this.#draw();
       return;
     }
@@ -988,23 +1121,34 @@ class CharacterCreationOverlay {
       this.#choosePath(button.dataset.pathChoice, button.dataset.value ?? "");
       return;
     }
+    if (button.dataset.treeBranch) {
+      const entry = this.#treeCatalogEntry(button.dataset.treeBranch, "branch");
+      if (!entry || this.#treeAvailable("talent") < Math.max(1, number(entry.branch.talentCost, 1))) return ui.notifications.warn("Not enough Talent Points to unlock this branch.");
+      this.state.talentTree.branches.push(entry.branch.id);
+      this.#draw();
+      return;
+    }
+    if (button.dataset.treeLeaf) {
+      const entry = this.#treeCatalogEntry(button.dataset.treeLeaf, "leaf");
+      if (!entry || this.#treeAvailable("talent") < Math.max(1, number(entry.leaf.talentCost, 1))) return ui.notifications.warn("Not enough Talent Points to purchase this leaf.");
+      this.state.talentTree.leaves.push({ id: entry.leaf.id, rank: 1 });
+      this.#draw();
+      return;
+    }
+    if (button.dataset.treeRank) {
+      const entry = (this.state.talentTree.leaves ?? []).find(candidate => candidate.id === button.dataset.treeRank);
+      const cost = skillPointCostForLevel(this.state.startingLevel);
+      if (!entry || this.#treeAvailable("skill") < cost) return ui.notifications.warn(`Not enough Skill Points to increase this rank (${cost} required).`);
+      entry.rank += 1;
+      this.#draw();
+      return;
+    }
     if (button.dataset.treeToggle) {
       this.#toggleTreeSelection(button.dataset.treeToggle);
       return;
     }
     if (action === "cancel") {
       this.close({ renderSheet: true });
-      return;
-    }
-    if (action === "open-tree-canvas") {
-      this.#saveVisibleInputs();
-      this.treeCanvasOpen = true;
-      this.#draw();
-      return;
-    }
-    if (action === "close-tree-canvas" || action === "confirm-tree-canvas") {
-      this.treeCanvasOpen = false;
-      this.#draw();
       return;
     }
     if (action === "previous" || action === "next") {
@@ -1016,12 +1160,20 @@ class CharacterCreationOverlay {
       }
       if (action === "next" && steps[this.step]?.key === "level") await this.#applyStartingLevel();
       this.step = Math.max(0, Math.min(steps.length - 1, this.step + (action === "next" ? 1 : -1)));
+      this.animateNavigation = true;
       this.#draw();
       return;
     }
     if (action === "add-contact") {
       this.#saveVisibleInputs();
       this.state.contacts.push({ name: "", role: "", disposition: "", notes: "" });
+      this.state.contactFocus = this.state.contacts.length - 1;
+      this.#draw();
+      return;
+    }
+    if (button.dataset.contactChoice !== undefined) {
+      this.#saveVisibleInputs();
+      this.state.contactFocus = number(button.dataset.contactChoice);
       this.#draw();
       return;
     }
@@ -1034,8 +1186,21 @@ class CharacterCreationOverlay {
       this.#draw();
       return;
     }
-    if (action === "toggle-qf-view") {
-      this.state.qualityFlawView = this.state.qualityFlawView === "tier" ? "pillar" : "tier";
+    if (action === "set-qf-type" || action === "set-qf-pillar" || action === "set-qf-tier") {
+      const value = button.dataset.qfFilter ?? "all";
+      if (action === "set-qf-type") this.state.qualityFlawTypeFilter = ["all", "quality", "flaw"].includes(value) ? value : "all";
+      if (action === "set-qf-pillar") this.state.qualityFlawPillarFilter = ["all", ...QUALITY_FLAW_PILLARS].includes(value) ? value : "all";
+      if (action === "set-qf-tier") this.state.qualityFlawTierFilter = ["all", ...QUALITY_FLAW_TIERS].includes(value) ? value : "all";
+      this.#draw();
+      return;
+    }
+    if (action === "focus-qf-choice") {
+      this.state.qualityFlawFocus = {
+        kind: button.dataset.qfKind === "flaw" ? "flaw" : "quality",
+        tier: QUALITY_FLAW_TIERS.includes(button.dataset.qfTier) ? button.dataset.qfTier : "Minor",
+        points: Math.max(1, number(button.dataset.qfPoints, 1)),
+        pillar: QUALITY_FLAW_PILLARS.includes(button.dataset.qfPillar) ? button.dataset.qfPillar : "Physical"
+      };
       this.#draw();
       return;
     }
@@ -1092,6 +1257,7 @@ class CharacterCreationOverlay {
     if (action === "apply-persona-recommendation") {
       this.#saveVisibleInputs();
       this.state.personaIndex = this.#personaRecommendation().values;
+      this.state.personaTouched = true;
       this.#draw();
       return;
     }
@@ -1140,13 +1306,8 @@ class CharacterCreationOverlay {
       this.#draw();
       return;
     }
-    this.pathTransitioning = true;
-    for (const column of columns) column.classList.add("fading");
-    window.setTimeout(() => {
-      applyState();
-      this.pathTransitioning = false;
-      this.#draw();
-    }, 280);
+    applyState();
+    this.#draw();
   }
 
   #toggleTreeSelection(value) {
@@ -1186,7 +1347,11 @@ class CharacterCreationOverlay {
     if (input.name.startsWith("personaIndex.")) {
       const value = clampPersona(input.value);
       this.#setStateValue(input.name, value);
+      this.state.personaTouched = true;
       for (const field of this.root.querySelectorAll(`[name="${input.name}"]`)) field.value = value;
+      this.#refreshLivePersonaPips();
+      this.#refreshInfoPanel();
+      return;
     }
     if (["archetype", "profession"].includes(input.name)) {
       if (input.name === "archetype") {
@@ -1196,6 +1361,7 @@ class CharacterCreationOverlay {
       this.#draw();
     } else {
       this.#refreshInfoPanel();
+      this.#refreshLiveBuild();
     }
   }
 
@@ -1214,6 +1380,7 @@ class CharacterCreationOverlay {
 
   async #confirm() {
     this.#saveVisibleInputs();
+    if (this.mode === "levelUp") return this.#confirmLevelUp();
     const qualityFlawAudit = this.#qualityFlawAudit();
     if (qualityFlawAudit.qualityPoints > 10 || qualityFlawAudit.minorPoints > 8 || qualityFlawAudit.flawPoints < 20) {
       ui.notifications.warn("Meet the Perk & Flaw Quota before confirming: perks max 10, minor max 8, flaws minimum 20.");
@@ -1226,12 +1393,13 @@ class CharacterCreationOverlay {
     const talentBudget = talentPointsForLevel(level);
     const skillBudget = skillPointsForLevel(level);
     const attributeSpent = this.#attributePointCost();
-    const talentSpent = Math.min(talentBudget, Math.max(0, number(this.state.talentPointsSpent)));
-    const skillSpent = Math.min(skillBudget, Math.max(0, number(this.state.skillPointsSpent)));
+    const treeSpent = this.#treeSpent();
+    const talentSpent = Math.min(talentBudget, treeSpent.talent);
+    const skillSpent = Math.min(skillBudget, treeSpent.skill);
     const update = {
       name,
-      "system.level": level,
-      "system.experience.max": xpForLevel(level),
+      "system.level": 1,
+      "system.experience.max": xpForLevel(1),
       "system.species": this.state.species,
       "system.origin": this.state.origin,
       "system.background": this.state.background,
@@ -1268,6 +1436,7 @@ class CharacterCreationOverlay {
       "system.characterGeneration.attributePointsSpent": attributeSpent,
       "system.characterGeneration.talentSkillPointsSpent": talentSpent + skillSpent,
       "system.characterGeneration.talentSkillSelections": this.state.talentSkillSelections ?? [],
+      "system.talentTree": this.state.talentTree ?? { branches: [], leaves: [] },
       "system.characterGeneration.talentPointsSpent": talentSpent,
       "system.characterGeneration.skillPointsSpent": skillSpent,
       "system.characterGeneration.spellPointsSpent": 0,
@@ -1280,6 +1449,34 @@ class CharacterCreationOverlay {
     };
     await this.actor.update(update);
     ui.notifications.info(`${name} character generation complete.`);
+    this.close({ renderSheet: true });
+  }
+
+  async #confirmLevelUp() {
+    const currentLevel = Math.max(1, number(this.actor.system?.level, 1));
+    const nextLevel = currentLevel + 1;
+    const xp = Math.max(0, number(this.actor.system?.experience?.value));
+    const max = xpForLevel(currentLevel);
+    if (xp < max) return ui.notifications.warn("This character does not have enough XP to level up.");
+    const pool = (key, budget, spent) => ({ total: Math.max(number(this.actor.system?.[key]?.total), budget), available: Math.max(0, Math.max(number(this.actor.system?.[key]?.total), budget) - spent) });
+    const attributes = pool("attributePoints", attributePointsForLevel(nextLevel), this.#attributePointCost());
+    const treeDelta = this.#treeSpent();
+    const initialTree = this.#treeSpent(this.initialTalentTree);
+    const talents = pool("talentPoints", talentPointsForLevel(nextLevel), number(this.actor.system?.talentPoints?.total) - number(this.actor.system?.talentPoints?.available) + treeDelta.talent - initialTree.talent);
+    const skills = pool("skillPoints", skillPointsForLevel(nextLevel), number(this.actor.system?.skillPoints?.total) - number(this.actor.system?.skillPoints?.available) + treeDelta.skill - initialTree.skill);
+    await this.actor.update({
+      "system.level": nextLevel,
+      "system.experience.value": xp - max,
+      "system.experience.max": xpForLevel(nextLevel),
+      "system.attributes": this.state.attributes,
+      "system.qualitiesTaken": this.state.qualitiesTaken,
+      "system.flawsTaken": this.state.flawsTaken,
+      "system.talentTree": this.state.talentTree ?? { branches: [], leaves: [] },
+      "system.attributePoints.total": attributes.total, "system.attributePoints.available": attributes.available,
+      "system.talentPoints.total": talents.total, "system.talentPoints.available": talents.available,
+      "system.skillPoints.total": skills.total, "system.skillPoints.available": skills.available
+    });
+    ui.notifications.info(`${this.actor.name} reached Level ${nextLevel}.`);
     this.close({ renderSheet: true });
   }
 }

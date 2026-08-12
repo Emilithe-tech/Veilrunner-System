@@ -276,6 +276,13 @@
         "actionType": { "label": "Action Type" },
         "category": { "label": "Category" },
         "favorite": { "label": "Favorite" },
+        "actions": { "label": "Actions" },
+        "damageType": { "label": "Damage Type" },
+        "currentLevel": { "label": "Current Level" },
+        "maxLevel": { "label": "Maximum Level" },
+        "damageDice": { "label": "Base Damage Dice" },
+        "damageDie": { "label": "Damage Die Faces" },
+        "damageLevelInterval": { "label": "Levels Per Damage Step" },
         "cost": { "label": "Cost" },
         "description": { "label": "Description" }
       }
@@ -283,6 +290,13 @@
     "Ability": {
       "FIELDS": {
         "featured": { "label": "Featured" },
+        "actions": { "label": "Actions" },
+        "damageType": { "label": "Damage Type" },
+        "currentLevel": { "label": "Current Level" },
+        "maxLevel": { "label": "Maximum Level" },
+        "damageDice": { "label": "Base Damage Dice" },
+        "damageDie": { "label": "Damage Die Faces" },
+        "damageLevelInterval": { "label": "Levels Per Damage Step" },
         "recharge": { "label": "Recharge" },
         "description": { "label": "Description" }
       }
@@ -438,7 +452,10 @@
       "electric": "Electric",
       "sonic": "Sonic",
       "light": "Light",
-      "void": "Void"
+      "void": "Void",
+      "slashing": "Slashing",
+      "bludgeoning": "Bludgeoning",
+      "piercing": "Piercing"
     },
     "EffectTarget": {
       "action": "Action",
@@ -625,9 +642,12 @@
     "Party": "Party",
     "Members": "Members",
     "PartyMembers": "Party Members",
+    "OpenCharacterSheet": "Open character sheet",
     "NoParty": "No other party members",
     "ShowPartyList": "Hide the party list in the Character Column",
     "ShowPartyListHint": "Hide the party list from the hero column.",
+    "ShowAllPartyResources": "Show all resources",
+    "ShowAllPartyResourcesHint": "When disabled, resources with a 0 / 0 maximum are hidden. Resources with a non-zero maximum remain visible.",
     "PartyList": "Party List",
     "UserInterface": "User Interface",
     "OtherFunctions": "Other Functions",
@@ -717,6 +737,26 @@
     "NoReactions": "No reactions.",
     "NoMagic": "No magic.",
     "NoTech": "No tech.",
+    "ActionWorkspace": {
+      "CardMode": "Card mode",
+      "ListMode": "List mode",
+      "Sort": "Sort",
+      "SortType": "Type",
+      "SortAZ": "Name A-Z",
+      "SortZA": "Name Z-A",
+      "SortCost": "Cost",
+      "ActionCount": "Actions",
+      "Name": "Name",
+      "Damage": "Damage",
+      "DamageType": "Damage Type",
+      "MagicType": "Magic Type",
+      "Cost": "Cost",
+      "Recharge": "Recharge",
+      "SendToChat": "Send to Chat",
+      "Details": "Details",
+      "Roll": "Roll",
+      "DescriptionHint": "Select Details on an action to view its description."
+    },
     "NoSkills": "No skills defined.",
     "NoBiography": "No biography yet.",
     "NoReputation": "No reputation entries.",

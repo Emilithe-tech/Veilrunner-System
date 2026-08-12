@@ -1,4 +1,4 @@
-const { StringField, BooleanField, HTMLField } = foundry.data.fields;
+const { StringField, NumberField, BooleanField, HTMLField } = foundry.data.fields;
 
 /** Ability data. */
 export default class AbilityData extends foundry.abstract.TypeDataModel {
@@ -7,6 +7,13 @@ export default class AbilityData extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
       featured: new BooleanField({ required: true, initial: false }),
+      actions: new NumberField({ required: true, integer: true, min: 0, initial: 1, nullable: false }),
+      damageType: new StringField({ required: true, blank: true, initial: "" }),
+      currentLevel: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false }),
+      maxLevel: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false }),
+      damageDice: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
+      damageDie: new NumberField({ required: true, integer: true, min: 2, initial: 6, nullable: false }),
+      damageLevelInterval: new NumberField({ required: true, integer: true, min: 1, initial: 3, nullable: false }),
       recharge: new StringField({ required: true, blank: true, initial: "" }),
       description: new HTMLField({ required: false, blank: true, initial: "" })
     };

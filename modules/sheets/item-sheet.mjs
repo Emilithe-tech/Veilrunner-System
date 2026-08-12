@@ -1,7 +1,7 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
-const ARMOR_TRAITS = ["pyro", "hydro", "cryo", "floral", "geo", "aero", "electric", "sonic", "light", "void"];
+const ARMOR_TRAITS = ["pyro", "hydro", "cryo", "floral", "geo", "aero", "electric", "sonic", "light", "void", "slashing", "bludgeoning", "piercing"];
 const ARMOR_EFFECT_TARGETS = ["action", "trait", "attribute"];
 
 function entryList(entries = []) {
@@ -61,6 +61,9 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
       background: "VEILRUNNER.BackgroundItem.FIELDS.description.label"
     }[this.item.type] ?? "";
     context.armorTraits = ARMOR_TRAITS;
+    context.actionDamageTypes = ARMOR_TRAITS;
+    const actionMaxLevel = Math.max(1, Number(context.system.maxLevel) || 1);
+    context.actionLevelOptions = Array.from({ length: actionMaxLevel }, (_, index) => index + 1);
     context.armorEffectTargets = ARMOR_EFFECT_TARGETS;
     context.armorResistances = this.#withEmptyArmorTraitRow(context.system.resistances);
     context.armorWeaknesses = this.#withEmptyArmorTraitRow(context.system.weaknesses);
@@ -83,6 +86,19 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
   /** @override */
   _prepareSubmitData(event, form, formData) {
     const submitData = super._prepareSubmitData(event, form, formData);
+    if (["action", "ability"].includes(this.item.type)) {
+      const number = (path, minimum, fallback) => {
+        const value = Number(foundry.utils.getProperty(submitData, path));
+        return Math.max(minimum, Number.isFinite(value) ? Math.floor(value) : fallback);
+      };
+      const maxLevel = number("system.maxLevel", 1, 1);
+      const currentLevel = Math.min(maxLevel, number("system.currentLevel", 1, 1));
+      foundry.utils.setProperty(submitData, "system.maxLevel", maxLevel);
+      foundry.utils.setProperty(submitData, "system.currentLevel", currentLevel);
+      foundry.utils.setProperty(submitData, "system.damageDice", number("system.damageDice", 0, 0));
+      foundry.utils.setProperty(submitData, "system.damageDie", number("system.damageDie", 2, 6));
+      foundry.utils.setProperty(submitData, "system.damageLevelInterval", number("system.damageLevelInterval", 1, 3));
+    }
     if (["species", "origin", "background"].includes(this.item.type)
       && foundry.utils.hasProperty(submitData, "system.persona")) {
       const raw = foundry.utils.getProperty(submitData, "system.persona");

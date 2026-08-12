@@ -1,6 +1,29 @@
 <section class="details-panel">
+  {{#if actionDetailsDrawer}}
+    <div class="panel-heading">
+      <span>{{actionDetails.name}}</span>
+      <button type="button" class="panel-icon-btn" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
+        <i class="fa-solid fa-angles-left"></i>
+      </button>
+    </div>
+    <article class="action-details-drawer">
+      <img src="{{actionDetails.img}}" alt="" />
+      <dl>
+        <div><dt>{{localize 'VEILRUNNER.Action.FIELDS.currentLevel.label'}}</dt><dd>{{actionDetails.currentLevel}} / {{actionDetails.maxLevel}}</dd></div>
+        <div><dt>{{localize 'VEILRUNNER.ActionWorkspace.ActionCount'}}</dt><dd>{{actionDetails.actionCount}}</dd></div>
+        <div><dt>{{localize 'VEILRUNNER.ActionWorkspace.Damage'}}</dt><dd>{{actionDetails.damageValue}}</dd></div>
+        <div><dt>{{localize actionDetails.typeLabelKey}}</dt><dd>{{actionDetails.typeLabel}}</dd></div>
+        <div><dt>{{localize actionDetails.costLabel}}</dt><dd>{{actionDetails.cost}}</dd></div>
+      </dl>
+      <div class="action-details-description">{{{actionDetails.description}}}</div>
+    </article>
+  {{else}}
   <div class="panel-heading">
-    <span>{{localize 'VEILRUNNER.Details'}}</span>
+    <span>
+      {{#each categories as |cat|}}
+        {{#if cat.active}}{{localize cat.label}}{{/if}}
+      {{/each}}
+    </span>
     <button type="button" class="panel-icon-btn" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
       <i class="fa-solid fa-angles-left"></i>
     </button>
@@ -83,7 +106,6 @@
       {{/each}}
 
     {{else if (eq category "skills")}}
-      <div class="section-heading">{{localize 'VEILRUNNER.SkillsAndProficiencies'}}</div>
       {{#each skillCategories as |cat|}}
         <div class="skill-category">
           <div class="skill-category-heading"><i class="{{cat.icon}}"></i> {{cat.label}}</div>
@@ -205,4 +227,5 @@
       {{/each}}
     {{/if}}
   </div>
+  {{/if}}
 </section>

@@ -1,0 +1,8 @@
+2026/08/12-00:28:40.564 5580 Recovering log #4
+2026/08/12-00:28:40.570 5580 Delete type=0 #4
+2026/08/12-00:28:40.570 5580 Delete type=3 #2
+2026/08/12-00:51:37.293 70d4 Level-0 table #9: started
+2026/08/12-00:51:37.293 70d4 Level-0 table #9: 0 bytes OK
+2026/08/12-00:51:37.296 70d4 Delete type=0 #7
+2026/08/12-00:51:37.302 70d4 Manual compaction at level-0 from '!items!VrTestAbl001' @ 72057594037927935 : 1 .. '!items!VrTestTech02' @ 0 : 0; will stop at (end)
+2026/08/12-00:51:37.302 70d4 Manual compaction at level-1 from '!items!VrTestAbl001' @ 72057594037927935 : 1 .. '!items!VrTestTech02' @ 0 : 0; will stop at (end)

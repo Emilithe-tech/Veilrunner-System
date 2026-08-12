@@ -1,32 +1,32 @@
 <header class="sheet-header">
   <div class="identity">
-    <input class="name-input" type="text" name="name" value="{{actor.name}}"
-           placeholder="{{localize 'VEILRUNNER.Name'}}" />
-    {{#if system.species}}<div class="species">{{system.species}}</div>{{/if}}
-    {{#if (or system.profession system.discipline)}}
-      <div class="profession-discipline">
-        {{system.profession}}{{#if (and system.profession system.discipline)}} - {{/if}}{{system.discipline}}
-      </div>
-    {{/if}}
-    <div class="header-resolve-track" aria-label="{{localize 'VEILRUNNER.Resolve'}}">
-      <span class="header-resolve-label">{{localize 'VEILRUNNER.Resolve'}}</span>
-      <div class="header-resolve-icons">
-        {{#each resolvePoints}}
-          <button type="button"
-                  class="header-resolve-pip {{#if active}}active{{/if}}"
-                  data-action="setStatusTrack"
-                  data-track="resolve"
-                  data-value="{{value}}"
-                  title="{{localize 'VEILRUNNER.Resolve'}} {{value}}">
-          </button>
-        {{/each}}
+    <div class="identity-discipline-icon" aria-label="{{localize 'VEILRUNNER.Discipline'}}">{{disciplineInitial}}</div>
+    <div class="identity-copy">
+      <input class="name-input" type="text" name="name" value="{{actor.name}}"
+             placeholder="{{localize 'VEILRUNNER.Name'}}" />
+      {{#if system.species}}<div class="species">{{system.species}}</div>{{/if}}
+      {{#if (or system.profession system.discipline)}}
+        <div class="profession-discipline">
+          {{system.profession}}{{#if (and system.profession system.discipline)}} - {{/if}}{{system.discipline}}
+        </div>
+      {{/if}}
+      <div class="header-resolve-track" aria-label="{{localize 'VEILRUNNER.Resolve'}}">
+        <span class="header-resolve-label">{{localize 'VEILRUNNER.Resolve'}}</span>
+        <div class="header-resolve-icons">
+          {{#each resolvePoints}}
+            <button type="button"
+                    class="header-resolve-pip {{#if active}}active{{/if}}"
+                    data-action="setStatusTrack"
+                    data-track="resolve"
+                    data-value="{{value}}"
+                    title="{{localize 'VEILRUNNER.Resolve'}} {{value}}">
+            </button>
+          {{/each}}
+        </div>
       </div>
     </div>
   </div>
   <div class="header-icons">
-    <button type="button" class="header-icon-btn {{#if editMode}}active{{/if}}" data-action="toggleEditMode" title="{{localize 'VEILRUNNER.EditMode'}}" aria-label="{{localize 'VEILRUNNER.EditMode'}}">
-      <i class="fa-solid fa-pen"></i>
-    </button>
     <button type="button" class="header-icon-btn" data-action="toggleEquipment" title="{{localize 'VEILRUNNER.Equipment'}}" aria-label="{{localize 'VEILRUNNER.Equipment'}}">
       <i class="fa-solid fa-shirt"></i>
     </button>
