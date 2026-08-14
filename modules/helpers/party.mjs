@@ -28,6 +28,9 @@ function sortedItems(items) {
   return items.sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name));
 }
 
+const BASE_CURRENCY_NAME = "Galactic Federation Credits";
+const BASE_CURRENCY_ICON = "fa-solid fa-sim-card";
+
 /** Hidden party storage actor for an Actor directory folder. */
 export function findPartyActorForFolder(folder, { user = game.user, requirePermission = true } = {}) {
   const id = folderId(folder);
@@ -86,7 +89,12 @@ export function partyCurrencies(party) {
   return currencies.map((currency, index) => ({
     index,
     name: String(currency.name ?? ""),
-    value: Number(currency.value ?? 0)
+    value: Number(currency.value ?? 0),
+    isBaseCurrency: String(currency.name ?? "").trim() === BASE_CURRENCY_NAME,
+    tracked: Boolean(currency.tracked),
+    icon: String(currency.name ?? "").trim() === BASE_CURRENCY_NAME
+      ? BASE_CURRENCY_ICON
+      : /^fa(?:-[a-z]+)*\s+fa-[a-z0-9-]+$/i.test(String(currency.icon ?? "")) ? String(currency.icon) : "fa-solid fa-coins"
   }));
 }
 
@@ -118,10 +126,14 @@ export function buildPartyOverview(party, { currentHero = null, user = game.user
   const members = getPartyMembers(party, { user });
   const inventory = partyInventory(party);
   const currencies = partyCurrencies(party);
+  const trackedCurrencies = currencies.filter(currency => currency.name && currency.tracked);
   const totalInventoryValue = inventory.reduce((total, item) => total + item.totalPrice, 0);
-  const totalCurrencyValue = currencies.reduce((total, currency) => total + currency.value, 0);
+  const totalCurrencyValue = currencies.find(currency => currency.isBaseCurrency)?.value ?? 0;
   const folder = party?.type === "Actor" ? party : party?.folder;
   const backingActor = party?.type === "party" ? party : findPartyActorForFolder(folder, { user, requirePermission: false });
+  const partyImage = backingActor?.img && backingActor.img !== "icons/svg/group.svg"
+    ? backingActor.img
+    : "icons/svg/mystery-man.svg";
 
   return {
     party: backingActor ?? null,
@@ -129,17 +141,40 @@ export function buildPartyOverview(party, { currentHero = null, user = game.user
     folderId: folder?.id ?? "",
     available: Boolean(party),
     name: backingActor?.name ?? folder?.name ?? game.i18n.localize("VEILRUNNER.NoPartyAssigned"),
-    img: backingActor?.img ?? "icons/svg/group.svg",
+    img: partyImage,
     folderName: folder?.name ?? "",
-    members: members.map(member => ({
-      id: member.id,
-      name: member.name,
-      img: member.system?.appearanceImage || member.img,
-      discipline: String(member.system?.discipline ?? ""),
-      level: Number(member.system?.level ?? 0),
-      current: member.id === currentHero?.id
-    })),
+    members: members.map(member => {
+      const resources = member.system?.resources ?? {};
+      const resource = key => resources[key] ?? (key === "shields" ? resources.shield : {});
+      const status = key => `${Number(resource(key)?.value ?? 0)} / ${Number(resource(key)?.max ?? 0)}`;
+      const visible = key => Number(resource(key)?.max ?? 0) > 0;
+      const wealth = Math.max(0, Number(member.system?.credits) || 0);
+      const itemWealth = [...member.items.contents].reduce((total, item) => {
+        const price = Math.max(0, Number(item.system?.price) || 0);
+        const quantity = item.type === "treasure" ? Math.max(0, Number(item.system?.quantity) || 0) : 1;
+        return total + (price * quantity);
+      }, 0);
+      return {
+        id: member.id,
+        name: member.name,
+        img: member.system?.appearanceImage || member.img,
+        discipline: String(member.system?.discipline ?? ""),
+        level: Number(member.system?.level ?? 0),
+        current: member.id === currentHero?.id,
+        health: status("health"),
+        armor: status("armor"),
+        shields: status("shields"),
+        barriers: status("barriers"),
+        showHealth: visible("health"),
+        showArmor: visible("armor"),
+        showShields: visible("shields"),
+        showBarriers: visible("barriers"),
+        wealth,
+        totalWealth: wealth + itemWealth
+      };
+    }),
     currencies,
+    trackedCurrencies,
     inventory,
     totalInventoryValue,
     totalCurrencyValue,

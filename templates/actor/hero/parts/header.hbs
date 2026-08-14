@@ -5,11 +5,13 @@
       <input class="name-input" type="text" name="name" value="{{actor.name}}"
              placeholder="{{localize 'VEILRUNNER.Name'}}" />
       {{#if system.species}}<div class="species">{{system.species}}</div>{{/if}}
-      {{#if (or system.profession system.discipline)}}
-        <div class="profession-discipline">
-          {{system.profession}}{{#if (and system.profession system.discipline)}} - {{/if}}{{system.discipline}}
-        </div>
-      {{/if}}
+      <div class="identity-profession-row">
+        {{#if (or system.profession system.discipline)}}
+          <div class="profession-discipline">
+            {{system.profession}}{{#if (and system.profession system.discipline)}} - {{/if}}{{system.discipline}}
+          </div>
+        {{/if}}
+      </div>
       <div class="header-resolve-track" aria-label="{{localize 'VEILRUNNER.Resolve'}}">
         <span class="header-resolve-label">{{localize 'VEILRUNNER.Resolve'}}</span>
         <div class="header-resolve-icons">

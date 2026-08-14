@@ -1,7 +1,7 @@
 import { VEILRUNNER_PERSONA_INDEX_MODIFIERS, VEILRUNNER_PROFESSIONS } from "../data/professions.mjs";
 import { attributePointsForLevel, attributePointsGainedAtLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
 import { xpForLevel } from "../data/xp.mjs";
-import { talentTreePage, skillPointCostForLevel } from "../data/talent-tree.mjs";
+import { talentTreeCatalog, talentTreePage, talentTreeRoot, saveTalentTreeCatalog, skillPointCostForLevel } from "../data/talent-tree.mjs";
 import { VEILRUNNER_STARTER_STORE } from "../data/starter-store.mjs";
 
 const ARCHETYPE_OPTIONS = ["Physique", "Armament", "Magic", "Tech", "Social"];
@@ -143,6 +143,20 @@ function listFromText(value) {
   return String(value ?? "").split(/[\n,]/).map(entry => entry.trim()).filter(Boolean);
 }
 
+function treeRequirement(value) {
+  if (value && typeof value === "object") return { id: String(value.id ?? "").trim(), level: Math.max(1, number(value.level, 1)), line: value.line && typeof value.line === "object" ? foundry.utils.deepClone(value.line) : {} };
+  const [id, level] = String(value ?? "").split(":").map(entry => entry.trim());
+  return { id, level: Math.max(1, number(level, 1)), line: {} };
+}
+
+function treeRequirementsFromText(value) {
+  return listFromText(value).map(treeRequirement).filter(entry => entry.id);
+}
+
+function treeRequirementsText(values) {
+  return (values ?? []).map(value => { const requirement = treeRequirement(value); return requirement.level > 1 ? `${requirement.id}:${requirement.level}` : requirement.id; }).join(", ");
+}
+
 function textFromList(value) {
   return Array.isArray(value) ? value.join("\n") : "";
 }
@@ -274,10 +288,26 @@ class CharacterCreationOverlay {
     this.mode = mode === "levelUp" ? "levelUp" : "creation";
     this.step = 0;
     this.treeCanvasOpen = false;
-    this.treePage = "skills";
+    this.treePage = "magic";
     this.pathTransitioning = false;
     this.openTreeGroups = new Set();
     this.animateNavigation = false;
+    this.authorNode = null;
+    this.traitEditorOpen = false;
+    this.treeZoom = 1;
+    this.treePan = null;
+    this.treeViewport = {};
+    this.treeViewportInitialized = {};
+    this.treeCanvasDimensions = { skills: { width: 10000, height: 6000 }, magic: { width: 10000, height: 6000 } };
+    this.treeUndoStack = [];
+    this.openPracticeId = null;
+    this.treeNodeDrag = null;
+    this.nodeMoveMode = false;
+    this.selectedTreeNodes = new Set();
+    this.treeRingTool = { active: false, radius: 500, rotation: -90 };
+    this.connectionDrag = null;
+    this.suppressTreeClick = false;
+    this.connectionTool = { active: false, source: null, operation: "connect", requiredLevel: 1, bend: 0, thickness: 2, sourceAnchor: "auto", targetAnchor: "auto", pattern: "solid", glow: 1, color: "" };
     this.state = defaultState(actor);
     this.initialTalentTree = foundry.utils.deepClone(this.state.talentTree);
     if (this.mode === "levelUp") {
@@ -305,6 +335,11 @@ class CharacterCreationOverlay {
     this.root.addEventListener("click", event => this.#onClick(event));
     this.root.addEventListener("input", event => this.#onInput(event));
     this.root.addEventListener("change", event => this.#onInput(event));
+    this.root.addEventListener("contextmenu", event => this.#onTreeContextMenu(event));
+    this.root.addEventListener("pointerdown", event => this.#onTreePanStart(event));
+    this.root.addEventListener("pointermove", event => this.#onTreePanMove(event));
+    this.root.addEventListener("pointerup", event => this.#onTreePanEnd(event));
+    this.root.addEventListener("wheel", event => this.#onTreeWheel(event), { passive: false });
     this.#draw();
     this.root.focus();
     await this.#loadReferenceOptions();
@@ -318,6 +353,11 @@ class CharacterCreationOverlay {
   }
 
   #draw() {
+    const previousTreeBoard = this.root.querySelector?.(".vr-cc-tree-board");
+    if (previousTreeBoard) {
+      const previousKey = previousTreeBoard.dataset.viewportKey ?? (previousTreeBoard.closest(".vr-cc-talent-canvas")?.classList.contains("magic") ? "magic:main" : "skills:main");
+      this.treeViewport[previousKey] = { left: previousTreeBoard.scrollLeft, top: previousTreeBoard.scrollTop };
+    }
     const steps = this.#steps;
     const current = steps[this.step];
     if (current?.key === "persona" && !this.state.personaTouched) this.state.personaIndex = this.#personaRecommendation().values;
@@ -334,12 +374,7 @@ class CharacterCreationOverlay {
           <footer class="vr-cc-progress"><span>Character Generation</span><strong>${this.step + 1} / ${steps.length}</strong><progress max="${steps.length}" value="${this.step + 1}"></progress></footer>
         </aside>
         <main class="vr-cc-main">
-          <header class="vr-cc-header">
-            <div>
-              <span>Step ${this.step + 1} of ${steps.length}</span>
-              <h1>${escape(current.label)}</h1>
-            </div>
-          </header>
+          ${current.key === "talents" ? this.#talentHeader(current, steps.length) : `<header class="vr-cc-header"><div><span>Step ${this.step + 1} of ${steps.length}</span><h1>${escape(current.label)}</h1></div></header>`}
           <section class="vr-cc-panel">${this.#stepContent(current.key)}</section>
         </main>
         ${current.key === "talents" ? "" : `<aside class="vr-cc-info">${this.#infoPanelContent(current.key)}</aside>`}
@@ -353,7 +388,152 @@ class CharacterCreationOverlay {
         ${current.key === "review" ? "" : `<aside class="vr-cc-live-build">${this.#liveBuild()}</aside>`}
       </div>
       ${this.#qualityFlawDialogMarkup()}`;
+    this.#decorateTreeNodeEditor();
+    this.#decorateTreeShapes();
+    this.#decorateTreeLineCrossings();
+    this.#decorateTreeRingPreview();
+    this.#decorateConnectionToolbar();
+    this.#decorateConnectionSockets();
+    this.#restoreTreeViewport();
     this.animateNavigation = false;
+  }
+
+  #decorateTreeNodeEditor() {
+    const grid = this.root.querySelector(".vr-cc-author-grid");
+    if (!grid || !this.authorNode || grid.querySelector('[name="authorNode.shape"]')) return;
+    const label = document.createElement("label");
+    label.textContent = "Shape";
+    const select = document.createElement("select");
+    select.name = "authorNode.shape";
+    for (const shape of ["circle", "hex", "pentagon", "square", "diamond"]) {
+      const option = document.createElement("option");
+      option.value = shape;
+      option.textContent = shape[0].toUpperCase() + shape.slice(1);
+      option.selected = this.authorNode.shape === shape;
+      select.append(option);
+    }
+    label.append(select);
+    grid.insertBefore(label, grid.children[1] ?? null);
+  }
+
+  #decorateTreeShapes() {
+    const apply = (element, shape) => element?.classList.add(`shape-${["circle", "hex", "pentagon", "square", "diamond"].includes(shape) ? shape : "diamond"}`);
+    const root = this.root.querySelector("[data-tree-root]");
+    if (root) apply(root, talentTreeRoot(this.treePage)?.shape ?? "hex");
+    for (const element of this.root.querySelectorAll("[data-tree-school]")) apply(element, this.#treeCatalogEntry(element.dataset.treeSchool, "school")?.school?.shape ?? "pentagon");
+    for (const element of this.root.querySelectorAll("[data-tree-practice-card]")) apply(element, this.#treeCatalogEntry(element.dataset.treePracticeCard, "practice")?.practice?.shape ?? "diamond");
+    for (const element of this.root.querySelectorAll("[data-tree-rank]")) {
+      const spell = this.#treeCatalogEntry(element.dataset.treeRank, "spell")?.spell;
+      apply(element, spell?.shape ?? (spell?.type === "ability" ? "hex" : "diamond"));
+    }
+    const world = this.root.querySelector(".vr-cc-tree-world");
+    for (const element of this.root.querySelectorAll("[data-tree-drag]")) element.draggable = false;
+    for (const element of this.root.querySelectorAll("[data-tree-drag]")) {
+      const selected = this.selectedTreeNodes.has(element.dataset.treeDrag);
+      element.classList.toggle("multi-selected", selected);
+      if (selected && world) this.#addTreeSelectionMarker(element, world);
+    }
+    world?.classList.toggle("node-move-mode", this.nodeMoveMode);
+  }
+
+  #addTreeSelectionMarker(element, world) {
+    if ([...world.querySelectorAll(".vr-cc-node-selection-marker")].some(marker => marker.dataset.selectionKey === element.dataset.treeDrag)) return;
+    const marker = document.createElement("span");
+    marker.className = `vr-cc-node-selection-marker ${element.dataset.treeRank ? "spell" : element.dataset.treeRoot ? "root" : "standard"}`;
+    marker.dataset.selectionKey = element.dataset.treeDrag;
+    marker.style.left = element.style.left;
+    marker.style.top = element.style.top;
+    marker.innerHTML = `<i></i><b>Selected</b>`;
+    world.append(marker);
+  }
+
+  #decorateTreeLineCrossings() {
+    for (const path of this.root.querySelectorAll(".vr-cc-tree-links > .vr-cc-tree-link:not(.connection-preview):not(.crossing-casing)")) {
+      const casing = path.cloneNode(false);
+      casing.classList.add("crossing-casing");
+      casing.setAttribute("aria-hidden", "true");
+      path.before(casing);
+    }
+  }
+
+  #decorateTreeRingPreview() {
+    const world = this.root.querySelector(".vr-cc-tree-world");
+    const svg = world?.querySelector(".vr-cc-tree-links");
+    svg?.querySelector(".vr-cc-ring-preview")?.remove();
+    if (!this.nodeMoveMode || !this.treeRingTool.active || this.openPracticeId || !svg) return;
+    const records = this.#ringSelectionRecords(talentTreeCatalog());
+    if (records.length < 2) return;
+    const root = talentTreeRoot(this.treePage);
+    if (!root) return;
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.classList.add("vr-cc-ring-preview");
+    const radius = Math.max(180, Math.min(3000, number(this.treeRingTool.radius, 500)));
+    const rotation = number(this.treeRingTool.rotation, -90) * Math.PI / 180;
+    const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    ring.setAttribute("cx", number(root.x));
+    ring.setAttribute("cy", number(root.y));
+    ring.setAttribute("r", radius);
+    ring.classList.add("vr-cc-ring-guide");
+    group.append(ring);
+    records.forEach((record, index) => {
+      const angle = rotation + index * Math.PI * 2 / records.length;
+      const x = number(root.x) + Math.cos(angle) * radius;
+      const y = number(root.y) + Math.sin(angle) * radius;
+      const spoke = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      spoke.setAttribute("x1", number(root.x));
+      spoke.setAttribute("y1", number(root.y));
+      spoke.setAttribute("x2", x);
+      spoke.setAttribute("y2", y);
+      spoke.classList.add("vr-cc-ring-spoke");
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      marker.setAttribute("cx", x);
+      marker.setAttribute("cy", y);
+      marker.setAttribute("r", 12);
+      marker.classList.add("vr-cc-ring-marker");
+      group.append(spoke, marker);
+    });
+    svg.append(group);
+  }
+
+  #decorateConnectionToolbar() {
+    const toolbar = this.root.querySelector(".vr-cc-connection-toolbar");
+    if (!toolbar || toolbar.querySelector('[name="connectionTool.requiredLevel"]')) return;
+    const label = document.createElement("label");
+    label.textContent = "Required source level";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "1";
+    input.max = "20";
+    input.name = "connectionTool.requiredLevel";
+    input.value = String(Math.max(1, Math.min(20, number(this.connectionTool.requiredLevel, 1))));
+    label.append(input);
+    toolbar.insertBefore(label, toolbar.children[2] ?? null);
+  }
+
+  #decorateConnectionSockets() {
+    if (!this.connectionTool.active) return;
+    const world = this.root.querySelector(".vr-cc-tree-world");
+    if (!world) return;
+    for (const node of this.root.querySelectorAll("[data-tree-root], [data-tree-school], [data-tree-practice-card], [data-tree-rank]")) {
+      const layer = document.createElement("span");
+      layer.className = "vr-cc-node-socket-layer";
+      for (const key of ["treeRoot", "treeSchool", "treePracticeCard", "treeRank"]) if (node.dataset[key]) layer.dataset[key] = node.dataset[key];
+      const isSpell = Boolean(node.dataset.treeRank);
+      const width = isSpell ? 46 : node.offsetWidth;
+      const height = isSpell ? 46 : node.offsetHeight;
+      layer.style.left = `${node.offsetLeft - width / 2}px`;
+      layer.style.top = `${node.offsetTop - height / 2}px`;
+      layer.style.width = `${width}px`;
+      layer.style.height = `${height}px`;
+      for (const socket of ["top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right"]) {
+        const point = document.createElement("i");
+        point.className = `vr-cc-node-socket socket-${socket}`;
+        point.dataset.treeSocket = socket;
+        point.title = `${socket} connection point`;
+        layer.append(point);
+      }
+      world.append(layer);
+    }
   }
 
   #refreshInfoPanel() {
@@ -492,6 +672,10 @@ class CharacterCreationOverlay {
       }).join("");
       return `<section class="vr-cc-tree-group"><button type="button" class="vr-cc-tree-trunk" data-tree-group="${escape(group.label)}" aria-expanded="${open}"><i class="fa-solid fa-chevron-${open ? "down" : "right"}"></i><span>${escape(group.label)}</span></button><div class="vr-cc-tree-branches ${open ? "open" : ""} ${open && this.animateNavigation ? "animate" : ""}">${children}</div></section>`;
     }).join("");
+  }
+
+  #stepGroupLabel(step) {
+    return STEP_GROUPS.find(group => group.keys.includes(step?.key))?.label ?? "";
   }
 
   async #loadReferenceOptions() {
@@ -835,16 +1019,308 @@ class CharacterCreationOverlay {
   }
 
   #talentsAndSkillsStep() {
-    return this.#talentCanvas();
+    return this.#talentCanvasV2();
+  }
+
+  #talentHeader(current, stepCount) {
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    return `<header class="vr-cc-header vr-cc-talent-header">
+      <div class="vr-cc-talent-heading"><span>Step ${this.step + 1} of ${stepCount}</span><h1>${escape(current.label)}</h1></div>
+      <nav class="vr-cc-tree-tabs" aria-label="Talent canvas"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}"><i class="fa-solid fa-crosshairs"></i><span>Skills</span></button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}"><i class="fa-solid fa-wand-sparkles"></i><span>Magic</span></button></nav>
+      <div class="vr-cc-tree-pools"><div><span>Talent Points</span><strong>${this.#treeAvailable("talent")}</strong></div><div><span>Skill Points</span><strong>${this.#treeAvailable("skill")}</strong></div><small>${Math.round(this.treeZoom * 100)}%</small><button type="button" class="vr-cc-btn vr-cc-tree-undo" data-action="undo-tree-purchase" ${this.treeUndoStack.length ? "" : "disabled"}><i class="fa-solid fa-rotate-left"></i><span>Undo</span></button></div>
+      ${game.user.isGM ? `<div class="vr-cc-tree-author-actions"><button type="button" class="vr-cc-btn ${this.nodeMoveMode ? "active" : ""}" data-action="toggle-tree-move"><i class="fa-solid fa-arrows-up-down-left-right"></i><span>${this.nodeMoveMode ? "Finish Moving" : "Move Nodes"}</span></button><button type="button" class="vr-cc-btn ${this.connectionTool.active ? "active" : ""}" data-action="toggle-tree-connect"><i class="fa-solid fa-link"></i><span>${this.connectionTool.active ? "Cancel Connect" : "Connect Nodes"}</span></button><button type="button" class="vr-cc-btn" data-action="add-tree-node"><i class="fa-solid fa-pen-ruler"></i><span>Node Editor</span></button><button type="button" class="vr-cc-btn" data-action="manage-tree-traits"><i class="fa-solid fa-tags"></i><span>Traits</span></button></div>` : ""}
+      ${game.user.isGM && this.connectionTool.active ? this.#connectionToolbar() : ""}
+      ${game.user.isGM && this.nodeMoveMode ? this.#nodeAlignmentToolbar() : ""}
+    </header>`;
+  }
+
+  #nodeAlignmentToolbar() {
+    const count = this.selectedTreeNodes.size;
+    const ringCount = [...this.selectedTreeNodes].filter(key => !key.startsWith("root:")).length;
+    const ringControls = this.treeRingTool.active ? `<div class="vr-cc-ring-controls"><label>Radius <input type="range" name="treeRingTool.radius" min="180" max="3000" step="10" value="${number(this.treeRingTool.radius, 500)}"><output>${number(this.treeRingTool.radius, 500)} px</output></label><label>Rotation <input type="range" name="treeRingTool.rotation" min="-180" max="180" step="1" value="${number(this.treeRingTool.rotation, -90)}"><output>${number(this.treeRingTool.rotation, -90)}°</output></label><button type="button" class="vr-cc-mini-btn primary" data-action="place-tree-ring"><i class="fa-solid fa-check"></i> Place on Ring</button><button type="button" class="vr-cc-mini-btn" data-action="cancel-tree-ring">Cancel Ring</button></div>` : "";
+    return `<section class="vr-cc-node-align-toolbar"><strong>${count} node${count === 1 ? "" : "s"} selected</strong><span>Click to select · Shift-click to add or remove</span><button type="button" class="vr-cc-mini-btn" data-action="align-tree-horizontal" ${count < 2 ? "disabled" : ""}><i class="fa-solid fa-arrows-left-right-to-line"></i> Horizontal line</button><button type="button" class="vr-cc-mini-btn" data-action="align-tree-vertical" ${count < 2 ? "disabled" : ""}><i class="fa-solid fa-arrows-up-down-to-line"></i> Vertical line</button><button type="button" class="vr-cc-mini-btn" data-action="square-tree-nodes" ${count < 2 ? "disabled" : ""}><i class="fa-solid fa-border-all"></i> Square Up</button><button type="button" class="vr-cc-mini-btn" data-action="space-tree-horizontal" ${count < 3 ? "disabled" : ""}><i class="fa-solid fa-arrows-left-right"></i> Space Horizontally</button><button type="button" class="vr-cc-mini-btn" data-action="space-tree-vertical" ${count < 3 ? "disabled" : ""}><i class="fa-solid fa-arrows-up-down"></i> Space Vertically</button><button type="button" class="vr-cc-mini-btn ${this.treeRingTool.active ? "active" : ""}" data-action="preview-tree-ring" ${ringCount < 2 || this.openPracticeId ? "disabled" : ""}><i class="fa-regular fa-circle"></i> Circular Ring</button><button type="button" class="vr-cc-mini-btn" data-action="clear-node-selection" ${count ? "" : "disabled"}>Clear selection</button>${ringControls}</section>`;
+  }
+
+  #connectionToolbar() {
+    const tool = this.connectionTool;
+    const anchorOptions = field => ["auto", "center", "top-left", "top", "top-right", "right", "bottom-right", "bottom", "bottom-left", "left"].map(value => `<option value="${value}" ${tool[field] === value ? "selected" : ""}>${value}</option>`).join("");
+    return `<section class="vr-cc-connection-toolbar"><strong>${tool.source ? `Source: ${escape(tool.source.name)}` : "Drag from any center, side, or corner socket to a target socket"}</strong><label>Mode<select name="connectionTool.operation"><option value="connect">Create / Update</option><option value="remove" ${tool.operation === "remove" ? "selected" : ""}>Remove</option></select></label><label>Thickness<input name="connectionTool.thickness" type="number" min="1" max="10" step=".5" value="${number(tool.thickness, 2)}" /></label><label>Bend<input name="connectionTool.bend" type="range" min="-100" max="100" value="${number(tool.bend)}" /><small>${number(tool.bend)}%</small></label><label>Source socket<select name="connectionTool.sourceAnchor">${anchorOptions("sourceAnchor")}</select></label><label>Target socket<select name="connectionTool.targetAnchor">${anchorOptions("targetAnchor")}</select></label><label>Pattern<select name="connectionTool.pattern"><option value="solid">Solid</option><option value="dashed" ${tool.pattern === "dashed" ? "selected" : ""}>Dashed</option><option value="dotted" ${tool.pattern === "dotted" ? "selected" : ""}>Dotted</option></select></label><label>Glow<input name="connectionTool.glow" type="range" min="0" max="3" step=".25" value="${number(tool.glow, 1)}" /></label><label>Color<input name="connectionTool.color" type="color" value="${escape(tool.color || "#ffffff")}" /><button type="button" class="vr-cc-mini-btn" data-action="clear-connection-color">School color</button></label><div class="vr-cc-connection-clear"><button type="button" class="vr-cc-mini-btn" data-action="clear-connection-selection" ${tool.source ? "" : "disabled"}>Clear Selection</button><button type="button" class="vr-cc-mini-btn danger" data-action="clear-canvas-connections">Clear Canvas Links</button></div></section>`;
+  }
+
+  #talentCanvasV2() {
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    const schools = talentTreePage(page);
+    const practiceEntry = this.openPracticeId ? this.#treeCatalogEntry(this.openPracticeId, "practice") : null;
+    const board = practiceEntry
+      ? this.#practiceSpellWorld(practiceEntry.school, practiceEntry.practice, page)
+      : schools.length ? this.#treeWorld(schools, page) : `<section class="vr-cc-tree-empty"><h2>${page === "magic" ? "Magic" : "Skills"} catalog not yet populated</h2><p>The ${page} system is separate and ready for its own Schools, Practices, and nodes.</p></section>`;
+    const breadcrumb = practiceEntry ? `<div class="vr-cc-subcanvas-heading"><button type="button" class="vr-cc-btn" data-action="close-practice-canvas"><i class="fa-solid fa-arrow-left"></i><span>All Practices</span></button><div><span>${escape(practiceEntry.school.name)}</span><strong>${escape(practiceEntry.practice.name)} ${page === "magic" ? "Spells" : "Skills"}</strong></div></div>` : "";
+    return `<section class="vr-cc-talent-canvas ${page === "magic" ? "magic" : "skills"}">${breadcrumb}<main class="vr-cc-tree-board" data-viewport-key="${escape(this.#treeViewportKey())}">${board}</main>${this.authorNode ? this.#authorNodeMarkup() : ""}${this.traitEditorOpen ? this.#traitEditorMarkup() : ""}</section>`;
+  }
+
+  #treeWorld(schools, page) {
+    const rootNode = talentTreeRoot(page);
+    const rootRecord = { kind: "root", root: rootNode, node: rootNode };
+    const schoolMap = new Map(schools.map(school => [school.id, { kind: "school", school, node: school }]));
+    const practiceMap = new Map(schools.flatMap(school => (school.practices ?? []).map(practice => [practice.id, { kind: "practice", school, practice, node: practice }])));
+    const purchasedPractices = new Set(this.state.talentTree?.branches ?? []);
+    const paths = [];
+    for (const school of schools) {
+      const line = this.#treeLineStyle(school.rootConnection, school.color);
+      const schoolState = this.#schoolInvestment(school).total > 0 ? "active" : "available";
+      if (!line.hidden) paths.push(`<path class="vr-cc-tree-link ${schoolState} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(rootRecord, schoolMap.get(school.id), line)} d="${this.#treeConnectionPath(rootRecord, schoolMap.get(school.id), line)}" />`);
+    }
+    for (const school of schools) for (const practice of school.practices ?? []) {
+      const sources = practice.requires?.length ? practice.requires.map(value => ({ source: practiceMap.get(treeRequirement(value).id), requirement: treeRequirement(value) })).filter(entry => entry.source) : [{ source: schoolMap.get(school.id), requirement: { line: practice.schoolConnection ?? {} } }];
+      const practiceAvailable = (practice.requires ?? []).every(value => purchasedPractices.has(treeRequirement(value).id)) && this.state.startingLevel >= Math.max(1, number(practice.requiredLevel, 1));
+      const practiceState = purchasedPractices.has(practice.id) ? "active" : practiceAvailable ? "available" : "blocked";
+      for (const entry of sources) {
+        const line = this.#treeLineStyle(entry.requirement.line, school.color);
+        if (!line.hidden) paths.push(`<path class="vr-cc-tree-link ${practiceState} ${entry.source.school.id !== school.id ? "cross-school" : ""} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(entry.source, practiceMap.get(practice.id), line)} d="${this.#treeConnectionPath(entry.source, practiceMap.get(practice.id), line)}" />`);
+      }
+    }
+    const dimensions = this.#treeWorldDimensions(schools, page);
+    return `<div class="vr-cc-tree-world-frame" style="width:${dimensions.width * this.treeZoom}px;height:${dimensions.height * this.treeZoom}px"><div class="vr-cc-tree-world ${page}" data-world-width="${dimensions.width}" data-world-height="${dimensions.height}" style="--tree-zoom:${this.treeZoom};width:${dimensions.width}px;height:${dimensions.height}px"><svg class="vr-cc-tree-links" viewBox="0 0 ${dimensions.width} ${dimensions.height}" style="width:${dimensions.width}px;height:${dimensions.height}px" aria-hidden="true">${paths.join("")}</svg>${this.#rootMarkup(rootNode, this.#magicInvestment(schools))}${schools.map(school => this.#schoolMarkup(school, false)).join("")}</div></div>`;
+  }
+
+  #practiceSpellWorld(school, practice, page) {
+    const practiceRecord = { kind: "practice", school, practice, node: practice };
+    const spellMap = new Map((practice.spells ?? []).map(spell => [spell.id, { kind: "spell", school, practice, spell, node: spell }]));
+    const practicePurchased = (this.state.talentTree?.branches ?? []).includes(practice.id);
+    const paths = [];
+    const external = new Map();
+    for (const spell of practice.spells ?? []) {
+      const target = spellMap.get(spell.id);
+      const rank = number((this.state.talentTree?.leaves ?? []).find(entry => entry.id === spell.id)?.rank);
+      const available = practicePurchased && (spell.requires ?? []).every(value => { const requirement = treeRequirement(value); return number((this.state.talentTree?.leaves ?? []).find(entry => entry.id === requirement.id)?.rank) >= requirement.level; });
+      const state = rank ? "active" : available ? "available" : "blocked";
+      if (!(spell.requires ?? []).length) {
+        const line = this.#treeLineStyle(spell.practiceConnection, practice.color || school.color);
+        if (!line.hidden) paths.push(`<path class="vr-cc-tree-link spell-link ${state} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(practiceRecord, target, line)} d="${this.#treeConnectionPath(practiceRecord, target, line)}" />`);
+      }
+      for (const requiredValue of spell.requires ?? []) {
+        const requirement = treeRequirement(requiredValue);
+        const source = spellMap.get(requirement.id);
+        if (!source) {
+          const sourceEntry = this.#treeCatalogEntry(requirement.id, "spell");
+          if (!sourceEntry) continue;
+          if (!external.has(requirement.id)) {
+            const index = external.size;
+            const proxy = { ...sourceEntry.spell, x: number(practice.x) - 280, y: number(practice.y) + 20 + index * 105 };
+            external.set(requirement.id, { kind: "external", ...sourceEntry, spell: proxy, node: proxy, requirement });
+          }
+          const proxySource = external.get(requirement.id);
+          const line = this.#treeLineStyle(requirement.line, sourceEntry.school.color);
+          if (!line.hidden) paths.push(`<path class="vr-cc-tree-link spell-link cross-school ${state} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(proxySource, target, line)} d="${this.#treeConnectionPath(proxySource, target, line)}" />`);
+          continue;
+        }
+        const line = this.#treeLineStyle(requirement.line, practice.color || school.color);
+        if (!line.hidden) paths.push(`<path class="vr-cc-tree-link spell-link ${state} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(source, target, line)} d="${this.#treeConnectionPath(source, target, line)}" />`);
+      }
+    }
+    const dimensions = this.#treeWorldDimensions([school], page);
+    return `<div class="vr-cc-tree-world-frame" style="width:${dimensions.width * this.treeZoom}px;height:${dimensions.height * this.treeZoom}px"><div class="vr-cc-tree-world ${page} practice-subcanvas" data-world-width="${dimensions.width}" data-world-height="${dimensions.height}" style="--tree-zoom:${this.treeZoom};width:${dimensions.width}px;height:${dimensions.height}px;--tree-color:${escape(practice.color || school.color)}"><svg class="vr-cc-tree-links" viewBox="0 0 ${dimensions.width} ${dimensions.height}" style="width:${dimensions.width}px;height:${dimensions.height}px" aria-hidden="true">${paths.join("")}</svg>${this.#practiceMarkup(school, practice, true)}${[...external.values()].map(entry => this.#externalRequirementMarkup(entry)).join("")}</div></div>`;
+  }
+
+  #externalRequirementMarkup(entry) {
+    const rank = Math.max(0, number((this.state.talentTree?.leaves ?? []).find(candidate => candidate.id === entry.spell.id)?.rank));
+    return `<div class="vr-cc-external-requirement" data-tree-node-id="${escape(entry.spell.id)}" style="left:${number(entry.spell.x)}px;top:${number(entry.spell.y)}px;--tree-color:${escape(entry.school.color)}" title="Cross-Practice prerequisite"><span>${escape(entry.school.name)} / ${escape(entry.practice.name)}</span><strong>${escape(entry.spell.name)}</strong><small>Lv ${rank}/${entry.requirement.level} required</small></div>`;
+  }
+
+  #rootMarkup(root, investment = { total: 0, talent: 0, skill: 0 }) {
+    const selected = this.connectionTool.source?.id === root.id ? "connection-source" : "";
+    const drag = game.user.isGM ? `draggable="true" data-tree-drag="root:${escape(root.id)}"` : "";
+    return `<div class="vr-cc-root-node shape-${escape(root.shape ?? "hex")} ${selected}" style="left:${number(root.x)}px;top:${number(root.y)}px;--tree-color:${escape(root.color ?? "#d8b4fe")}" ${drag} data-tree-root="${escape(root.id)}" data-tree-node-id="${escape(root.id)}" title="${investment.talent} Talent Points and ${investment.skill} Skill Points invested"><span>Total Investment</span><b>${investment.total}</b><strong>${escape(root.name)}</strong></div>`;
+  }
+
+  #schoolInvestment(school) {
+    const branches = new Set(this.state.talentTree?.branches ?? []);
+    const ranks = new Map((this.state.talentTree?.leaves ?? []).map(entry => [entry.id, Math.max(0, number(entry.rank))]));
+    let talent = 0;
+    let skill = 0;
+    for (const practice of school.practices ?? []) {
+      if (branches.has(practice.id)) talent += Math.max(1, number(practice.talentCost, 1));
+      for (const spell of practice.spells ?? []) {
+        const rank = ranks.get(spell.id) ?? 0;
+        if (!rank) continue;
+        talent += Math.max(1, number(spell.talentCost, 1));
+        skill += Math.max(0, rank - 1) * Math.max(0, number(spell.rankCost, skillPointCostForLevel(this.state.startingLevel)));
+      }
+    }
+    return { talent, skill, total: talent + skill };
+  }
+
+  #magicInvestment(schools) {
+    return schools.reduce((total, school) => { const value = this.#schoolInvestment(school); total.talent += value.talent; total.skill += value.skill; total.total += value.total; return total; }, { talent: 0, skill: 0, total: 0 });
+  }
+
+  #treeWorldDimensions(schools, page) {
+    const nodes = schools.flatMap(school => [school, ...(school.practices ?? []).flatMap(practice => [practice, ...(practice.spells ?? [])])]);
+    const previous = this.treeCanvasDimensions[page] ?? { width: 10000, height: 6000 };
+    const maximumX = Math.max(0, ...nodes.map(node => number(node.x)));
+    const maximumY = Math.max(0, ...nodes.map(node => number(node.y)));
+    const dimensions = { width: Math.max(previous.width, Math.ceil((maximumX + 2500) / 2000) * 2000), height: Math.max(previous.height, Math.ceil((maximumY + 1800) / 1500) * 1500) };
+    this.treeCanvasDimensions[page] = dimensions;
+    return dimensions;
+  }
+
+  #treeLineStyle(source = {}, fallbackColor = "#94a3b8") {
+    const line = source && typeof source === "object" ? source : {};
+    const thickness = Math.max(1, Math.min(10, number(line.thickness, 2)));
+    const bend = Math.max(-100, Math.min(100, number(line.bend)));
+    const glow = Math.max(0, Math.min(3, number(line.glow, 1)));
+    const pattern = ["solid", "dashed", "dotted"].includes(line.pattern) ? line.pattern : "solid";
+    const anchors = ["auto", "center", "top-left", "top", "top-right", "right", "bottom-right", "bottom", "bottom-left", "left"];
+    const sourceAnchor = anchors.includes(line.sourceAnchor) ? line.sourceAnchor : "auto";
+    const targetAnchor = anchors.includes(line.targetAnchor) ? line.targetAnchor : "auto";
+    const color = /^#[0-9a-f]{6}$/i.test(line.color ?? "") ? line.color : fallbackColor;
+    return { hidden: line.hidden === true, thickness, bend, glow, pattern, sourceAnchor, targetAnchor, color, css: `--tree-color:${escape(color)};--line-width:${thickness};--line-glow:${glow}` };
+  }
+
+  #treeNodeGeometry(record) {
+    const node = record?.node;
+    if (!node) return { left: 0, top: 0, right: 0, bottom: 0, cx: 0, cy: 0 };
+    if (record.kind === "external") return { left: number(node.x) - 85, top: number(node.y) - 32, right: number(node.x) + 85, bottom: number(node.y) + 32, cx: number(node.x), cy: number(node.y) };
+    if (record.kind === "spell") return { left: number(node.x) - 23, top: number(node.y) - 23, right: number(node.x) + 23, bottom: number(node.y) + 23, cx: number(node.x), cy: number(node.y) };
+    const width = record.kind === "root" ? 144 : 116;
+    const height = width;
+    return { left: number(node.x) - width / 2, top: number(node.y) - height / 2, right: number(node.x) + width / 2, bottom: number(node.y) + height / 2, cx: number(node.x), cy: number(node.y) };
+  }
+
+  #treeAnchorPoint(geometry, anchor, toward) {
+    let selected = anchor;
+    if (selected === "auto") {
+      const dx = toward.cx - geometry.cx;
+      const dy = toward.cy - geometry.cy;
+      selected = Math.abs(dx) > Math.abs(dy) ? (dx >= 0 ? "right" : "left") : (dy >= 0 ? "bottom" : "top");
+    }
+    if (selected === "top") return { x: geometry.cx, y: geometry.top };
+    if (selected === "top-left") return { x: geometry.left, y: geometry.top };
+    if (selected === "top-right") return { x: geometry.right, y: geometry.top };
+    if (selected === "right") return { x: geometry.right, y: geometry.cy };
+    if (selected === "bottom") return { x: geometry.cx, y: geometry.bottom };
+    if (selected === "bottom-right") return { x: geometry.right, y: geometry.bottom };
+    if (selected === "bottom-left") return { x: geometry.left, y: geometry.bottom };
+    if (selected === "left") return { x: geometry.left, y: geometry.cy };
+    return { x: geometry.cx, y: geometry.cy };
+  }
+
+  #treeConnectionPath(source, target, line) {
+    const sourceGeometry = this.#treeNodeGeometry(source);
+    const targetGeometry = this.#treeNodeGeometry(target);
+    const start = this.#treeAnchorPoint(sourceGeometry, line.sourceAnchor, targetGeometry);
+    const end = this.#treeAnchorPoint(targetGeometry, line.targetAnchor, sourceGeometry);
+    if (!line.bend) return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const offset = Math.min(360, distance * .45) * (line.bend / 100);
+    const nx = -dy / distance;
+    const ny = dx / distance;
+    return `M ${start.x} ${start.y} C ${start.x + dx / 3 + nx * offset} ${start.y + dy / 3 + ny * offset}, ${start.x + dx * 2 / 3 + nx * offset} ${start.y + dy * 2 / 3 + ny * offset}, ${end.x} ${end.y}`;
+  }
+
+  #treeLineMetadata(source, target, line) {
+    return `data-tree-source="${escape(source?.node?.id ?? "")}" data-tree-target="${escape(target?.node?.id ?? "")}" data-source-anchor="${escape(line.sourceAnchor ?? "auto")}" data-target-anchor="${escape(line.targetAnchor ?? "auto")}" data-line-bend="${number(line.bend)}"`;
+  }
+
+  #schoolMarkup(school, showSpells = false) {
+    const drag = game.user.isGM ? `draggable="true" data-tree-drag="school:${escape(school.id)}"` : "";
+    const selected = this.connectionTool.source?.id === school.id ? "connection-source" : "";
+    const investment = this.#schoolInvestment(school);
+    return `<section class="vr-cc-school-group" style="--tree-color:${escape(school.color)}"><div class="vr-cc-school-node ${selected}" style="left:${number(school.x)}px;top:${number(school.y)}px" ${drag} data-tree-school="${escape(school.id)}" data-tree-node-id="${escape(school.id)}" title="${investment.talent} Talent Points and ${investment.skill} Skill Points invested"><span>School</span><b>${investment.total}</b><strong>${escape(school.name)}</strong></div>${(school.practices ?? []).map(practice => this.#practiceMarkup(school, practice, showSpells)).join("")}</section>`;
+  }
+
+  #practiceMarkup(school, practice, showSpells = false) {
+    const purchased = (this.state.talentTree?.branches ?? []).includes(practice.id);
+    const draftPurchase = purchased && !(this.initialTalentTree?.branches ?? []).includes(practice.id);
+    const requirementsMet = (practice.requires ?? []).every(value => (this.state.talentTree?.branches ?? []).includes(treeRequirement(value).id));
+    const levelMet = this.state.startingLevel >= Math.max(1, number(practice.requiredLevel, 1));
+    const available = requirementsMet && levelMet;
+    const drag = game.user.isGM ? `draggable="true" data-tree-drag="practice:${escape(school.id)}:${escape(practice.id)}"` : "";
+    const spells = showSpells ? (practice.spells ?? []).map(spell => this.#spellRow(school, practice, spell, purchased, practice.color || school.color)).join("") : "";
+    const selected = this.connectionTool.source?.id === practice.id ? "connection-source" : "";
+    const status = purchased ? (showSpells ? "" : "Open Spells") : `${Math.max(1, number(practice.talentCost, 1))} TP`;
+    return `<div class="vr-cc-practice-cluster" style="--tree-color:${escape(practice.color || school.color)}"><button type="button" class="vr-cc-practice-node ${selected} ${draftPurchase ? "draft-change" : ""} ${purchased ? "purchased" : available ? "available" : "locked"}" style="left:${number(practice.x)}px;top:${number(practice.y)}px" ${drag} data-tree-practice-card="${escape(practice.id)}" data-tree-practice="${escape(practice.id)}" data-tree-node-id="${escape(practice.id)}" title="${draftPurchase ? "Right-click to undo this current-session purchase." : ""}" ${(!purchased && !available) && !game.user.isGM ? "disabled" : ""}><span>Practice</span><strong>${escape(practice.name)}</strong>${status ? `<small>${escape(status)}</small>` : ""}</button>${spells}</div>`;
+  }
+
+  #spellRow(school, practice, spell, practicePurchased, color) {
+    const entry = (this.state.talentTree?.leaves ?? []).find(candidate => candidate.id === spell.id);
+    const rank = Math.max(0, number(entry?.rank));
+    const initialRank = Math.max(0, number((this.initialTalentTree?.leaves ?? []).find(candidate => candidate.id === spell.id)?.rank));
+    const draftRank = rank > initialRank;
+    const requirementsMet = (spell.requires ?? []).every(value => { const requirement = treeRequirement(value); return number((this.state.talentTree?.leaves ?? []).find(candidate => candidate.id === requirement.id)?.rank) >= requirement.level; });
+    const levelMet = this.state.startingLevel >= Math.max(1, number(spell.requiredLevel, 1));
+    const maximum = Math.max(1, number(spell.maxRank, 1));
+    const available = practicePurchased && requirementsMet && levelMet && rank < maximum;
+    const cost = rank ? Math.max(0, number(spell.rankCost, skillPointCostForLevel(this.state.startingLevel))) : Math.max(1, number(spell.talentCost, 1));
+    const currency = rank ? "SP" : "TP";
+    const prerequisiteText = (spell.requires ?? []).map(value => { const requirement = treeRequirement(value); return `${this.#treeCatalogEntry(requirement.id, "spell")?.spell?.name ?? requirement.id} level ${requirement.level}`; }).join(", ");
+    const drag = game.user.isGM ? `draggable="true" data-tree-drag="spell:${escape(school.id)}:${escape(practice.id)}:${escape(spell.id)}"` : "";
+    const selected = this.connectionTool.source?.id === spell.id ? "connection-source" : "";
+    return `<button type="button" class="vr-cc-spell-node ${selected} ${draftRank ? "draft-change" : ""} ${rank ? "ranked" : ""} ${available ? "available" : "locked"}" style="left:${number(spell.x)}px;top:${number(spell.y)}px;--tree-color:${escape(color)}" data-tree-rank="${escape(spell.id)}" data-tree-node-id="${escape(spell.id)}" ${drag} ${!available && !game.user.isGM ? "disabled" : ""} title="${escape(`${spell.name}; level ${rank}/${maximum}; ${cost} ${currency}${prerequisiteText ? `; requires ${prerequisiteText}` : ""}${draftRank ? "; right-click to undo one current-session level" : ""}`)}"><span class="vr-cc-spell-glyph"><i class="fa-solid ${spell.type === "ability" ? "fa-burst" : "fa-wand-sparkles"}"></i></span><strong>${escape(spell.name)}</strong><small>Lv ${rank}/${maximum} · ${rank >= maximum ? "MAX" : `${cost} ${currency}`}</small></button>`;
   }
 
   #talentCanvas() {
     const page = this.treePage === "magic" ? "magic" : "skills";
     const trees = talentTreePage(page);
     const board = trees.length
-      ? trees.map(tree => `<section class="vr-cc-tree-column"><h2>${escape(tree.name)}</h2>${(tree.branches ?? []).map(branch => this.#treeBranchMarkup(branch)).join("")}</section>`).join("")
+      ? `<div class="vr-cc-constellation-board" style="--tree-zoom:${this.treeZoom}">${trees.map(tree => this.#constellationBranch(tree)).join("")}</div>`
       : `<section class="vr-cc-tree-empty"><h2>${page === "magic" ? "Magic" : "Skills"} catalog not yet populated</h2><p>This canvas is ready for approved branches, leaves, prerequisites, and level requirements. No rules have been invented.</p></section>`;
-    return `<section class="vr-cc-talent-canvas"><header class="vr-cc-talent-summary"><div><span>Talent Points</span><strong>${this.#treeAvailable("talent")} available</strong></div><div><span>Skill Points</span><strong>${this.#treeAvailable("skill")} available</strong></div><div><span>Rank cost</span><strong>${skillPointCostForLevel(this.state.startingLevel)} SP</strong></div></header><main class="vr-cc-tree-board">${board}</main><footer class="vr-cc-talent-switch"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}"><i class="fa-solid fa-crosshairs"></i><span>Skills</span></button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}"><i class="fa-solid fa-wand-sparkles"></i><span>Magic</span></button></footer></section>`;
+    return `<section class="vr-cc-talent-canvas"><header class="vr-cc-talent-summary"><div><span>Talent Points</span><strong>${this.#treeAvailable("talent")} available</strong></div><div><span>Skill Points</span><strong>${this.#treeAvailable("skill")} available</strong></div><div><span>Rank cost</span><strong>${skillPointCostForLevel(this.state.startingLevel)} SP</strong></div><div class="vr-cc-tree-zoom"><button type="button" data-action="tree-zoom-out" title="Zoom out"><i class="fa-solid fa-minus"></i></button><strong>${Math.round(this.treeZoom * 100)}%</strong><button type="button" data-action="tree-zoom-in" title="Zoom in"><i class="fa-solid fa-plus"></i></button></div>${game.user.isGM ? `<button type="button" class="vr-cc-btn" data-action="add-tree-node"><i class="fa-solid fa-plus"></i><span>Author Node</span></button><button type="button" class="vr-cc-btn" data-action="manage-tree-traits"><i class="fa-solid fa-tags"></i><span>Traits</span></button>` : ""}</header><main class="vr-cc-tree-board">${board}</main><footer class="vr-cc-talent-switch"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}"><i class="fa-solid fa-crosshairs"></i><span>Skills</span></button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}"><i class="fa-solid fa-wand-sparkles"></i><span>Magic</span></button></footer>${this.authorNode ? this.#authorNodeMarkup() : ""}${this.traitEditorOpen ? this.#traitEditorMarkup() : ""}</section>`;
+  }
+
+  #constellationBranch(branch) {
+    const unlocked = (this.state.talentTree?.branches ?? []).includes(branch.id);
+    const leaves = branch.leaves ?? [];
+    const lines = leaves.map(leaf => {
+      const prerequisite = leaves.find(candidate => candidate.id === leaf.requires?.[0]);
+      const source = prerequisite ?? branch;
+      const dx = (number(leaf.x, 50) - number(source.x, 50)) * 7.6;
+      const dy = (number(leaf.y, 50) - number(source.y, 50)) * 6.2;
+      return `<i class="vr-cc-constellation-line" style="--x1:${number(source.x, 50)}%;--y1:${number(source.y, 50)}%;--line-width:${Math.hypot(dx, dy).toFixed(1)}px;--line-angle:${Math.atan2(dy, dx)}rad;--tree-color:${escape(branch.color ?? "#67e8f9")}"></i>`;
+    }).join("");
+    const drag = game.user.isGM ? `draggable="true" data-tree-drag="branch:${escape(branch.id)}"` : "";
+    const root = `<button type="button" class="vr-cc-constellation-node root ${unlocked ? "purchased" : ""}" style="--node-x:${number(branch.x, 50)}%;--node-y:${number(branch.y, 50)}%;--tree-color:${escape(branch.color ?? "#67e8f9")}" data-tree-branch="${escape(branch.id)}" ${drag} title="${escape(branch.name)}"><i class="fa-solid fa-satellite-dish"></i><span>${escape(branch.name)}</span></button>`;
+    const nodes = leaves.map(leaf => {
+      const entry = (this.state.talentTree?.leaves ?? []).find(candidate => candidate.id === leaf.id);
+      const requirementsMet = (leaf.requires ?? []).every(id => (this.state.talentTree?.leaves ?? []).some(candidate => candidate.id === id));
+      const levelMet = this.state.startingLevel >= Math.max(1, number(leaf.requiredLevel, 1));
+      const enabled = unlocked && requirementsMet && levelMet;
+      const action = entry ? `data-tree-rank="${escape(leaf.id)}"` : `data-tree-leaf="${escape(leaf.id)}"`;
+      const leafDrag = game.user.isGM ? `draggable="true" data-tree-drag="leaf:${escape(branch.id)}:${escape(leaf.id)}"` : "";
+      return `<button type="button" class="vr-cc-constellation-node ${entry ? "purchased" : ""} ${enabled ? "available" : "locked"}" style="--node-x:${number(leaf.x, 50)}%;--node-y:${number(leaf.y, 50)}%;--tree-color:${escape(branch.color ?? "#67e8f9")}" ${action} ${leafDrag} ${!entry && !enabled && !game.user.isGM ? "disabled" : ""} title="${escape(`${leaf.name} · ${(leaf.traits ?? []).join(", ") || "No traits"}`)}"><i class="fa-solid ${leaf.type === "ability" ? "fa-burst" : "fa-wand-sparkles"}"></i><span>${escape(leaf.name)}</span><small>${entry ? `R${entry.rank}` : `${Math.max(0, number(leaf.talentCost, 1))} TP`}</small></button>`;
+    }).join("");
+    return `<section class="vr-cc-constellation-school">${lines}${root}${nodes}</section>`;
+  }
+
+  #authorNodeMarkup() {
+    return this.#authorNodeMarkupV2();
+    /* Legacy constellation editor retained below for migration reference. */
+    const node = this.authorNode;
+    const traits = game.settings.get(game.system.id, "actionTraits") ?? [];
+    return `<div class="vr-cc-author-shade"><form class="vr-cc-author-panel"><header><div><span>GM Authoring</span><h2>Create ${this.treePage === "magic" ? "Magic" : "Skill"} Node</h2></div><button type="button" class="vr-cc-icon" data-action="cancel-tree-node"><i class="fa-solid fa-xmark"></i></button></header><div class="vr-cc-author-grid">
+      <label>School / Root<input name="authorNode.school" value="${escape(node.school)}" required /></label><label>Title<input name="authorNode.name" value="${escape(node.name)}" required /></label>
+      <label>Kind<select name="authorNode.type"><option value="action">Action</option><option value="ability" ${node.type === "ability" ? "selected" : ""}>Ability (0 action points)</option></select></label>
+      <label>Category<select name="authorNode.category">${["actions", "reactions", "magic", "tech"].map(value => `<option value="${value}" ${node.category === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
+      <label>Action Points<input type="number" name="authorNode.actions" value="${number(node.actions)}" min="0" ${node.type === "ability" ? "max=\"0\"" : ""} /></label>
+      <label>Traits<input name="authorNode.traitsText" value="${escape(node.traitsText)}" list="vr-action-traits" /></label><datalist id="vr-action-traits">${traits.filter(entry => !entry.retired).map(entry => `<option value="${escape(entry.label)}"></option>`).join("")}</datalist>
+      <label>Mana<input type="number" name="authorNode.mana" value="${number(node.mana)}" min="0" /></label><label>Stamina<input type="number" name="authorNode.stamina" value="${number(node.stamina)}" min="0" /></label><label>Health<input type="number" name="authorNode.health" value="${number(node.health)}" min="0" /></label>
+      <label>Talent Cost<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="0" /></label><label>Rank Cost<input type="number" name="authorNode.rankCost" value="${number(node.rankCost, 1)}" min="0" /></label><label>Maximum Rank<input type="number" name="authorNode.maxRank" value="${number(node.maxRank, 1)}" min="1" /></label>
+      <label>Required Level<input type="number" name="authorNode.requiredLevel" value="${number(node.requiredLevel, 1)}" min="1" /></label><label>Prerequisite IDs<input name="authorNode.requiresText" value="${escape(node.requiresText)}" placeholder="node-one, node-two" /></label><label>Artwork<input name="authorNode.img" value="${escape(node.img)}" placeholder="icons/svg/light.svg" /></label>
+      <label class="wide">Description<textarea name="authorNode.description">${escape(node.description)}</textarea></label>
+      <fieldset class="wide"><legend>Actor or Area Effect</legend><label>Scope<select name="authorNode.effectScope"><option value="actor">Actor</option><option value="area" ${node.effectScope === "area" ? "selected" : ""}>Area</option></select></label><label>Target<input name="authorNode.effectTarget" value="${escape(node.effectTarget)}" placeholder="resources.stamina.max" /></label><label>Value<input name="authorNode.effectValue" value="${escape(node.effectValue)}" /></label><label>Duration<input name="authorNode.effectDuration" value="${escape(node.effectDuration)}" /></label></fieldset>
+      </div><footer>${node.editLeafId ? `<button type="button" class="vr-cc-btn danger" data-action="delete-tree-node"><i class="fa-solid fa-trash"></i><span>Delete Node</span></button>` : ""}<button type="button" class="vr-cc-btn primary" data-action="save-tree-node"><i class="fa-solid fa-floppy-disk"></i><span>Save Node</span></button></footer></form></div>`;
+  }
+
+  #traitEditorMarkup() {
+    const traits = game.settings.get(game.system.id, "actionTraits") ?? [];
+    const used = new Set([
+      ...["skills", "magic"].flatMap(page => talentTreePage(page).flatMap(school => (school.practices ?? []).flatMap(practice => (practice.spells ?? []).flatMap(spell => spell.traits ?? [])))),
+      ...(game.items?.contents ?? []).flatMap(item => item.system?.traits ?? []),
+      ...(game.actors?.contents ?? []).flatMap(actor => actor.items.contents.flatMap(item => item.system?.traits ?? []))
+    ]);
+    return `<div class="vr-cc-author-shade"><section class="vr-cc-author-panel vr-cc-trait-manager"><header><div><span>GM Authoring</span><h2>Action Traits</h2></div><button type="button" class="vr-cc-icon" data-action="close-tree-traits"><i class="fa-solid fa-xmark"></i></button></header><div class="vr-cc-trait-list">${traits.map((trait, index) => `<label><input name="traitLabels.${index}" value="${escape(trait.label)}" /><span>${escape(trait.id)}</span><button type="button" class="vr-cc-icon" data-action="retire-tree-trait" data-index="${index}" title="${trait.retired ? "Restore" : "Retire"}"><i class="fa-solid ${trait.retired ? "fa-rotate-left" : "fa-eye-slash"}"></i></button><button type="button" class="vr-cc-icon" data-action="delete-tree-trait" data-index="${index}" ${used.has(trait.id) ? "disabled" : ""} title="${used.has(trait.id) ? "Trait is in use" : "Delete unused trait"}"><i class="fa-solid fa-trash"></i></button></label>`).join("")}</div><footer><input name="newTraitLabel" placeholder="New trait" /><button type="button" class="vr-cc-btn" data-action="add-tree-trait">Add</button><button type="button" class="vr-cc-btn primary" data-action="save-tree-traits">Save</button></footer></section></div>`;
   }
 
   #drawTalentSkillCanvas() {
@@ -910,10 +1386,13 @@ class CharacterCreationOverlay {
   }
 
   #treeCatalogEntry(id, kind) {
-    for (const page of ["skills", "magic"]) for (const tree of talentTreePage(page)) for (const branch of tree.branches ?? []) {
-      if (kind === "branch" && branch.id === id) return { branch };
-      const leaf = (branch.leaves ?? []).find(candidate => candidate.id === id);
-      if (kind === "leaf" && leaf) return { branch, leaf };
+    for (const page of ["skills", "magic"]) for (const school of talentTreePage(page)) {
+      if ((kind === "school" || kind === "branch") && school.id === id) return { page, school, branch: school };
+      for (const practice of school.practices ?? []) {
+        if ((kind === "practice" || kind === "branch") && practice.id === id) return { page, school, practice, branch: practice };
+        const spell = (practice.spells ?? []).find(candidate => candidate.id === id);
+        if ((kind === "spell" || kind === "leaf") && spell) return { page, school, practice, spell, branch: practice, leaf: spell };
+      }
     }
     return null;
   }
@@ -921,13 +1400,831 @@ class CharacterCreationOverlay {
   #treeSpent(tree = this.state.talentTree) {
     let talent = 0;
     let skill = 0;
-    for (const id of tree?.branches ?? []) talent += Math.max(1, number(this.#treeCatalogEntry(id, "branch")?.branch?.talentCost, 1));
+    for (const id of tree?.branches ?? []) {
+      const practice = this.#treeCatalogEntry(id, "practice")?.practice;
+      if (practice) talent += Math.max(1, number(practice.talentCost, 1));
+    }
     for (const entry of tree?.leaves ?? []) {
-      const leaf = this.#treeCatalogEntry(entry.id, "leaf")?.leaf;
-      talent += Math.max(1, number(leaf?.talentCost, 1));
-      skill += Math.max(0, number(entry.rank, 1) - 1) * skillPointCostForLevel(this.state.startingLevel);
+      const spell = this.#treeCatalogEntry(entry.id, "spell")?.spell;
+      if (spell) {
+        talent += Math.max(1, number(spell.talentCost, 1));
+        skill += Math.max(0, number(entry.rank) - 1) * Math.max(0, number(spell.rankCost, skillPointCostForLevel(this.state.startingLevel)));
+      }
     }
     return { talent, skill };
+  }
+
+  #authorTreeNode(source = null) {
+    this.#authorTreeNodeV2(source);
+    return;
+    /* Legacy constellation editor retained below for migration reference. */
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    this.authorNode = {
+      editBranchId: source?.branch?.id ?? "", editLeafId: source?.leaf?.id ?? "", school: source?.branch?.name ?? "",
+      name: source?.leaf?.name ?? "", type: source?.leaf?.type ?? "action", category: source?.leaf?.category ?? (page === "magic" ? "magic" : "actions"),
+      actions: source?.leaf?.type === "ability" ? 0 : number(source?.leaf?.actions, 1), traitsText: (source?.leaf?.traits ?? []).join(", "),
+      mana: number(source?.leaf?.resourceCosts?.mana), stamina: number(source?.leaf?.resourceCosts?.stamina), health: number(source?.leaf?.resourceCosts?.health),
+      talentCost: number(source?.leaf?.talentCost, 1), rankCost: number(source?.leaf?.rankCost, 1), maxRank: number(source?.leaf?.maxRank, 5), requiredLevel: number(source?.leaf?.requiredLevel, 1),
+      requiresText: (source?.leaf?.requires ?? []).join(", "), img: source?.leaf?.img ?? "", description: source?.leaf?.description ?? "",
+      effectScope: source?.leaf?.effects?.[0]?.scope ?? "actor", effectTarget: source?.leaf?.effects?.[0]?.target ?? "", effectValue: source?.leaf?.effects?.[0]?.value ?? "", effectDuration: source?.leaf?.effects?.[0]?.duration ?? ""
+    };
+    this.#draw();
+  }
+
+  async #saveAuthoredTreeNode() {
+    return this.#saveAuthoredTreeNodeV2();
+    /* Legacy constellation editor retained below for migration reference. */
+    this.#saveVisibleInputs();
+    const source = this.authorNode;
+    if (!source) return;
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    const school = String(source.school ?? "").trim();
+    const name = String(source.name ?? "").trim();
+    if (!school || !name) return ui.notifications.warn("Enter both a school and node title.");
+    const type = source.type === "ability" ? "ability" : "action";
+    const category = ["actions", "reactions", "magic", "tech"].includes(source.category) ? source.category : "actions";
+    const registry = game.settings.get(game.system.id, "actionTraits") ?? [];
+    const traitIds = new Map(registry.flatMap(entry => [[String(entry.id).toLowerCase(), entry.id], [String(entry.label).toLowerCase(), entry.id]]));
+    const traits = String(source.traitsText ?? "").split(",").map(value => value.trim()).filter(Boolean).map(value => traitIds.get(value.toLowerCase()) ?? value.toLowerCase().replace(/[^a-z0-9]+/g, "-")).filter(Boolean);
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const trees = catalog[page] ?? (catalog[page] = []);
+    const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "node";
+    let branch = trees.find(entry => entry.id === source.editBranchId) ?? trees.find(entry => entry.name.toLowerCase() === school.toLowerCase());
+    if (!branch) {
+      branch = { id: slug(school), name: school, color: "#67e8f9", x: 50, y: 18, talentCost: 1, leaves: [] };
+      while (trees.some(entry => entry.id === branch.id)) branch.id = `${branch.id}-${trees.length + 1}`;
+      trees.push(branch);
+    }
+    branch.name = school;
+    let leaf = branch.leaves.find(entry => entry.id === source.editLeafId);
+    if (!leaf) {
+      leaf = { id: slug(name), x: 50, y: 55 };
+      while (branch.leaves.some(entry => entry.id === leaf.id)) leaf.id = `${leaf.id}-${branch.leaves.length + 1}`;
+      branch.leaves.push(leaf);
+    }
+    Object.assign(leaf, { name, type, category, actions: type === "ability" ? 0 : Math.max(1, number(source.actions, 1)), traits: [...new Set(traits)], img: String(source.img ?? "").trim(), description: String(source.description ?? ""), talentCost: Math.max(0, number(source.talentCost, 1)), rankCost: Math.max(0, number(source.rankCost, 1)), maxRank: Math.max(1, number(source.maxRank, 1)), requiredLevel: Math.max(1, number(source.requiredLevel, 1)), requires: listFromText(source.requiresText), resourceCosts: { mana: Math.max(0, number(source.mana)), stamina: Math.max(0, number(source.stamina)), health: Math.max(0, number(source.health)) }, effects: source.effectTarget ? [{ scope: source.effectScope === "area" ? "area" : "actor", target: source.effectTarget, value: String(source.effectValue ?? ""), duration: String(source.effectDuration ?? ""), notes: "" }] : [] });
+    const itemData = { name, type: "action", img: leaf.img || "icons/svg/light.svg", system: { activationKind: type, category, actionType: category === "reactions" ? "reaction" : "standard", actions: leaf.actions, currentLevel: 1, maxLevel: leaf.maxRank, traits: leaf.traits, resourceCosts: leaf.resourceCosts, effects: leaf.effects, tree: { enabled: true, page, school, x: leaf.x, y: leaf.y, requires: leaf.requires, talentCost: leaf.talentCost, rankCost: leaf.rankCost, requiredLevel: leaf.requiredLevel }, description: leaf.description } };
+    let actionDocument = leaf.sourceUuid ? await fromUuid(leaf.sourceUuid) : null;
+    if (actionDocument?.documentName === "Item") await actionDocument.update(itemData);
+    else {
+      actionDocument = await Item.create(itemData, { renderSheet: false });
+      leaf.sourceUuid = actionDocument.uuid;
+    }
+    await saveTalentTreeCatalog(catalog);
+    await this.#registerCustomTraits(traits);
+    this.authorNode = null;
+    this.#draw();
+  }
+
+  #authorTreeNodeV2(source = null) {
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    const kind = source?.spell ? "spell" : source?.practice ? "practice" : source?.school ? "school" : "spell";
+    const node = source?.spell ?? source?.practice ?? source?.school ?? {};
+    this.authorNode = {
+      nodeKind: kind, editId: node.id ?? "", schoolId: source?.school?.id ?? "", practiceId: source?.practice?.id ?? "",
+      name: node.name ?? "", color: source?.school?.color ?? "#8b5cf6", shape: node.shape ?? (kind === "school" ? "pentagon" : kind === "practice" ? "diamond" : "diamond"), x: number(node.x, 500), y: number(node.y, 300),
+      type: node.type ?? "action", category: node.category ?? (page === "magic" ? "magic" : "actions"), actions: node.type === "ability" ? 0 : number(node.actions, 1),
+      traitsText: (node.traits ?? []).join(", "), mana: number(node.resourceCosts?.mana), stamina: number(node.resourceCosts?.stamina), health: number(node.resourceCosts?.health),
+      talentCost: number(node.talentCost, 1), rankCost: number(node.rankCost, 1), maxRank: number(node.maxRank, 20), requiredLevel: number(node.requiredLevel, 1),
+      requiresText: treeRequirementsText(node.requires), img: node.img ?? "", description: node.description ?? "",
+      effectScope: node.effects?.[0]?.scope ?? "actor", effectTarget: node.effects?.[0]?.target ?? "", effectValue: node.effects?.[0]?.value ?? "", effectDuration: node.effects?.[0]?.duration ?? ""
+    };
+    this.#draw();
+  }
+
+  #authorNodeMarkupV2() {
+    const node = this.authorNode;
+    const schools = talentTreePage(this.treePage);
+    const practices = schools.flatMap(school => (school.practices ?? []).map(practice => ({ ...practice, schoolId: school.id, schoolName: school.name })));
+    const traits = game.settings.get(game.system.id, "actionTraits") ?? [];
+    const spellFields = node.nodeKind === "spell" ? `<label>Action Kind<select name="authorNode.type"><option value="action">Action</option><option value="ability" ${node.type === "ability" ? "selected" : ""}>Ability (0 AP)</option></select></label><label>Category<select name="authorNode.category">${["actions", "reactions", "magic", "tech"].map(value => `<option value="${value}" ${node.category === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Action Points<input type="number" name="authorNode.actions" value="${number(node.actions)}" min="0" ${node.type === "ability" ? "max=\"0\"" : ""} /></label><label>Traits<input name="authorNode.traitsText" value="${escape(node.traitsText)}" list="vr-action-traits" /></label><datalist id="vr-action-traits">${traits.filter(entry => !entry.retired).map(entry => `<option value="${escape(entry.label)}"></option>`).join("")}</datalist><label>Mana Cost<input type="number" name="authorNode.mana" value="${number(node.mana)}" min="0" /></label><label>Stamina Cost<input type="number" name="authorNode.stamina" value="${number(node.stamina)}" min="0" /></label><label>Health Cost<input type="number" name="authorNode.health" value="${number(node.health)}" min="0" /></label><label>First Purchase<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /> TP</label><label>SP per Later Level<input type="number" name="authorNode.rankCost" value="${number(node.rankCost, 1)}" min="0" /></label><label>Maximum Level<input type="number" name="authorNode.maxRank" value="${number(node.maxRank, 20)}" min="1" max="20" /></label><label>Artwork<input name="authorNode.img" value="${escape(node.img)}" /></label><fieldset class="wide"><legend>Actor or Area Effect</legend><label>Scope<select name="authorNode.effectScope"><option value="actor">Actor</option><option value="area" ${node.effectScope === "area" ? "selected" : ""}>Area</option></select></label><label>Target<input name="authorNode.effectTarget" value="${escape(node.effectTarget)}" /></label><label>Value<input name="authorNode.effectValue" value="${escape(node.effectValue)}" /></label><label>Duration<input name="authorNode.effectDuration" value="${escape(node.effectDuration)}" /></label></fieldset>` : "";
+    return `<div class="vr-cc-author-shade"><form class="vr-cc-author-panel"><header><div><span>Shared GM Authoring</span><h2>${node.editId ? "Edit" : "Create"} Tree Node</h2></div><button type="button" class="vr-cc-icon" data-action="cancel-tree-node"><i class="fa-solid fa-xmark"></i></button></header><div class="vr-cc-author-grid"><label>Node Type<select name="authorNode.nodeKind"><option value="school" ${node.nodeKind === "school" ? "selected" : ""}>School</option><option value="practice" ${node.nodeKind === "practice" ? "selected" : ""}>Practice</option><option value="spell" ${node.nodeKind === "spell" ? "selected" : ""}>${this.treePage === "magic" ? "Spell" : "Skill"}</option></select></label>${node.nodeKind !== "school" ? `<label>School<select name="authorNode.schoolId"><option value="">Select School</option>${schools.map(school => `<option value="${escape(school.id)}" ${node.schoolId === school.id ? "selected" : ""}>${escape(school.name)}</option>`).join("")}</select></label>` : ""}${node.nodeKind === "spell" ? `<label>Practice<select name="authorNode.practiceId"><option value="">Select Practice</option>${practices.filter(practice => !node.schoolId || practice.schoolId === node.schoolId).map(practice => `<option value="${escape(practice.id)}" ${node.practiceId === practice.id ? "selected" : ""}>${escape(practice.schoolName)} / ${escape(practice.name)}</option>`).join("")}</select></label>` : ""}<label>Title<input name="authorNode.name" value="${escape(node.name)}" required /></label>${node.nodeKind === "school" ? `<label>School Color<input name="authorNode.color" type="color" value="${escape(node.color)}" /></label>` : ""}<label>X<input name="authorNode.x" type="number" value="${number(node.x)}" /></label><label>Y<input name="authorNode.y" type="number" value="${number(node.y)}" /></label>${node.nodeKind === "practice" ? `<label>Talent Point Cost<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /></label>` : ""}${node.nodeKind !== "school" ? `<label>Required Character Level<input type="number" name="authorNode.requiredLevel" value="${number(node.requiredLevel, 1)}" min="1" /></label><label>${node.nodeKind === "spell" ? "Spell Prerequisites" : "Practice Prerequisite IDs"}<input name="authorNode.requiresText" value="${escape(node.requiresText)}" placeholder="${node.nodeKind === "spell" ? "firebolt:5, other-spell:3" : "practice-id, cross-school-id"}" /></label>` : ""}${spellFields}<label class="wide">Description<textarea name="authorNode.description">${escape(node.description)}</textarea></label></div><footer>${node.editId ? `<button type="button" class="vr-cc-btn danger" data-action="delete-tree-node"><i class="fa-solid fa-trash"></i><span>Delete Node</span></button>` : ""}<button type="button" class="vr-cc-btn primary" data-action="save-tree-node"><i class="fa-solid fa-floppy-disk"></i><span>Save Shared Node</span></button></footer></form></div>`;
+  }
+
+  async #saveAuthoredTreeNodeV2() {
+    this.#saveVisibleInputs();
+    const source = this.authorNode;
+    if (!source) return;
+    const name = String(source.name ?? "").trim();
+    if (!name) return ui.notifications.warn("Enter a node title.");
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const schools = catalog[page] ?? (catalog[page] = []);
+    const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "node";
+    const uniqueId = (base, used) => { let id = slug(base); let n = 2; while (used.has(id)) id = `${slug(base)}-${n++}`; return id; };
+    let savedNode;
+    if (source.nodeKind === "school") {
+      savedNode = schools.find(entry => entry.id === source.editId);
+      if (!savedNode) { savedNode = { id: uniqueId(name, new Set(schools.map(entry => entry.id))), practices: [] }; schools.push(savedNode); }
+      Object.assign(savedNode, { name, color: source.color || "#8b5cf6", shape: ["circle", "hex", "pentagon", "square", "diamond"].includes(source.shape) ? source.shape : "pentagon", x: number(source.x, 500), y: number(source.y, 120) });
+    } else {
+      const school = schools.find(entry => entry.id === source.schoolId);
+      if (!school) return ui.notifications.warn("Select a School.");
+      school.practices ??= [];
+      if (source.nodeKind === "practice") {
+        savedNode = school.practices.find(entry => entry.id === source.editId);
+        const used = new Set(schools.flatMap(entry => entry.practices ?? []).map(entry => entry.id));
+        if (!savedNode) { savedNode = { id: uniqueId(name, used), spells: [] }; school.practices.push(savedNode); }
+        const previousRequirementLines = new Map((savedNode.requires ?? []).map(value => { const requirement = treeRequirement(value); return [requirement.id, requirement.line]; }));
+        Object.assign(savedNode, { name, shape: ["circle", "hex", "pentagon", "square", "diamond"].includes(source.shape) ? source.shape : "diamond", x: number(source.x, 500), y: number(source.y, 390), talentCost: Math.max(1, number(source.talentCost, 1)), requiredLevel: Math.max(1, number(source.requiredLevel, 1)), requires: listFromText(source.requiresText), description: String(source.description ?? "") });
+        savedNode.requires = savedNode.requires.map(value => ({ ...treeRequirement(value), line: previousRequirementLines.get(treeRequirement(value).id) ?? {} }));
+      } else {
+        const practice = school.practices.find(entry => entry.id === source.practiceId);
+        if (!practice) return ui.notifications.warn("Select a Practice.");
+        practice.spells ??= [];
+        savedNode = practice.spells.find(entry => entry.id === source.editId);
+        const used = new Set(schools.flatMap(entry => entry.practices ?? []).flatMap(entry => entry.spells ?? []).map(entry => entry.id));
+        if (!savedNode) { savedNode = { id: uniqueId(name, used) }; practice.spells.push(savedNode); }
+        const registry = game.settings.get(game.system.id, "actionTraits") ?? [];
+        const traitIds = new Map(registry.flatMap(entry => [[String(entry.id).toLowerCase(), entry.id], [String(entry.label).toLowerCase(), entry.id]]));
+        const traits = listFromText(source.traitsText).map(value => traitIds.get(value.toLowerCase()) ?? slug(value));
+        const type = source.type === "ability" ? "ability" : "action";
+        const category = ["actions", "reactions", "magic", "tech"].includes(source.category) ? source.category : (page === "magic" ? "magic" : "actions");
+        const previousRequirementLines = new Map((savedNode.requires ?? []).map(value => { const requirement = treeRequirement(value); return [requirement.id, requirement.line]; }));
+        Object.assign(savedNode, { name, x: number(source.x, number(practice.x) + 105), y: number(source.y, number(practice.y) + 138), type, category, actions: type === "ability" ? 0 : Math.max(1, number(source.actions, 1)), traits: [...new Set(traits)], img: String(source.img ?? ""), description: String(source.description ?? ""), talentCost: Math.max(1, number(source.talentCost, 1)), rankCost: Math.max(0, number(source.rankCost, 1)), maxRank: Math.min(20, Math.max(1, number(source.maxRank, 20))), requiredLevel: Math.max(1, number(source.requiredLevel, 1)), requires: treeRequirementsFromText(source.requiresText), resourceCosts: { mana: Math.max(0, number(source.mana)), stamina: Math.max(0, number(source.stamina)), health: Math.max(0, number(source.health)) }, effects: source.effectTarget ? [{ scope: source.effectScope === "area" ? "area" : "actor", target: String(source.effectTarget), value: String(source.effectValue ?? ""), duration: String(source.effectDuration ?? ""), notes: "" }] : [] });
+        savedNode.requires = savedNode.requires.map(requirement => ({ ...requirement, line: previousRequirementLines.get(requirement.id) ?? requirement.line }));
+        savedNode.shape = ["circle", "hex", "pentagon", "square", "diamond"].includes(source.shape) ? source.shape : (type === "ability" ? "hex" : "diamond");
+        const itemRequires = savedNode.requires.map(value => { const requirement = treeRequirement(value); return `${requirement.id}:${requirement.level}`; });
+        const itemData = { name, type: "action", img: savedNode.img || "icons/svg/light.svg", system: { activationKind: type, category, actionType: category === "reactions" ? "reaction" : "standard", actions: savedNode.actions, currentLevel: 1, maxLevel: savedNode.maxRank, traits: savedNode.traits, resourceCosts: savedNode.resourceCosts, effects: savedNode.effects, tree: { enabled: true, page, school: school.name, practice: practice.name, x: savedNode.x, y: savedNode.y, requires: itemRequires, talentCost: savedNode.talentCost, rankCost: savedNode.rankCost, requiredLevel: savedNode.requiredLevel }, description: savedNode.description } };
+        let actionDocument = savedNode.sourceUuid ? await fromUuid(savedNode.sourceUuid) : null;
+        if (actionDocument?.documentName === "Item") await actionDocument.update(itemData);
+        else { actionDocument = await Item.create(itemData, { renderSheet: false }); savedNode.sourceUuid = actionDocument.uuid; }
+        await this.#registerCustomTraits(traits);
+      }
+    }
+    await saveTalentTreeCatalog(catalog);
+    this.authorNode = null;
+    this.#draw();
+  }
+
+  async #deleteAuthoredTreeNodeV2() {
+    const source = this.authorNode;
+    if (!source?.editId) return;
+    const confirmed = await foundry.applications.api.DialogV2.confirm({ window: { title: "Delete Shared Tree Node" }, content: `<p>Delete <strong>${escape(source.name)}</strong> from the shared ${escape(this.treePage)} catalog?</p>`, modal: true });
+    if (!confirmed) return;
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const schools = catalog[this.treePage] ?? [];
+    const allPractices = schools.flatMap(school => school.practices ?? []);
+    const allSpells = allPractices.flatMap(practice => practice.spells ?? []);
+    const requiredBy = [...allPractices, ...allSpells].filter(node => (node.requires ?? []).some(value => treeRequirement(value).id === source.editId));
+    if (requiredBy.length) return ui.notifications.warn(`Remove this prerequisite from ${requiredBy.map(node => node.name).join(", ")} first.`);
+    if (source.nodeKind === "school") {
+      const school = schools.find(entry => entry.id === source.editId);
+      if (school?.practices?.length) return ui.notifications.warn("Delete or move this School's Practices first.");
+      catalog[this.treePage] = schools.filter(entry => entry.id !== source.editId);
+    } else if (source.nodeKind === "practice") {
+      const school = schools.find(entry => entry.id === source.schoolId);
+      const practice = school?.practices?.find(entry => entry.id === source.editId);
+      if (practice?.spells?.length) return ui.notifications.warn("Delete or move this Practice's Spells first.");
+      if (school) school.practices = school.practices.filter(entry => entry.id !== source.editId);
+    } else {
+      const practice = allPractices.find(entry => entry.id === source.practiceId);
+      const spell = practice?.spells?.find(entry => entry.id === source.editId);
+      const actionDocument = spell?.sourceUuid ? await fromUuid(spell.sourceUuid) : null;
+      if (practice) practice.spells = practice.spells.filter(entry => entry.id !== source.editId);
+      if (actionDocument?.documentName === "Item") await actionDocument.delete();
+    }
+    await saveTalentTreeCatalog(catalog);
+    this.authorNode = null;
+    this.#draw();
+  }
+
+  async #registerCustomTraits(ids) {
+    const traits = foundry.utils.deepClone(game.settings.get(game.system.id, "actionTraits") ?? []);
+    const known = new Set(traits.map(entry => entry.id));
+    for (const id of ids) if (!known.has(id)) traits.push({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), retired: false });
+    await game.settings.set(game.system.id, "actionTraits", traits);
+  }
+
+  async #addTreeTrait() {
+    const label = String(this.root.querySelector('[name="newTraitLabel"]')?.value ?? "").trim();
+    if (!label) return;
+    await this.#registerCustomTraits([label.toLowerCase().replace(/[^a-z0-9]+/g, "-")]);
+    this.#draw();
+  }
+
+  async #saveTreeTraits() {
+    const traits = foundry.utils.deepClone(game.settings.get(game.system.id, "actionTraits") ?? []);
+    for (const input of this.root.querySelectorAll('[name^="traitLabels."]')) {
+      const index = number(input.name.split(".")[1], -1);
+      if (traits[index]) traits[index].label = String(input.value ?? "").trim() || traits[index].label;
+    }
+    await game.settings.set(game.system.id, "actionTraits", traits);
+    this.traitEditorOpen = false;
+    this.#draw();
+  }
+
+  async #deleteAuthoredTreeNode() {
+    return this.#deleteAuthoredTreeNodeV2();
+    /* Legacy constellation editor retained below for migration reference. */
+    const source = this.authorNode;
+    if (!source?.editLeafId) return;
+    const confirmed = await foundry.applications.api.DialogV2.confirm({ window: { title: "Delete Tree Node" }, content: `<p>Delete <strong>${escape(source.name)}</strong> from the shared tree catalog?</p>`, modal: true });
+    if (!confirmed) return;
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const branch = (catalog[this.treePage] ?? []).find(entry => entry.id === source.editBranchId);
+    const leaf = branch?.leaves?.find(entry => entry.id === source.editLeafId);
+    if (!leaf) return;
+    const requiredBy = (catalog[this.treePage] ?? []).flatMap(entry => entry.leaves ?? []).filter(entry => (entry.requires ?? []).includes(leaf.id));
+    if (requiredBy.length) return ui.notifications.warn(`Remove this prerequisite from ${requiredBy.map(entry => entry.name).join(", ")} first.`);
+    const document = leaf.sourceUuid ? await fromUuid(leaf.sourceUuid) : null;
+    branch.leaves = branch.leaves.filter(entry => entry.id !== leaf.id);
+    await saveTalentTreeCatalog(catalog);
+    if (document?.documentName === "Item") await document.delete();
+    this.authorNode = null;
+    this.#draw();
+  }
+
+  #onTreeWheel(event) {
+    const board = event.target.closest?.(".vr-cc-tree-board");
+    if (!board) return;
+    event.preventDefault();
+    const previous = this.treeZoom;
+    const next = Math.max(.35, Math.min(1.8, previous * (event.deltaY < 0 ? 1.1 : .9)));
+    if (Math.abs(next - previous) < .001) return;
+    const rect = board.getBoundingClientRect();
+    const worldX = (board.scrollLeft + event.clientX - rect.left) / previous;
+    const worldY = (board.scrollTop + event.clientY - rect.top) / previous;
+    this.treeZoom = next;
+    const world = board.querySelector(".vr-cc-tree-world");
+    const frame = board.querySelector(".vr-cc-tree-world-frame");
+    if (world && frame) {
+      world.style.setProperty("--tree-zoom", next);
+      const width = number(world.dataset.worldWidth, 10000);
+      const height = number(world.dataset.worldHeight, 6000);
+      frame.style.width = `${width * next}px`;
+      frame.style.height = `${height * next}px`;
+      board.scrollLeft = worldX * next - (event.clientX - rect.left);
+      board.scrollTop = worldY * next - (event.clientY - rect.top);
+      const readout = this.root.querySelector(".vr-cc-tree-pools > small");
+      if (readout) readout.textContent = `${Math.round(next * 100)}%`;
+    }
+  }
+
+  #onTreePanStart(event) {
+    if (event.button !== 0) return;
+    const scroller = event.target.closest?.(".vr-cc-tree-board");
+    if (!scroller) return;
+    const socket = event.target.closest?.("[data-tree-socket]");
+    if (game.user.isGM && this.connectionTool.active && socket) {
+      const layer = socket.closest(".vr-cc-node-socket-layer");
+      const source = this.#connectionNodeRecord(layer);
+      const world = layer?.closest(".vr-cc-tree-world");
+      const svg = world?.querySelector(".vr-cc-tree-links");
+      if (!source || !world || !svg) return;
+      const preview = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      preview.classList.add("vr-cc-tree-link", "connection-preview", `pattern-${this.connectionTool.pattern}`);
+      const style = this.#authoredConnectionStyle();
+      preview.setAttribute("style", style.css ?? `--tree-color:${style.color || "#ffffff"};--line-width:${style.thickness};--line-glow:${style.glow}`);
+      svg.append(preview);
+      this.connectionTool.sourceAnchor = socket.dataset.treeSocket;
+      this.connectionDrag = { source, layer, socket, world, scroller, preview, start: this.#treePointerPosition(event, world), moved: false };
+      socket.classList.add("drag-source");
+      this.root.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+      return;
+    }
+    const dragTarget = game.user.isGM && this.nodeMoveMode && !this.connectionTool.active ? event.target.closest?.("[data-tree-drag]") : null;
+    if (dragTarget) {
+      const world = dragTarget.closest(".vr-cc-tree-world");
+      const [kind, schoolId, practiceId, spellId] = dragTarget.dataset.treeDrag.split(":");
+      const record = kind === "root" ? { node: talentTreeRoot(this.treePage) } : this.#treeCatalogEntry(kind === "spell" ? spellId : kind === "practice" ? practiceId : schoolId, kind);
+      const node = kind === "spell" ? record?.spell : kind === "practice" ? record?.practice : kind === "school" ? record?.school : record?.node;
+      if (!world || !node) return;
+      const guideX = document.createElement("i");
+      const guideY = document.createElement("i");
+      const coordinate = document.createElement("output");
+      guideX.className = "vr-cc-drag-guide-x";
+      guideY.className = "vr-cc-drag-guide-y";
+      coordinate.className = "vr-cc-drag-coordinate";
+      world.append(guideX, guideY, coordinate);
+      const children = kind === "practice" ? [...world.querySelectorAll("[data-tree-rank], .vr-cc-external-requirement")].map(element => ({ element, x: number(element.style.left), y: number(element.style.top) })) : [];
+      const selectionKey = dragTarget.dataset.treeDrag;
+      const wasSelected = this.selectedTreeNodes.has(selectionKey);
+      if (!wasSelected) {
+        if (!event.shiftKey) {
+          this.selectedTreeNodes.clear();
+          for (const selected of world.querySelectorAll("[data-tree-drag].multi-selected")) selected.classList.remove("multi-selected");
+          for (const marker of world.querySelectorAll(".vr-cc-node-selection-marker")) marker.remove();
+        }
+        this.selectedTreeNodes.add(selectionKey);
+        dragTarget.classList.add("multi-selected");
+        this.#addTreeSelectionMarker(dragTarget, world);
+      }
+      this.treeNodeDrag = { target: dragTarget, world, scroller, kind, schoolId, practiceId, spellId, selectionKey, wasSelected, additiveSelection: event.shiftKey, startX: event.clientX, startY: event.clientY, startScrollLeft: scroller.scrollLeft, startScrollTop: scroller.scrollTop, nodeX: number(node.x), nodeY: number(node.y), x: number(node.x), y: number(node.y), moved: false, guideX, guideY, coordinate, children };
+      dragTarget.classList.add("node-dragging");
+      scroller.classList.add("node-moving");
+      this.root.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+      return;
+    }
+    if (event.target.closest?.("button, input, select, textarea")) return;
+    this.treePan = { scroller, x: event.clientX, y: event.clientY, left: scroller.scrollLeft, top: scroller.scrollTop };
+    scroller.classList.add("panning");
+    this.root.setPointerCapture?.(event.pointerId);
+  }
+
+  #onTreePanMove(event) {
+    if (this.connectionDrag) {
+      const drag = this.connectionDrag;
+      const end = this.#treePointerPosition(event, drag.world);
+      drag.moved ||= Math.hypot(end.x - drag.start.x, end.y - drag.start.y) > 4;
+      drag.preview.setAttribute("d", this.#treePointPath(drag.start, end, number(this.connectionTool.bend)));
+      for (const item of this.root.querySelectorAll(".vr-cc-node-socket.drop-target")) item.classList.remove("drop-target");
+      const candidate = document.elementsFromPoint(event.clientX, event.clientY).find(item => item.matches?.("[data-tree-socket]"));
+      if (candidate && candidate !== drag.socket) candidate.classList.add("drop-target");
+      return;
+    }
+    if (this.treeNodeDrag) {
+      const drag = this.treeNodeDrag;
+      const rect = drag.scroller.getBoundingClientRect();
+      const edge = 56;
+      const panX = event.clientX < rect.left + edge ? -Math.ceil((rect.left + edge - event.clientX) / 3) : event.clientX > rect.right - edge ? Math.ceil((event.clientX - (rect.right - edge)) / 3) : 0;
+      const panY = event.clientY < rect.top + edge ? -Math.ceil((rect.top + edge - event.clientY) / 3) : event.clientY > rect.bottom - edge ? Math.ceil((event.clientY - (rect.bottom - edge)) / 3) : 0;
+      if (panX) drag.scroller.scrollLeft = Math.max(0, drag.scroller.scrollLeft + panX);
+      if (panY) drag.scroller.scrollTop = Math.max(0, drag.scroller.scrollTop + panY);
+      const dx = (event.clientX - drag.startX + drag.scroller.scrollLeft - drag.startScrollLeft) / this.treeZoom;
+      const dy = (event.clientY - drag.startY + drag.scroller.scrollTop - drag.startScrollTop) / this.treeZoom;
+      drag.x = Math.max(0, Math.round(drag.nodeX + dx));
+      drag.y = Math.max(0, Math.round(drag.nodeY + dy));
+      drag.moved ||= Math.hypot(dx, dy) > 3;
+      drag.target.style.left = `${drag.x}px`;
+      drag.target.style.top = `${drag.y}px`;
+      const selectionMarker = [...drag.world.querySelectorAll(".vr-cc-node-selection-marker")].find(marker => marker.dataset.selectionKey === drag.selectionKey);
+      if (selectionMarker) { selectionMarker.style.left = `${drag.x}px`; selectionMarker.style.top = `${drag.y}px`; }
+      for (const child of drag.children) { child.element.style.left = `${child.x + dx}px`; child.element.style.top = `${child.y + dy}px`; }
+      drag.guideX.style.top = `${drag.y}px`;
+      drag.guideY.style.left = `${drag.x}px`;
+      drag.coordinate.style.left = `${drag.x + 18}px`;
+      drag.coordinate.style.top = `${drag.y - 30}px`;
+      drag.coordinate.textContent = `${drag.x}, ${drag.y}`;
+      this.#refreshTreeLines(drag.world);
+      this.#ensureTreeCanvasContains(drag.scroller, drag.x + 1200, drag.y + 900);
+      return;
+    }
+    if (!this.treePan) return;
+    this.treePan.scroller.scrollLeft = this.treePan.left - (event.clientX - this.treePan.x);
+    this.treePan.scroller.scrollTop = this.treePan.top - (event.clientY - this.treePan.y);
+    this.#expandTreeCanvasAtEdge(this.treePan.scroller);
+  }
+
+  #expandTreeCanvasAtEdge(scroller) {
+    if (!game.user.isGM) return;
+    const world = scroller.querySelector(".vr-cc-tree-world");
+    const frame = scroller.querySelector(".vr-cc-tree-world-frame");
+    const svg = world?.querySelector(".vr-cc-tree-links");
+    if (!world || !frame || !svg) return;
+    let width = number(world.dataset.worldWidth, 10000);
+    let height = number(world.dataset.worldHeight, 6000);
+    let changed = false;
+    if (scroller.scrollLeft + scroller.clientWidth > frame.offsetWidth - 800) { width *= 2; changed = true; }
+    if (scroller.scrollTop + scroller.clientHeight > frame.offsetHeight - 800) { height *= 2; changed = true; }
+    if (!changed) return;
+    this.treeCanvasDimensions[this.treePage] = { width, height };
+    world.dataset.worldWidth = String(width);
+    world.dataset.worldHeight = String(height);
+    world.style.width = `${width}px`;
+    world.style.height = `${height}px`;
+    frame.style.width = `${width * this.treeZoom}px`;
+    frame.style.height = `${height * this.treeZoom}px`;
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.style.width = `${width}px`;
+    svg.style.height = `${height}px`;
+  }
+
+  #ensureTreeCanvasContains(scroller, requestedWidth, requestedHeight) {
+    const world = scroller.querySelector(".vr-cc-tree-world");
+    const frame = scroller.querySelector(".vr-cc-tree-world-frame");
+    const svg = world?.querySelector(".vr-cc-tree-links");
+    if (!world || !frame || !svg) return;
+    let width = number(world.dataset.worldWidth, 10000);
+    let height = number(world.dataset.worldHeight, 6000);
+    while (requestedWidth > width) width *= 2;
+    while (requestedHeight > height) height *= 2;
+    if (width === number(world.dataset.worldWidth) && height === number(world.dataset.worldHeight)) return;
+    this.treeCanvasDimensions[this.treePage] = { width, height };
+    world.dataset.worldWidth = String(width);
+    world.dataset.worldHeight = String(height);
+    world.style.width = `${width}px`;
+    world.style.height = `${height}px`;
+    frame.style.width = `${width * this.treeZoom}px`;
+    frame.style.height = `${height * this.treeZoom}px`;
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.style.width = `${width}px`;
+    svg.style.height = `${height}px`;
+  }
+
+  #treePointerPosition(event, world) {
+    const rect = world.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) / this.treeZoom, y: (event.clientY - rect.top) / this.treeZoom };
+  }
+
+  #treePointPath(start, end, bend = 0) {
+    if (!bend) return `M ${start.x} ${start.y} L ${end.x} ${end.y}`;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const offset = Math.min(360, distance * .45) * (Math.max(-100, Math.min(100, bend)) / 100);
+    const nx = -dy / distance;
+    const ny = dx / distance;
+    return `M ${start.x} ${start.y} C ${start.x + dx / 3 + nx * offset} ${start.y + dy / 3 + ny * offset}, ${start.x + dx * 2 / 3 + nx * offset} ${start.y + dy * 2 / 3 + ny * offset}, ${end.x} ${end.y}`;
+  }
+
+  #refreshTreeLines(world) {
+    const worldRect = world.getBoundingClientRect();
+    const nodes = [...world.querySelectorAll("[data-tree-node-id]")];
+    const geometry = id => {
+      const node = nodes.find(entry => entry.dataset.treeNodeId === id);
+      if (!node) return null;
+      const visual = node.querySelector?.(".vr-cc-spell-glyph") ?? node;
+      const rect = visual.getBoundingClientRect();
+      const left = (rect.left - worldRect.left) / this.treeZoom;
+      const top = (rect.top - worldRect.top) / this.treeZoom;
+      const right = (rect.right - worldRect.left) / this.treeZoom;
+      const bottom = (rect.bottom - worldRect.top) / this.treeZoom;
+      return { left, top, right, bottom, cx: (left + right) / 2, cy: (top + bottom) / 2 };
+    };
+    for (const path of world.querySelectorAll(".vr-cc-tree-link[data-tree-source][data-tree-target]")) {
+      const source = geometry(path.dataset.treeSource);
+      const target = geometry(path.dataset.treeTarget);
+      if (!source || !target) continue;
+      const start = this.#treeAnchorPoint(source, path.dataset.sourceAnchor ?? "auto", target);
+      const end = this.#treeAnchorPoint(target, path.dataset.targetAnchor ?? "auto", source);
+      path.setAttribute("d", this.#treePointPath(start, end, number(path.dataset.lineBend)));
+    }
+  }
+
+  async #onTreePanEnd(event) {
+    if (this.connectionDrag) {
+      const drag = this.connectionDrag;
+      const targetSocket = document.elementsFromPoint(event.clientX, event.clientY).find(item => item.matches?.("[data-tree-socket]"));
+      const targetLayer = targetSocket?.closest(".vr-cc-node-socket-layer");
+      drag.preview.remove();
+      drag.socket.classList.remove("drag-source");
+      for (const item of this.root.querySelectorAll(".vr-cc-node-socket.drop-target")) item.classList.remove("drop-target");
+      this.connectionDrag = null;
+      this.root.releasePointerCapture?.(event.pointerId);
+      if (drag.moved && targetLayer && targetLayer !== drag.layer) {
+        this.connectionTool.source = drag.source;
+        this.connectionTool.sourceAnchor = drag.socket.dataset.treeSocket;
+        this.suppressTreeClick = true;
+        setTimeout(() => { this.suppressTreeClick = false; }, 0);
+        await this.#onConnectionNodeClick(targetLayer, targetSocket.dataset.treeSocket);
+      }
+      return;
+    }
+    if (this.treeNodeDrag) {
+      const drag = this.treeNodeDrag;
+      drag.target.classList.remove("node-dragging");
+      drag.scroller.classList.remove("node-moving");
+      drag.guideX.remove();
+      drag.guideY.remove();
+      drag.coordinate.remove();
+      this.treeNodeDrag = null;
+      this.root.releasePointerCapture?.(event.pointerId);
+      this.suppressTreeClick = true;
+      setTimeout(() => { this.suppressTreeClick = false; }, 0);
+      if (drag.moved) {
+        await this.#saveTreeNodePosition(drag);
+      } else {
+        if (drag.additiveSelection) {
+          if (drag.wasSelected) this.selectedTreeNodes.delete(drag.selectionKey);
+          else this.selectedTreeNodes.add(drag.selectionKey);
+        } else {
+          this.selectedTreeNodes.clear();
+          this.selectedTreeNodes.add(drag.selectionKey);
+        }
+        this.#redrawTreePreservingViewport();
+      }
+      return;
+    }
+    if (!this.treePan) return;
+    this.treePan.scroller.classList.remove("panning");
+    this.treePan = null;
+    this.root.releasePointerCapture?.(event.pointerId);
+  }
+
+  async #saveTreeNodePosition(drag) {
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const school = (catalog[this.treePage] ?? []).find(entry => entry.id === drag.schoolId);
+    const practice = school?.practices?.find(entry => entry.id === drag.practiceId);
+    const node = drag.kind === "root" ? catalog.roots?.[this.treePage] : drag.kind === "spell" ? practice?.spells?.find(entry => entry.id === drag.spellId) : drag.kind === "practice" ? practice : school;
+    if (!node) return;
+    const dx = drag.x - number(node.x);
+    const dy = drag.y - number(node.y);
+    node.x = drag.x;
+    node.y = drag.y;
+    if (drag.kind === "practice") for (const spell of node.spells ?? []) { spell.x = number(spell.x) + dx; spell.y = number(spell.y) + dy; }
+    const viewport = this.#treeViewportSnapshot();
+    await saveTalentTreeCatalog(catalog);
+    this.#redrawTreePreservingViewport(viewport);
+  }
+
+  #catalogNodeForSelection(catalog, selectionKey) {
+    const [kind, schoolId, practiceId, spellId] = String(selectionKey).split(":");
+    const school = (catalog[this.treePage] ?? []).find(entry => entry.id === schoolId);
+    const practice = school?.practices?.find(entry => entry.id === practiceId);
+    const node = kind === "root" ? catalog.roots?.[this.treePage] : kind === "spell" ? practice?.spells?.find(entry => entry.id === spellId) : kind === "practice" ? practice : school;
+    return node ? { kind, node, selectionKey } : null;
+  }
+
+  #moveSelectedCatalogNode(record, x, y) {
+    const nextX = Math.max(0, Math.round(number(x, record.node.x)));
+    const nextY = Math.max(0, Math.round(number(y, record.node.y)));
+    const dx = nextX - number(record.node.x);
+    const dy = nextY - number(record.node.y);
+    record.node.x = nextX;
+    record.node.y = nextY;
+    if (record.kind === "practice") for (const spell of record.node.spells ?? []) {
+      spell.x = number(spell.x) + dx;
+      spell.y = number(spell.y) + dy;
+    }
+  }
+
+  #selectedCatalogRecords(catalog) {
+    return [...this.selectedTreeNodes].map(key => this.#catalogNodeForSelection(catalog, key)).filter(Boolean);
+  }
+
+  #ringSelectionRecords(catalog) {
+    const root = talentTreeRoot(this.treePage);
+    return this.#selectedCatalogRecords(catalog).filter(record => record.kind !== "root").sort((a, b) => Math.atan2(number(a.node.y) - number(root?.y), number(a.node.x) - number(root?.x)) - Math.atan2(number(b.node.y) - number(root?.y), number(b.node.x) - number(root?.x)));
+  }
+
+  async #saveSelectedNodeLayout(catalog, message) {
+    const viewport = this.#treeViewportSnapshot();
+    await saveTalentTreeCatalog(catalog);
+    this.#redrawTreePreservingViewport(viewport);
+    ui.notifications.info(message);
+  }
+
+  async #alignSelectedTreeNodes(axis) {
+    if (!game.user.isGM || this.selectedTreeNodes.size < 2) return;
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const records = this.#selectedCatalogRecords(catalog);
+    if (records.length < 2) return ui.notifications.warn("Select at least two nodes on this canvas.");
+    const property = axis === "vertical" ? "x" : "y";
+    const target = Math.round(records.reduce((sum, record) => sum + number(record.node[property]), 0) / records.length);
+    for (const record of records) {
+      this.#moveSelectedCatalogNode(record, property === "x" ? target : record.node.x, property === "y" ? target : record.node.y);
+    }
+    await this.#saveSelectedNodeLayout(catalog, `Aligned ${records.length} nodes in a ${axis} line.`);
+  }
+
+  async #squareSelectedTreeNodes() {
+    if (!game.user.isGM || this.selectedTreeNodes.size < 2) return;
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const records = this.#selectedCatalogRecords(catalog).sort((a, b) => number(a.node.y) - number(b.node.y) || number(a.node.x) - number(b.node.x));
+    if (records.length < 2) return;
+    const columns = Math.ceil(Math.sqrt(records.length));
+    const rows = Math.ceil(records.length / columns);
+    const centerX = records.reduce((sum, record) => sum + number(record.node.x), 0) / records.length;
+    const centerY = records.reduce((sum, record) => sum + number(record.node.y), 0) / records.length;
+    const spacing = 180;
+    for (let row = 0, index = 0; row < rows; row += 1) {
+      const rowCount = Math.min(columns, records.length - index);
+      for (let column = 0; column < rowCount; column += 1, index += 1) {
+        const x = centerX + (column - (rowCount - 1) / 2) * spacing;
+        const y = centerY + (row - (rows - 1) / 2) * spacing;
+        this.#moveSelectedCatalogNode(records[index], x, y);
+      }
+    }
+    await this.#saveSelectedNodeLayout(catalog, `Squared up ${records.length} nodes with equal 180-pixel center spacing.`);
+  }
+
+  async #spaceSelectedTreeNodes(axis) {
+    if (!game.user.isGM || this.selectedTreeNodes.size < 3) return;
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const property = axis === "vertical" ? "y" : "x";
+    const records = this.#selectedCatalogRecords(catalog).sort((a, b) => number(a.node[property]) - number(b.node[property]));
+    if (records.length < 3) return;
+    const first = number(records[0].node[property]);
+    const last = number(records.at(-1).node[property]);
+    const interval = (last - first) / (records.length - 1);
+    records.forEach((record, index) => this.#moveSelectedCatalogNode(record, property === "x" ? first + interval * index : record.node.x, property === "y" ? first + interval * index : record.node.y));
+    await this.#saveSelectedNodeLayout(catalog, `Distributed ${records.length} nodes with equal ${axis} spacing.`);
+  }
+
+  async #placeSelectedTreeRing() {
+    if (!game.user.isGM || this.openPracticeId) return;
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const records = this.#ringSelectionRecords(catalog);
+    if (records.length < 2) return ui.notifications.warn("Select at least two non-root nodes.");
+    const root = catalog.roots?.[this.treePage] ?? talentTreeRoot(this.treePage);
+    const radius = Math.max(180, Math.min(3000, number(this.treeRingTool.radius, 500)));
+    const rotation = number(this.treeRingTool.rotation, -90) * Math.PI / 180;
+    records.forEach((record, index) => {
+      const angle = rotation + index * Math.PI * 2 / records.length;
+      this.#moveSelectedCatalogNode(record, number(root.x) + Math.cos(angle) * radius, number(root.y) + Math.sin(angle) * radius);
+    });
+    this.treeRingTool.active = false;
+    await this.#saveSelectedNodeLayout(catalog, `Placed ${records.length} nodes evenly on a ${radius}-pixel ring around ${root.name}.`);
+  }
+
+  async #onTreeContextMenu(event) {
+    const target = event.target.closest?.("[data-tree-school], [data-tree-practice-card], [data-tree-rank]");
+    if (!target) return;
+    event.preventDefault();
+    const id = target.dataset.treeSchool ?? target.dataset.treePracticeCard ?? target.dataset.treeRank;
+    const kind = target.dataset.treeSchool ? "school" : target.dataset.treePracticeCard ? "practice" : "spell";
+    if (kind === "practice" || kind === "spell") {
+      const undone = await this.#undoCurrentTreePurchase(id, kind);
+      if (undone) return;
+      if (!game.user.isGM) return ui.notifications.warn("Only purchases or Spell levels added during this chargen or level-up session can be undone.");
+    }
+    if (!game.user.isGM) return;
+    const source = this.#treeCatalogEntry(id, kind);
+    if (source) this.#authorTreeNode(source);
+  }
+
+  async #undoCurrentTreePurchase(id, kind) {
+    const viewport = this.#treeViewportSnapshot();
+    if (kind === "spell") {
+      const current = (this.state.talentTree?.leaves ?? []).find(entry => entry.id === id);
+      const initialRank = Math.max(0, number((this.initialTalentTree?.leaves ?? []).find(entry => entry.id === id)?.rank));
+      const currentRank = Math.max(0, number(current?.rank));
+      if (!current || currentRank <= initialRank) return false;
+      const nextRank = currentRank - 1;
+      const ranked = new Set((this.state.talentTree?.leaves ?? []).filter(entry => number(entry.rank) > 0).map(entry => entry.id));
+      const blockedBy = talentTreePage(this.treePage).flatMap(school => school.practices ?? []).flatMap(practice => practice.spells ?? []).filter(spell => ranked.has(spell.id) && (spell.requires ?? []).map(treeRequirement).some(requirement => requirement.id === id && requirement.level > nextRank));
+      if (blockedBy.length) {
+        ui.notifications.warn(`Undo ${blockedBy.map(spell => spell.name).join(", ")} first; ${currentRank > 1 ? `level ${nextRank}` : "removing this purchase"} would no longer meet its prerequisite.`);
+        return true;
+      }
+      if (currentRank - 1 <= 0) this.state.talentTree.leaves = this.state.talentTree.leaves.filter(entry => entry.id !== id);
+      else current.rank = currentRank - 1;
+      this.treeUndoStack.length = 0;
+      this.#redrawTreePreservingViewport(viewport);
+      const name = this.#treeCatalogEntry(id, "spell")?.spell?.name ?? id;
+      ui.notifications.info(nextRank ? `${name} returned to level ${nextRank}.` : `${name} purchase undone.`);
+      return true;
+    }
+    const purchased = (this.state.talentTree?.branches ?? []).includes(id);
+    const previouslyOwned = (this.initialTalentTree?.branches ?? []).includes(id);
+    if (!purchased || previouslyOwned) return false;
+    const practice = this.#treeCatalogEntry(id, "practice")?.practice;
+    const purchasedPractices = new Set(this.state.talentTree?.branches ?? []);
+    const dependentPractices = talentTreePage(this.treePage).flatMap(school => school.practices ?? []).filter(candidate => candidate.id !== id && purchasedPractices.has(candidate.id) && (candidate.requires ?? []).map(treeRequirement).some(requirement => requirement.id === id));
+    if (dependentPractices.length) {
+      ui.notifications.warn(`Undo ${dependentPractices.map(candidate => candidate.name).join(", ")} first; those Practices require ${practice?.name ?? id}.`);
+      return true;
+    }
+    const spellIds = new Set((practice?.spells ?? []).map(spell => spell.id));
+    const draftSpellLevels = (this.state.talentTree?.leaves ?? []).filter(entry => spellIds.has(entry.id) && number(entry.rank) > number((this.initialTalentTree?.leaves ?? []).find(initial => initial.id === entry.id)?.rank));
+    if (draftSpellLevels.length) {
+      ui.notifications.warn("Undo the current-session Spell levels in this Practice first.");
+      return true;
+    }
+    this.state.talentTree.branches = this.state.talentTree.branches.filter(branchId => branchId !== id);
+    this.treeUndoStack.length = 0;
+    if (this.openPracticeId === id) this.openPracticeId = null;
+    this.#draw();
+    ui.notifications.info(`${practice?.name ?? id} purchase undone.`);
+    return true;
+  }
+
+  #treeViewportSnapshot() {
+    const board = this.root.querySelector(".vr-cc-tree-board");
+    return board ? { left: board.scrollLeft, top: board.scrollTop } : (this.treeViewport[this.#treeViewportKey()] ?? { left: 0, top: 0 });
+  }
+
+  #treeViewportKey() {
+    return `${this.treePage}:${this.openPracticeId ?? "main"}`;
+  }
+
+  #restoreTreeViewport() {
+    const board = this.root.querySelector(".vr-cc-tree-board");
+    if (!board) return;
+    const key = this.#treeViewportKey();
+    let viewport = this.treeViewport[key] ?? { left: 0, top: 0 };
+    if (!this.treeViewportInitialized[key]) {
+      const focus = this.openPracticeId ? this.#treeCatalogEntry(this.openPracticeId, "practice")?.practice : talentTreeRoot(this.treePage);
+      viewport = { left: Math.max(0, number(focus?.x) * this.treeZoom - board.clientWidth / 2), top: Math.max(0, number(focus?.y) * this.treeZoom - board.clientHeight / 2) };
+      this.treeViewport[key] = viewport;
+      this.treeViewportInitialized[key] = true;
+    }
+    board.scrollLeft = viewport.left;
+    board.scrollTop = viewport.top;
+  }
+
+  #redrawTreePreservingViewport(snapshot = this.#treeViewportSnapshot()) {
+    const key = this.#treeViewportKey();
+    this.treeViewport[key] = snapshot;
+    this.#draw();
+    const restore = () => {
+      const board = this.root.querySelector(".vr-cc-tree-board");
+      if (!board) return;
+      board.scrollLeft = snapshot.left;
+      board.scrollTop = snapshot.top;
+    };
+    restore();
+    requestAnimationFrame(restore);
+  }
+
+  #connectionNodeRecord(element) {
+    if (element.dataset.treeRoot) { const root = talentTreeRoot(this.treePage); return { kind: "root", id: root.id, name: root.name }; }
+    if (element.dataset.treeSchool) { const entry = this.#treeCatalogEntry(element.dataset.treeSchool, "school"); return entry ? { kind: "school", id: entry.school.id, name: entry.school.name, schoolId: entry.school.id } : null; }
+    if (element.dataset.treePracticeCard) { const entry = this.#treeCatalogEntry(element.dataset.treePracticeCard, "practice"); return entry ? { kind: "practice", id: entry.practice.id, name: entry.practice.name, schoolId: entry.school.id } : null; }
+    if (element.dataset.treeRank) { const entry = this.#treeCatalogEntry(element.dataset.treeRank, "spell"); return entry ? { kind: "spell", id: entry.spell.id, name: entry.spell.name, schoolId: entry.school.id, practiceId: entry.practice.id } : null; }
+    return null;
+  }
+
+  #authoredConnectionStyle() {
+    const tool = this.connectionTool;
+    return { bend: Math.max(-100, Math.min(100, number(tool.bend))), thickness: Math.max(1, Math.min(10, number(tool.thickness, 2))), sourceAnchor: tool.sourceAnchor ?? "auto", targetAnchor: tool.targetAnchor ?? "auto", pattern: tool.pattern ?? "solid", glow: Math.max(0, Math.min(3, number(tool.glow, 1))), color: /^#[0-9a-f]{6}$/i.test(tool.color ?? "") ? tool.color : "" };
+  }
+
+  async #clearCanvasConnections() {
+    const practiceEntry = this.openPracticeId ? this.#treeCatalogEntry(this.openPracticeId, "practice") : null;
+    const scope = practiceEntry ? `${practiceEntry.practice.name} ${this.treePage === "magic" ? "Spell" : "Skill"} canvas` : `${this.treePage === "magic" ? "Magic" : "Skills"} overview`;
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "Clear Canvas Connections" },
+      content: `<p>Clear every visible connection on the <strong>${escape(scope)}</strong>?</p><p>This also removes prerequisite links represented by those lines. Nodes and purchases are not deleted.</p>`,
+      modal: true,
+      rejectClose: false
+    });
+    if (!confirmed) return;
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    if (practiceEntry) {
+      const practice = (catalog[this.treePage] ?? []).flatMap(school => school.practices ?? []).find(entry => entry.id === practiceEntry.practice.id);
+      if (!practice) return;
+      for (const spell of practice.spells ?? []) {
+        spell.practiceConnection = { hidden: true };
+        spell.requires = [];
+      }
+    } else {
+      for (const school of catalog[this.treePage] ?? []) {
+        school.rootConnection = { hidden: true };
+        for (const practice of school.practices ?? []) {
+          practice.schoolConnection = { hidden: true };
+          practice.requires = [];
+        }
+      }
+    }
+    const viewport = this.#treeViewportSnapshot();
+    await saveTalentTreeCatalog(catalog);
+    this.connectionTool.source = null;
+    this.#redrawTreePreservingViewport(viewport);
+    ui.notifications.info(`Cleared connections from the ${scope}.`);
+  }
+
+  async #onConnectionNodeClick(element, socket = "") {
+    const selected = this.#connectionNodeRecord(element);
+    if (!selected) return;
+    if (!this.connectionTool.source) {
+      if (socket) this.connectionTool.sourceAnchor = socket;
+      this.connectionTool.source = selected;
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    const source = this.connectionTool.source;
+    if (socket) this.connectionTool.targetAnchor = socket;
+    if (source.id === selected.id) {
+      this.connectionTool.source = null;
+      this.#redrawTreePreservingViewport();
+      return ui.notifications.warn("Choose two different nodes.");
+    }
+    const catalog = foundry.utils.deepClone(talentTreeCatalog());
+    const schools = catalog[this.treePage] ?? [];
+    const findSchool = id => schools.find(school => school.id === id);
+    const findPractice = id => schools.flatMap(school => school.practices ?? []).find(practice => practice.id === id);
+    const findSpell = id => schools.flatMap(school => school.practices ?? []).flatMap(practice => practice.spells ?? []).find(spell => spell.id === id);
+    const style = this.#authoredConnectionStyle();
+    const remove = this.connectionTool.operation === "remove";
+    let supported = true;
+    if (source.kind === "root" && selected.kind === "school") {
+      const school = findSchool(selected.id);
+      if (school) school.rootConnection = remove ? { hidden: true } : style;
+    } else if (source.kind === "school" && selected.kind === "practice" && source.id === selected.schoolId) {
+      const practice = findPractice(selected.id);
+      if (practice) practice.schoolConnection = remove ? { hidden: true } : style;
+    } else if (source.kind === "practice" && selected.kind === "spell" && source.id === selected.practiceId) {
+      const spell = findSpell(selected.id);
+      if (spell) spell.practiceConnection = remove ? { hidden: true } : style;
+    } else if (source.kind === "practice" && selected.kind === "practice") {
+      const practice = findPractice(selected.id);
+      if (practice) {
+        const requirements = (practice.requires ?? []).map(treeRequirement).filter(requirement => requirement.id !== source.id);
+        if (!remove) requirements.push({ id: source.id, level: 1, line: style });
+        practice.requires = requirements;
+      }
+    } else if (source.kind === "spell" && selected.kind === "spell") {
+      const spell = findSpell(selected.id);
+      if (spell) {
+        const requirements = (spell.requires ?? []).map(treeRequirement).filter(requirement => requirement.id !== source.id);
+        if (!remove) requirements.push({ id: source.id, level: Math.max(1, Math.min(20, number(this.connectionTool.requiredLevel, 1))), line: style });
+        spell.requires = requirements;
+      }
+    } else supported = false;
+    if (!supported) {
+      this.connectionTool.source = null;
+      this.#redrawTreePreservingViewport();
+      return ui.notifications.warn("Connect Root to School, School to one of its Practices, Practice to Practice or one of its Spells, or Spell to Spell.");
+    }
+    const viewport = this.#treeViewportSnapshot();
+    await saveTalentTreeCatalog(catalog);
+    this.connectionTool.source = null;
+    this.#redrawTreePreservingViewport(viewport);
+    ui.notifications.info(remove ? "Connection removed." : "Connection saved to the shared tree catalog.");
   }
 
   #treeAvailable(pool) {
@@ -937,6 +2234,15 @@ class CharacterCreationOverlay {
     const source = this.actor.system?.[`${pool}Points`] ?? {};
     const granted = Math.max(0, budget - number(source.total));
     return Math.max(0, number(source.available) + granted - (spent - this.#treeSpent(this.initialTalentTree)[pool]));
+  }
+
+  #pushTreeUndo(label) {
+    this.treeUndoStack.push({ label, tree: foundry.utils.deepClone(this.state.talentTree) });
+    if (this.treeUndoStack.length > 50) this.treeUndoStack.shift();
+  }
+
+  async #confirmTreePurchase(title, body) {
+    return foundry.applications.api.DialogV2.confirm({ window: { title }, content: `<p>${escape(body)}</p>`, modal: true, rejectClose: false });
   }
 
   #personaStep() {
@@ -1077,9 +2383,90 @@ class CharacterCreationOverlay {
   }
 
   async #onClick(event) {
+    if (this.suppressTreeClick) {
+      this.suppressTreeClick = false;
+      event.preventDefault();
+      return;
+    }
+    const connectionNode = event.target.closest?.("[data-tree-root], [data-tree-school], [data-tree-practice-card], [data-tree-rank]");
+    if (this.connectionTool.active && connectionNode && game.user.isGM) {
+      await this.#onConnectionNodeClick(connectionNode, event.target.closest?.("[data-tree-socket]")?.dataset.treeSocket);
+      return;
+    }
     const button = event.target.closest("button");
     if (!button) return;
     const action = button.dataset.action;
+    if (action === "toggle-tree-connect") {
+      this.connectionTool.active = !this.connectionTool.active;
+      if (this.connectionTool.active) this.nodeMoveMode = false;
+      this.connectionTool.source = null;
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    if (action === "toggle-tree-move") {
+      this.nodeMoveMode = !this.nodeMoveMode;
+      if (this.nodeMoveMode) { this.connectionTool.active = false; this.connectionTool.source = null; }
+      else { this.selectedTreeNodes.clear(); this.treeRingTool.active = false; }
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    if (action === "align-tree-horizontal" || action === "align-tree-vertical") {
+      await this.#alignSelectedTreeNodes(action === "align-tree-vertical" ? "vertical" : "horizontal");
+      return;
+    }
+    if (action === "square-tree-nodes") {
+      await this.#squareSelectedTreeNodes();
+      return;
+    }
+    if (action === "space-tree-horizontal" || action === "space-tree-vertical") {
+      await this.#spaceSelectedTreeNodes(action === "space-tree-vertical" ? "vertical" : "horizontal");
+      return;
+    }
+    if (action === "preview-tree-ring") {
+      this.treeRingTool.active = true;
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    if (action === "cancel-tree-ring") {
+      this.treeRingTool.active = false;
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    if (action === "place-tree-ring") {
+      await this.#placeSelectedTreeRing();
+      return;
+    }
+    if (action === "clear-node-selection") {
+      this.selectedTreeNodes.clear();
+      this.treeRingTool.active = false;
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    if (action === "clear-connection-color") {
+      this.connectionTool.color = "";
+      const color = this.root.querySelector('[name="connectionTool.color"]');
+      if (color) color.value = "#ffffff";
+      return;
+    }
+    if (action === "clear-connection-selection") {
+      this.connectionTool.source = null;
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    if (action === "clear-canvas-connections") {
+      if (game.user.isGM) await this.#clearCanvasConnections();
+      return;
+    }
+    if (action === "undo-tree-purchase") {
+      const previous = this.treeUndoStack.pop();
+      if (!previous) return;
+      this.state.talentTree = foundry.utils.deepClone(previous.tree);
+      const closePractice = this.openPracticeId && !(this.state.talentTree.branches ?? []).includes(this.openPracticeId);
+      if (closePractice) { this.openPracticeId = null; this.#draw(); }
+      else this.#redrawTreePreservingViewport();
+      ui.notifications.info(`Undid ${previous.label}.`);
+      return;
+    }
     if (button.dataset.treeGroup) {
       const group = button.dataset.treeGroup;
       if (this.openTreeGroups.has(group)) this.openTreeGroups.delete(group);
@@ -1094,8 +2481,77 @@ class CharacterCreationOverlay {
       return;
     }
     if (button.dataset.treePage) {
+      this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
       this.treePage = button.dataset.treePage === "magic" ? "magic" : "skills";
+      this.openPracticeId = null;
+      this.selectedTreeNodes.clear();
+      this.treeRingTool.active = false;
+      this.connectionTool.source = null;
+      if (this.treeViewportInitialized[this.#treeViewportKey()]) this.#redrawTreePreservingViewport(this.treeViewport[this.#treeViewportKey()]);
+      else this.#draw();
+      return;
+    }
+    if (action === "close-practice-canvas") {
+      this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
+      this.openPracticeId = null;
+      this.selectedTreeNodes.clear();
+      this.treeRingTool.active = false;
       this.#draw();
+      return;
+    }
+    if (action === "add-tree-node") {
+      if (game.user.isGM) this.#authorTreeNode();
+      return;
+    }
+    if (action === "tree-zoom-in" || action === "tree-zoom-out") {
+      this.treeZoom = Math.max(.65, Math.min(1.75, this.treeZoom + (action === "tree-zoom-in" ? .1 : -.1)));
+      this.#draw();
+      return;
+    }
+    if (action === "cancel-tree-node") {
+      this.authorNode = null;
+      this.#draw();
+      return;
+    }
+    if (action === "save-tree-node") {
+      await this.#saveAuthoredTreeNode();
+      return;
+    }
+    if (action === "delete-tree-node") {
+      await this.#deleteAuthoredTreeNode();
+      return;
+    }
+    if (action === "manage-tree-traits") {
+      this.traitEditorOpen = true;
+      this.#draw();
+      return;
+    }
+    if (action === "close-tree-traits") {
+      this.traitEditorOpen = false;
+      this.#draw();
+      return;
+    }
+    if (action === "retire-tree-trait") {
+      const traits = foundry.utils.deepClone(game.settings.get(game.system.id, "actionTraits") ?? []);
+      const trait = traits[number(button.dataset.index, -1)];
+      if (trait) trait.retired = !trait.retired;
+      await game.settings.set(game.system.id, "actionTraits", traits);
+      this.#draw();
+      return;
+    }
+    if (action === "delete-tree-trait") {
+      const traits = foundry.utils.deepClone(game.settings.get(game.system.id, "actionTraits") ?? []);
+      traits.splice(number(button.dataset.index, -1), 1);
+      await game.settings.set(game.system.id, "actionTraits", traits);
+      this.#draw();
+      return;
+    }
+    if (action === "add-tree-trait") {
+      await this.#addTreeTrait();
+      return;
+    }
+    if (action === "save-tree-traits") {
+      await this.#saveTreeTraits();
       return;
     }
     if (button.dataset.inspectTitle) {
@@ -1106,13 +2562,14 @@ class CharacterCreationOverlay {
     if (Object.hasOwn(button.dataset, "step")) {
       this.#saveVisibleInputs();
       const steps = this.#steps;
-      if (number(button.dataset.step) > 0 && !this.#hasStartingLevel()) {
+      const nextStep = number(button.dataset.step);
+      if (nextStep > 0 && !this.#hasStartingLevel()) {
         ui.notifications.warn("Choose a starting level before continuing character generation.");
         return;
       }
-      if (steps[this.step]?.key === "level" && number(button.dataset.step) > this.step) await this.#applyStartingLevel();
-      this.step = number(button.dataset.step);
-      this.animateNavigation = true;
+      if (steps[this.step]?.key === "level" && nextStep > this.step) await this.#applyStartingLevel();
+      this.animateNavigation = this.#stepGroupLabel(steps[this.step]) !== this.#stepGroupLabel(steps[nextStep]);
+      this.step = nextStep;
       this.#draw();
       return;
     }
@@ -1121,25 +2578,53 @@ class CharacterCreationOverlay {
       this.#choosePath(button.dataset.pathChoice, button.dataset.value ?? "");
       return;
     }
-    if (button.dataset.treeBranch) {
-      const entry = this.#treeCatalogEntry(button.dataset.treeBranch, "branch");
-      if (!entry || this.#treeAvailable("talent") < Math.max(1, number(entry.branch.talentCost, 1))) return ui.notifications.warn("Not enough Talent Points to unlock this branch.");
-      this.state.talentTree.branches.push(entry.branch.id);
-      this.#draw();
-      return;
-    }
-    if (button.dataset.treeLeaf) {
-      const entry = this.#treeCatalogEntry(button.dataset.treeLeaf, "leaf");
-      if (!entry || this.#treeAvailable("talent") < Math.max(1, number(entry.leaf.talentCost, 1))) return ui.notifications.warn("Not enough Talent Points to purchase this leaf.");
-      this.state.talentTree.leaves.push({ id: entry.leaf.id, rank: 1 });
+    if (button.dataset.treePractice) {
+      const entry = this.#treeCatalogEntry(button.dataset.treePractice, "practice");
+      if ((this.state.talentTree.branches ?? []).includes(button.dataset.treePractice)) {
+        if (!this.openPracticeId) {
+          this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
+          this.openPracticeId = button.dataset.treePractice;
+          this.selectedTreeNodes.clear();
+          this.treeRingTool.active = false;
+          this.connectionTool.source = null;
+          this.#draw();
+        }
+        return;
+      }
+      const requirementsMet = (entry?.practice?.requires ?? []).every(value => (this.state.talentTree.branches ?? []).includes(treeRequirement(value).id));
+      if (!requirementsMet) return ui.notifications.warn("Purchase every prerequisite Practice first.");
+      const talentCost = Math.max(1, number(entry?.practice?.talentCost, 1));
+      if (!entry || this.#treeAvailable("talent") < talentCost) return ui.notifications.warn("Not enough Talent Points to purchase this Practice.");
+      if (!await this.#confirmTreePurchase("Purchase Practice", `Purchase ${entry.practice.name} for ${talentCost} Talent Point${talentCost === 1 ? "" : "s"}? This unlocks access but grants no Spell or Skill levels.`)) return;
+      this.#pushTreeUndo(`purchase of ${entry.practice.name}`);
+      this.state.talentTree.branches.push(entry.practice.id);
+      this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
+      this.openPracticeId = entry.practice.id;
+      this.selectedTreeNodes.clear();
+      this.treeRingTool.active = false;
       this.#draw();
       return;
     }
     if (button.dataset.treeRank) {
       const entry = (this.state.talentTree.leaves ?? []).find(candidate => candidate.id === button.dataset.treeRank);
-      const cost = skillPointCostForLevel(this.state.startingLevel);
-      if (!entry || this.#treeAvailable("skill") < cost) return ui.notifications.warn(`Not enough Skill Points to increase this rank (${cost} required).`);
-      entry.rank += 1;
+      const catalog = this.#treeCatalogEntry(button.dataset.treeRank, "spell");
+      const spell = catalog?.spell;
+      if (!spell || !(this.state.talentTree.branches ?? []).includes(catalog.practice.id)) return ui.notifications.warn("Purchase this Spell's Practice first.");
+      const unmet = (spell.requires ?? []).map(treeRequirement).filter(requirement => number((this.state.talentTree.leaves ?? []).find(candidate => candidate.id === requirement.id)?.rank) < requirement.level);
+      if (unmet.length) return ui.notifications.warn(`Prerequisites not met: ${unmet.map(requirement => `${this.#treeCatalogEntry(requirement.id, "spell")?.spell?.name ?? requirement.id} level ${requirement.level}`).join(", ")}.`);
+      if (number(entry?.rank) >= Math.max(1, number(spell.maxRank, 1))) return;
+      if (!entry) {
+        const talentCost = Math.max(1, number(spell.talentCost, 1));
+        if (this.#treeAvailable("talent") < talentCost) return ui.notifications.warn(`Not enough Talent Points to purchase this Spell (${talentCost} required).`);
+        if (!await this.#confirmTreePurchase(`Purchase ${this.treePage === "magic" ? "Spell" : "Skill"}`, `Purchase ${spell.name} at level 1 for ${talentCost} Talent Point${talentCost === 1 ? "" : "s"}?`)) return;
+        this.#pushTreeUndo(`purchase of ${spell.name}`);
+        this.state.talentTree.leaves.push({ id: spell.id, rank: 1 });
+      } else {
+        const skillCost = Math.max(0, number(spell.rankCost, skillPointCostForLevel(this.state.startingLevel)));
+        if (this.#treeAvailable("skill") < skillCost) return ui.notifications.warn(`Not enough Skill Points to increase this Spell (${skillCost} required).`);
+        this.#pushTreeUndo(`${spell.name} level ${number(entry.rank) + 1}`);
+        entry.rank = Math.max(1, number(entry.rank)) + 1;
+      }
       this.#draw();
       return;
     }
@@ -1159,8 +2644,9 @@ class CharacterCreationOverlay {
         return;
       }
       if (action === "next" && steps[this.step]?.key === "level") await this.#applyStartingLevel();
-      this.step = Math.max(0, Math.min(steps.length - 1, this.step + (action === "next" ? 1 : -1)));
-      this.animateNavigation = true;
+      const nextStep = Math.max(0, Math.min(steps.length - 1, this.step + (action === "next" ? 1 : -1)));
+      this.animateNavigation = this.#stepGroupLabel(steps[this.step]) !== this.#stepGroupLabel(steps[nextStep]);
+      this.step = nextStep;
       this.#draw();
       return;
     }
@@ -1322,6 +2808,12 @@ class CharacterCreationOverlay {
     const input = event.target;
     if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement)) return;
     this.#setStateValue(input.name, input.type === "number" || input.type === "range" ? number(input.value) : input.value);
+    if (input.name.startsWith("treeRingTool.")) {
+      const output = input.parentElement?.querySelector("output");
+      if (output) output.textContent = input.name.endsWith("radius") ? `${number(input.value)} px` : `${number(input.value)}°`;
+      this.#decorateTreeRingPreview();
+      return;
+    }
     if (input.name === "startingLevel") {
       if (event.type === "change") this.#draw();
       else this.#refreshInfoPanel();
@@ -1342,6 +2834,11 @@ class CharacterCreationOverlay {
         this.#clampAttributeValuesToBudget();
         this.#draw();
       } else this.#refreshInfoPanel();
+      return;
+    }
+    if (["authorNode.nodeKind", "authorNode.schoolId", "authorNode.type"].includes(input.name) && event.type === "change") {
+      if (input.name === "authorNode.type" && this.authorNode?.type === "ability") { this.authorNode.actions = 0; this.authorNode.shape = "hex"; }
+      this.#draw();
       return;
     }
     if (input.name.startsWith("personaIndex.")) {
@@ -1375,6 +2872,19 @@ class CharacterCreationOverlay {
 
   #setStateValue(path, value) {
     if (!path) return;
+    if (path.startsWith("authorNode.")) {
+      if (this.authorNode) foundry.utils.setProperty(this.authorNode, path.slice("authorNode.".length), value);
+      return;
+    }
+    if (path.startsWith("connectionTool.")) {
+      foundry.utils.setProperty(this.connectionTool, path.slice("connectionTool.".length), value);
+      return;
+    }
+    if (path.startsWith("treeRingTool.")) {
+      foundry.utils.setProperty(this.treeRingTool, path.slice("treeRingTool.".length), value);
+      return;
+    }
+    if (path.startsWith("traitLabels.") || path === "newTraitLabel") return;
     foundry.utils.setProperty(this.state, path, value);
   }
 
@@ -1448,8 +2958,29 @@ class CharacterCreationOverlay {
       ].filter(Boolean).join("\n\n")
     };
     await this.actor.update(update);
+    await this.#grantTreeItems();
     ui.notifications.info(`${name} character generation complete.`);
     this.close({ renderSheet: true });
+  }
+
+  async #grantTreeItems() {
+    const existingItems = new Map(this.actor.items.filter(item => item.flags?.veilrunner?.treeNodeId).map(item => [item.flags.veilrunner.treeNodeId, item]));
+    const existing = new Set(existingItems.keys());
+    const rankUpdates = (this.state.talentTree?.leaves ?? []).map(purchase => ({ purchase, item: existingItems.get(purchase.id) })).filter(entry => entry.item && number(entry.item.system?.currentLevel, 1) !== number(entry.purchase.rank, 1)).map(({ purchase, item }) => ({ _id: item.id, "system.currentLevel": Math.max(1, number(purchase.rank, 1)) }));
+    const documents = (this.state.talentTree?.leaves ?? [])
+      .map(purchase => ({ purchase, catalog: this.#treeCatalogEntry(purchase.id, "leaf") })).filter(entry => entry.catalog)
+      .filter(entry => !existing.has(entry.catalog.leaf.id)).map(({ purchase, catalog: { leaf, practice, school, page } }) => ({
+        name: leaf.name, type: "action", img: leaf.img || "icons/svg/light.svg",
+        system: {
+          activationKind: leaf.type === "ability" ? "ability" : "action", category: leaf.category || "actions", actionType: leaf.category === "reactions" ? "reaction" : "standard", actions: leaf.type === "ability" ? 0 : Math.max(1, number(leaf.actions, 1)),
+          currentLevel: Math.min(Math.max(1, number(leaf.maxRank, 1)), Math.max(1, number(purchase.rank, 1))), maxLevel: Math.max(1, number(leaf.maxRank, 1)), traits: leaf.traits ?? [],
+          resourceCosts: leaf.resourceCosts ?? { mana: 0, stamina: 0, health: 0 }, effects: leaf.effects ?? [],
+          tree: { enabled: true, page, school: school.name, practice: practice.name, x: number(leaf.x, 0), y: number(leaf.y, 0), requires: (leaf.requires ?? []).map(value => { const requirement = treeRequirement(value); return `${requirement.id}:${requirement.level}`; }), talentCost: Math.max(1, number(leaf.talentCost, 1)), rankCost: Math.max(0, number(leaf.rankCost, 1)), requiredLevel: Math.max(1, number(leaf.requiredLevel, 1)) },
+          description: leaf.description ?? ""
+        }, flags: { veilrunner: { treeNodeId: leaf.id } }
+      }));
+    if (documents.length) await this.actor.createEmbeddedDocuments("Item", documents);
+    if (rankUpdates.length) await this.actor.updateEmbeddedDocuments("Item", rankUpdates);
   }
 
   async #confirmLevelUp() {
@@ -1476,6 +3007,7 @@ class CharacterCreationOverlay {
       "system.talentPoints.total": talents.total, "system.talentPoints.available": talents.available,
       "system.skillPoints.total": skills.total, "system.skillPoints.available": skills.available
     });
+    await this.#grantTreeItems();
     ui.notifications.info(`${this.actor.name} reached Level ${nextLevel}.`);
     this.close({ renderSheet: true });
   }

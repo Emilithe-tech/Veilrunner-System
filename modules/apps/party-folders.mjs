@@ -65,7 +65,7 @@ async function ensurePartyActor(folder) {
   party = await Actor.create({
     name: folder.name,
     type: "party",
-    img: "icons/svg/group.svg",
+    img: "icons/svg/mystery-man.svg",
     folder: folder.id,
     ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
     flags: {

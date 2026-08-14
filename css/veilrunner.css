@@ -2485,6 +2485,25 @@
 .vr-cc-talent-summary span { color: #67e8f9; font-size: .65rem; font-weight: 700; text-transform: uppercase; }
 .vr-cc-talent-summary strong { color: #f8fafc; font-size: .82rem; }
 .vr-cc-talent-canvas .vr-cc-tree-board { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); padding: 1rem; }
+.vr-cc-talent-canvas .vr-cc-tree-board { display: block; position: relative; min-height: 0; overflow: auto; padding: 0; background: radial-gradient(circle at center, rgba(29, 78, 216, .18), transparent 42%), linear-gradient(135deg, rgba(3, 7, 18, .96), rgba(9, 20, 34, .9)); }
+.vr-cc-constellation-board { position: relative; min-width: 760px; min-height: 620px; height: 100%; zoom: var(--tree-zoom, 1); background-image: radial-gradient(rgba(103,232,249,.12) 1px, transparent 1px); background-size: 24px 24px; }
+.vr-cc-constellation-school { position: absolute; inset: 0; }
+.vr-cc-constellation-line { position: absolute; z-index: 0; width: var(--line-width); height: 2px; left: var(--x1); top: var(--y1); background: var(--tree-color); opacity: .45; transform-origin: left center; transform: rotate(var(--line-angle)); box-shadow: 0 0 8px var(--tree-color); pointer-events: none; }
+.vr-cc-constellation-node { position: absolute; z-index: 1; left: var(--node-x); top: var(--node-y); display: grid; place-items: center; gap: .12rem; width: 5.6rem; min-height: 5.6rem; border: 1px solid color-mix(in srgb, var(--tree-color) 72%, #fff); border-radius: 50%; color: #e5edf6; background: radial-gradient(circle, rgba(15, 23, 42, .96), rgba(2, 6, 23, .95)); box-shadow: 0 0 0 2px rgba(2,6,23,.9), 0 0 16px color-mix(in srgb, var(--tree-color) 45%, transparent); transform: translate(-50%, -50%); text-align: center; }
+.vr-cc-constellation-node.root { width: 7.4rem; min-height: 7.4rem; border-width: 3px; font-weight: 800; }
+.vr-cc-constellation-node i { color: var(--tree-color); font-size: 1.05rem; }.vr-cc-constellation-node span { font-size: .66rem; line-height: 1.05; }.vr-cc-constellation-node small { color: #94a3b8; font-size: .56rem; }
+.vr-cc-constellation-node.available { cursor: pointer; animation: vr-cc-node-pulse 1.6s ease-in-out infinite; }.vr-cc-constellation-node.purchased { background: color-mix(in srgb, var(--tree-color) 30%, #07111e); box-shadow: 0 0 22px var(--tree-color); }.vr-cc-constellation-node.locked { opacity: .5; filter: grayscale(.65); }
+@keyframes vr-cc-node-pulse { 50% { box-shadow: 0 0 28px var(--tree-color); } }
+.vr-cc-author-shade { position: absolute; z-index: 20; inset: 0; display: grid; place-items: center; padding: 2rem; background: rgba(1, 5, 13, .82); backdrop-filter: blur(5px); }
+.vr-cc-author-panel { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: min(58rem, 92vw); max-height: 86vh; overflow: hidden; border: 1px solid rgba(103,232,249,.5); border-radius: 10px; background: linear-gradient(145deg, rgba(8,20,34,.98), rgba(4,10,20,.98)); box-shadow: 0 0 38px rgba(34,211,238,.2); }
+.vr-cc-author-panel > header, .vr-cc-author-panel > footer { display: flex; align-items: center; gap: .65rem; padding: .8rem 1rem; border-bottom: 1px solid rgba(148,163,184,.22); }.vr-cc-author-panel > header .vr-cc-icon { margin-left: auto; }.vr-cc-author-panel > header span { color: #67e8f9; font-size: .65rem; text-transform: uppercase; }.vr-cc-author-panel > header h2 { margin: .1rem 0 0; }
+.vr-cc-author-panel > footer { justify-content: flex-end; border-top: 1px solid rgba(148,163,184,.22); border-bottom: 0; }
+.vr-cc-author-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; overflow: auto; padding: 1rem; }.vr-cc-author-grid label { display: grid; align-content: start; gap: .3rem; color: #9bdff0; font-size: .7rem; }.vr-cc-author-grid .wide { grid-column: 1 / -1; }.vr-cc-author-grid textarea { min-height: 6rem; resize: vertical; }.vr-cc-author-grid fieldset { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .65rem; border-color: rgba(103,232,249,.25); }
+.vr-cc-trait-manager { width: min(42rem, 90vw); }.vr-cc-trait-list { display: grid; gap: .35rem; overflow: auto; padding: 1rem; }.vr-cc-trait-list label { display: grid; grid-template-columns: minmax(0, 1fr) 10rem 2rem 2rem; align-items: center; gap: .5rem; }.vr-cc-trait-list span { color: #64748b; font-size: .67rem; }.vr-cc-trait-manager > footer input { flex: 1; }
+.vr-cc-constellation-node[draggable="true"] { cursor: grab; }.vr-cc-constellation-node[draggable="true"]:active { cursor: grabbing; }
+.vr-cc-tree-board { cursor: grab; }.vr-cc-tree-board.panning { cursor: grabbing; user-select: none; }.vr-cc-tree-zoom { display: flex !important; grid-auto-flow: column; align-items: center; gap: .25rem; border: 0 !important; }.vr-cc-tree-zoom button { width: 1.8rem; min-height: 1.8rem; border: 1px solid rgba(103,232,249,.3); border-radius: 4px; color: #dbeafe; background: rgba(15,23,42,.75); }
+.vr-action-tree-fields { display: grid; gap: .7rem; margin-top: .8rem; padding: .8rem; }.vr-action-effect-row { display: grid; grid-template-columns: 5rem minmax(9rem,1.5fr) repeat(3,minmax(5rem,1fr)) 2rem; gap: .35rem; align-items: center; }.vr-item-section-heading { display: flex; align-items: center; justify-content: space-between; }.vr-item-section-heading h4 { margin: 0; }
+.actions-card-traits { overflow: hidden; color: #94a3b8; font-size: .6rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
 .vr-cc-talent-switch { display: flex; justify-content: center; gap: .5rem; padding: .7rem; border-top: 1px solid rgba(148,163,184,.22); }
 .vr-cc-talent-switch button { display: inline-flex; align-items: center; gap: .45rem; min-width: 7rem; justify-content: center; border: 1px solid rgba(148,163,184,.3); border-radius: 5px; color: #cbd5e1; background: rgba(15,23,42,.8); padding: .55rem .9rem; transition: transform 160ms ease, background 160ms ease, border-color 160ms ease; }
 .vr-cc-talent-switch button.active { border-color: #67e8f9; color: #f8fafc; background: linear-gradient(135deg, rgba(8,145,178,.7), rgba(22,163,74,.55)); transform: translateY(-2px); }
@@ -2512,6 +2531,170 @@
 .vr-cc-contact-add { border-style: dashed; color: #67e8f9; }
 .vr-cc-contact { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .85rem; border: 1px solid rgba(148,163,184,.25); border-radius: 8px; background: rgba(15,23,42,.42); }
 .vr-cc-contact-empty { margin: 0; padding: 1rem; border: 1px dashed rgba(103,232,249,.35); border-radius: 6px; color: #94a3b8; }
+
+/* Shared three-tier talent canvas. Magic uses an arcane network; Skills may layer a technical treatment separately. */
+.vr-cc-talent-mode .vr-cc-shell { grid-template-columns: minmax(0, 1fr); }
+.vr-cc-talent-mode .vr-cc-rail,
+.vr-cc-talent-mode .vr-cc-live-build { display: none; }
+.vr-cc-talent-mode .vr-cc-main { grid-column: 1; min-width: 0; min-height: 0; }
+.vr-cc-talent-mode .vr-cc-panel { min-height: 0; overflow: hidden; padding: 0; border: 0; border-radius: 0; }
+.vr-cc-talent-mode .vr-cc-flow-footer { grid-column: 1; }
+.vr-cc-talent-header { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); align-items: center; gap: 1rem; padding: .55rem 1rem; }
+.vr-cc-talent-heading h1 { margin: .05rem 0 0; }
+.vr-cc-talent-header .vr-cc-tree-tabs { padding: 0; }
+.vr-cc-talent-header .vr-cc-tree-tabs button { display: inline-flex; align-items: center; gap: .4rem; min-width: 6.5rem; justify-content: center; clip-path: polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px); }
+.vr-cc-tree-pools { display: flex; align-items: center; gap: .85rem; }
+.vr-cc-tree-pools > div { display: grid; gap: .05rem; padding-left: .75rem; border-left: 1px solid rgba(148,163,184,.28); }
+.vr-cc-tree-pools span { color: #7dd3fc; font-size: .6rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.vr-cc-tree-pools strong { font-size: 1rem; }
+.vr-cc-tree-pools > small { color: #94a3b8; font-size: .68rem; }
+.vr-cc-tree-author-actions { display: flex; justify-self: end; gap: .45rem; }
+.vr-cc-talent-canvas { position: relative; display: block; height: 100%; min-height: 0; overflow: hidden; }
+.vr-cc-talent-canvas .vr-cc-tree-board { position: absolute; inset: 0; display: block; overflow: auto; padding: 0; border: 0; background: #08080d; scrollbar-color: rgba(125,211,252,.35) rgba(0,0,0,.25); }
+.vr-cc-talent-canvas.magic .vr-cc-tree-board { background:
+  radial-gradient(ellipse at 18% 34%, rgba(110,32,72,.28), transparent 32%),
+  radial-gradient(ellipse at 53% 42%, rgba(36,24,92,.32), transparent 37%),
+  radial-gradient(ellipse at 82% 66%, rgba(19,73,91,.23), transparent 31%),
+  linear-gradient(145deg, #07070b, #100b13 47%, #060910); }
+.vr-cc-talent-canvas.magic .vr-cc-tree-board::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .22; background: repeating-radial-gradient(ellipse at center, transparent 0 78px, rgba(204,170,255,.12) 79px 80px, transparent 81px 158px); mix-blend-mode: screen; }
+.vr-cc-tree-world-frame { position: relative; }
+.vr-cc-tree-world { position: absolute; top: 0; left: 0; width: 6200px; height: 2100px; transform: scale(var(--tree-zoom, 1)); transform-origin: 0 0; }
+.vr-cc-tree-links { position: absolute; z-index: 0; inset: 0; width: 6200px; height: 2100px; overflow: visible; pointer-events: none; }
+.vr-cc-tree-links marker path { fill: context-stroke; }
+.vr-cc-tree-link { fill: none; stroke: color-mix(in srgb, var(--tree-color) 34%, #9294a2); stroke-width: calc(var(--line-width, 2) * 1px); vector-effect: non-scaling-stroke; transition: opacity 180ms ease, stroke-width 180ms ease, filter 180ms ease; }
+.vr-cc-tree-link.blocked { opacity: .1; stroke: #4a4652; }
+.vr-cc-tree-link.available { opacity: .46; filter: drop-shadow(0 0 calc(2px * var(--line-glow, 1)) color-mix(in srgb, var(--tree-color) 45%, transparent)); }
+.vr-cc-tree-link.active { opacity: 1; stroke: var(--tree-color); filter: drop-shadow(0 0 calc(3px * var(--line-glow, 1)) var(--tree-color)) drop-shadow(0 0 calc(8px * var(--line-glow, 1)) color-mix(in srgb, var(--tree-color) 78%, transparent)); }
+.vr-cc-tree-link.pattern-dashed { stroke-dasharray: 12 8; }
+.vr-cc-tree-link.pattern-dotted { stroke-dasharray: 2 8; stroke-linecap: round; }
+.vr-cc-school-node,
+.vr-cc-practice-node,
+.vr-cc-spell-node { position: absolute; z-index: 2; border: 0; color: #f8fafc; font-family: inherit; }
+.vr-cc-school-node { display: grid; place-items: center; width: 220px; height: 64px; padding: .45rem 1.5rem; border: 1px solid color-mix(in srgb, var(--tree-color) 82%, white); clip-path: polygon(18px 0,calc(100% - 18px) 0,100% 50%,calc(100% - 18px) 100%,18px 100%,0 50%); background: linear-gradient(135deg,color-mix(in srgb,var(--tree-color) 28%,#17111d),#09080d); box-shadow: inset 0 0 18px color-mix(in srgb,var(--tree-color) 22%,transparent),0 0 16px color-mix(in srgb,var(--tree-color) 24%,transparent); text-transform: uppercase; }
+.vr-cc-school-node span,.vr-cc-practice-node span { color: color-mix(in srgb,var(--tree-color) 74%,white); font-size: 9px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+.vr-cc-school-node strong { font-size: 18px; letter-spacing: .08em; }
+.vr-cc-practice-node { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; width: 210px; height: 64px; padding: .55rem .8rem; border: 1px solid color-mix(in srgb,var(--tree-color) 58%,#817b8c); clip-path: polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px); background: linear-gradient(145deg,rgba(31,24,34,.97),rgba(10,9,14,.98)); text-align: left; }
+.vr-cc-practice-node strong { grid-column: 1; font-size: 13px; }
+.vr-cc-practice-node small { grid-column: 2; grid-row: 1 / 3; color: #b9b5c1; font-size: 9px; }
+.vr-cc-practice-node.available { opacity: .76; box-shadow: 0 0 8px color-mix(in srgb,var(--tree-color) 28%,transparent); }
+.vr-cc-practice-node.purchased { border-color: var(--tree-color); background: linear-gradient(145deg,color-mix(in srgb,var(--tree-color) 25%,#1a131e),#09080d); box-shadow: inset 0 0 14px color-mix(in srgb,var(--tree-color) 20%,transparent),0 0 14px color-mix(in srgb,var(--tree-color) 55%,transparent); }
+.vr-cc-practice-node.locked { opacity: .3; filter: grayscale(.8); }
+.vr-cc-spell-node { display: grid; place-items: center; width: 96px; height: 102px; padding: 0; background: transparent; transform: translate(-50%,-23px); text-align: center; }
+.vr-cc-spell-glyph { display: grid; place-items: center; width: 46px; height: 46px; border: 2px solid #665f6d; background: linear-gradient(135deg,#211a25,#09080d); box-shadow: 0 0 0 3px rgba(5,4,8,.9); transform: rotate(45deg); }
+.vr-cc-spell-glyph i { color: #aaa4b1; transform: rotate(-45deg); }
+.vr-cc-spell-node strong { width: 96px; margin-top: 8px; color: #d9d4df; font-size: 9px; line-height: 1.1; }
+.vr-cc-spell-node small { color: #8e8994; font-size: 8px; }
+.vr-cc-spell-node.available { opacity: .64; }
+.vr-cc-spell-node.available .vr-cc-spell-glyph { border-color: color-mix(in srgb,var(--tree-color) 62%,#aaa); box-shadow: 0 0 0 3px rgba(5,4,8,.9),0 0 8px color-mix(in srgb,var(--tree-color) 38%,transparent); }
+.vr-cc-spell-node.ranked { opacity: 1; }
+.vr-cc-spell-node.ranked .vr-cc-spell-glyph { border-color: color-mix(in srgb,var(--tree-color) 75%,white); background: linear-gradient(135deg,color-mix(in srgb,var(--tree-color) 40%,#281a2c),#09080d); box-shadow: 0 0 0 3px rgba(5,4,8,.9),0 0 8px var(--tree-color),0 0 20px color-mix(in srgb,var(--tree-color) 55%,transparent); }
+.vr-cc-spell-node.ranked .vr-cc-spell-glyph i { color: white; text-shadow: 0 0 8px var(--tree-color); }
+.vr-cc-spell-node.locked { opacity: .22; filter: grayscale(1); }
+.vr-cc-school-node[draggable="true"],.vr-cc-practice-node[draggable="true"],.vr-cc-spell-node[draggable="true"] { cursor: grab; }
+.vr-cc-tree-empty { width: 100%; height: 100%; min-height: 0; }
+
+/* Talent authoring controls, shape language, and live character reference. */
+.vr-cc-talent-mode .vr-cc-shell { grid-template-columns: minmax(0, 1fr) minmax(250px, 18vw); }
+.vr-cc-talent-mode .vr-cc-rail { display: none; }
+.vr-cc-talent-mode .vr-cc-live-build { display: grid; grid-column: 2; grid-row: 1 / -1; }
+.vr-cc-talent-mode .vr-cc-main { grid-column: 1; }
+.vr-cc-talent-mode .vr-cc-flow-footer { grid-column: 1; }
+.vr-cc-talent-header { grid-template-columns: auto auto auto minmax(0,1fr); }
+.vr-cc-tree-author-actions .active { border-color: #f0abfc; background: rgba(126,34,206,.28); }
+.vr-cc-tree-undo { min-height: 1.8rem; padding: .2rem .5rem; font-size: .66rem; }
+.vr-cc-connection-toolbar { grid-column: 1 / -1; display: flex; align-items: end; gap: .55rem; overflow-x: auto; padding: .55rem .7rem; border-top: 1px solid rgba(216,180,254,.2); background: rgba(7,5,12,.82); }
+.vr-cc-connection-toolbar > strong { align-self: center; min-width: 15rem; color: #e9d5ff; font-size: .68rem; }
+.vr-cc-connection-toolbar label { display: grid; flex: 0 0 auto; gap: .18rem; color: #a9a1b2; font-size: .58rem; text-transform: uppercase; }
+.vr-cc-connection-toolbar input,.vr-cc-connection-toolbar select { width: 7rem; min-height: 1.65rem; }
+.vr-cc-connection-toolbar input[type="range"] { width: 8rem; }
+.vr-cc-connection-toolbar input[type="color"] { width: 3rem; }
+.vr-cc-mini-btn { min-height: 1.4rem; border: 1px solid rgba(216,180,254,.3); color: #ddd6e4; background: rgba(30,22,36,.8); font-size: .55rem; }
+
+.vr-cc-root-node,.vr-cc-school-node,.vr-cc-practice-node { position: absolute; z-index: 2; display: grid; grid-template-columns: 1fr; grid-template-rows: auto auto auto; place-content: center; place-items: center; width: 116px; height: 116px; padding: .65rem; border: 2px solid color-mix(in srgb,var(--tree-color) 72%,white); border-radius: 0; clip-path: none; color: #f8fafc; background: linear-gradient(145deg,color-mix(in srgb,var(--tree-color) 20%,#1c1420),#08070c); box-shadow: inset 0 0 18px color-mix(in srgb,var(--tree-color) 20%,transparent),0 0 14px color-mix(in srgb,var(--tree-color) 30%,transparent); text-align: center; transform: translate(-50%,-50%); }
+.vr-cc-root-node { width: 144px; height: 144px; }
+.vr-cc-root-node span,.vr-cc-school-node span,.vr-cc-practice-node span { color: color-mix(in srgb,var(--tree-color) 72%,white); font-size: 8px; letter-spacing: .15em; text-transform: uppercase; }
+.vr-cc-root-node strong { font-size: 19px; text-transform: uppercase; }
+.vr-cc-school-node strong,.vr-cc-practice-node strong { font-size: 12px; }
+.vr-cc-practice-node small { grid-column: 1; grid-row: auto; color: #bdb6c4; }
+:is(.vr-cc-root-node,.vr-cc-school-node,.vr-cc-practice-node).shape-circle { border-radius: 50% !important; clip-path: circle(50%) !important; }
+:is(.vr-cc-root-node,.vr-cc-school-node,.vr-cc-practice-node).shape-hex { border-radius: 0 !important; clip-path: polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%) !important; }
+:is(.vr-cc-root-node,.vr-cc-school-node,.vr-cc-practice-node).shape-pentagon { border-radius: 0 !important; clip-path: polygon(50% 1%,98% 36%,80% 96%,20% 96%,2% 36%) !important; }
+:is(.vr-cc-root-node,.vr-cc-school-node,.vr-cc-practice-node).shape-square { border-radius: 0 !important; clip-path: inset(0) !important; }
+:is(.vr-cc-root-node,.vr-cc-school-node,.vr-cc-practice-node).shape-diamond { border-radius: 0 !important; clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%) !important; }
+.vr-cc-spell-node.shape-circle .vr-cc-spell-glyph { border-radius: 50%; transform: none; clip-path: circle(50%); }
+.vr-cc-spell-node.shape-circle .vr-cc-spell-glyph i { transform: none; }
+.vr-cc-spell-node.shape-hex .vr-cc-spell-glyph { transform: none; clip-path: polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%); }
+.vr-cc-spell-node.shape-hex .vr-cc-spell-glyph i { transform: none; }
+.vr-cc-spell-node.shape-pentagon .vr-cc-spell-glyph { transform: none; clip-path: polygon(50% 1%,98% 36%,80% 96%,20% 96%,2% 36%); }
+.vr-cc-spell-node.shape-pentagon .vr-cc-spell-glyph i { transform: none; }
+.vr-cc-spell-node.shape-square .vr-cc-spell-glyph { transform: none; clip-path: inset(0); }
+.vr-cc-spell-node.shape-square .vr-cc-spell-glyph i { transform: none; }
+.vr-cc-spell-node.shape-diamond .vr-cc-spell-glyph { transform: rotate(45deg); clip-path: none; }
+.vr-cc-spell-node.shape-diamond .vr-cc-spell-glyph i { transform: rotate(-45deg); }
+.connection-source { outline: 3px solid #f8fafc; outline-offset: 6px; filter: drop-shadow(0 0 10px var(--tree-color)); }
+.vr-cc-node-socket-layer { position: absolute; z-index: 7; display: block; pointer-events: none; }
+.vr-cc-node-socket { position: absolute; z-index: 8; display: block; width: 10px; height: 10px; border: 2px solid #f8fafc; border-radius: 50%; background: #7e22ce; box-shadow: 0 0 7px #d8b4fe; pointer-events: auto; transform: translate(-50%,-50%); }
+.vr-cc-node-socket.socket-top-left { left: 0; top: 0; }
+.vr-cc-node-socket.socket-top { left: 50%; top: 0; }
+.vr-cc-node-socket.socket-top-right { left: 100%; top: 0; }
+.vr-cc-node-socket.socket-left { left: 0; top: 50%; }
+.vr-cc-node-socket.socket-center { left: 50%; top: 50%; }
+.vr-cc-node-socket.socket-right { left: 100%; top: 50%; }
+.vr-cc-node-socket.socket-bottom-left { left: 0; top: 100%; }
+.vr-cc-node-socket.socket-bottom { left: 50%; top: 100%; }
+.vr-cc-node-socket.socket-bottom-right { left: 100%; top: 100%; }
+.vr-cc-node-socket { cursor: crosshair; transition: width 120ms ease,height 120ms ease,background 120ms ease,box-shadow 120ms ease; }
+.vr-cc-node-socket:hover,.vr-cc-node-socket.drag-source,.vr-cc-node-socket.drop-target { width: 17px; height: 17px; background: #f8fafc; box-shadow: 0 0 5px #fff,0 0 15px var(--tree-color,#d8b4fe); }
+.vr-cc-tree-link.connection-preview { opacity: .9; stroke: var(--tree-color,#fff); pointer-events: none; }
+.vr-cc-tree-link.crossing-casing { opacity: .96; stroke: #08070d; stroke-width: calc(var(--line-width,2) * 1px + 8px); filter: none; transition: none; }
+.vr-cc-tree-link.crossing-casing.blocked { opacity: .5; stroke: #08070d; }
+.vr-cc-tree-world [data-tree-drag] { touch-action: none; }
+.vr-cc-tree-world.node-move-mode [data-tree-drag] { cursor: grab; }
+.vr-cc-tree-world.node-move-mode [data-tree-drag].multi-selected { z-index: 11; filter: brightness(1.3) drop-shadow(0 0 3px #fff) drop-shadow(0 0 15px rgba(56,189,248,.95)); }
+.vr-cc-node-selection-marker { position: absolute; z-index: 10; display: block; width: 148px; height: 148px; pointer-events: none; transform: translate(-50%,-50%); filter: drop-shadow(0 0 5px rgba(56,189,248,.95)); }
+.vr-cc-node-selection-marker.root { width: 178px; height: 178px; }
+.vr-cc-node-selection-marker.spell { width: 78px; height: 78px; }
+.vr-cc-node-selection-marker i { position: absolute; inset: 0; display: block; background:
+  linear-gradient(#e0f2fe,#e0f2fe) left top/26px 3px no-repeat,
+  linear-gradient(#e0f2fe,#e0f2fe) left top/3px 26px no-repeat,
+  linear-gradient(#e0f2fe,#e0f2fe) right top/26px 3px no-repeat,
+  linear-gradient(#e0f2fe,#e0f2fe) right top/3px 26px no-repeat,
+  linear-gradient(#e0f2fe,#e0f2fe) left bottom/26px 3px no-repeat,
+  linear-gradient(#e0f2fe,#e0f2fe) left bottom/3px 26px no-repeat,
+  linear-gradient(#e0f2fe,#e0f2fe) right bottom/26px 3px no-repeat,
+  linear-gradient(#e0f2fe,#e0f2fe) right bottom/3px 26px no-repeat; }
+.vr-cc-node-selection-marker b { position: absolute; left: 50%; bottom: -18px; padding: 2px 7px; border: 1px solid #7dd3fc; color: #e0f2fe; background: rgba(3,7,14,.94); box-shadow: 0 0 9px rgba(56,189,248,.65); font: 800 9px/1.2 Arial,sans-serif; letter-spacing: .13em; text-transform: uppercase; transform: translateX(-50%); }
+.vr-cc-node-align-toolbar { grid-column: 1 / -1; display: flex; align-items: center; gap: .45rem; min-height: 38px; padding: .42rem .7rem; overflow-x: auto; border-top: 1px solid rgba(125,211,252,.24); background: rgba(5,10,17,.9); }
+.vr-cc-node-align-toolbar button { flex: 0 0 auto; }
+.vr-cc-node-align-toolbar strong { color: #bae6fd; font-size: .7rem; }
+.vr-cc-node-align-toolbar > span { margin-right: auto; color: #94a3b8; font-size: .62rem; }
+.vr-cc-ring-controls { display: flex; flex: 0 0 auto; align-items: center; gap: .45rem; padding-left: .55rem; border-left: 1px solid rgba(125,211,252,.3); }
+.vr-cc-ring-controls label { display: grid; grid-template-columns: auto 110px auto; align-items: center; gap: .3rem; color: #bae6fd; font-size: .6rem; white-space: nowrap; }
+.vr-cc-ring-controls input { width: 110px; accent-color: #7dd3fc; }
+.vr-cc-ring-controls output { min-width: 48px; color: #f8fafc; font: 700 .62rem/1 monospace; }
+.vr-cc-ring-preview { pointer-events: none; }
+.vr-cc-ring-guide { fill: rgba(125,211,252,.025); stroke: rgba(125,211,252,.78); stroke-width: 2px; stroke-dasharray: 10 8; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 7px rgba(125,211,252,.55)); }
+.vr-cc-ring-spoke { stroke: rgba(125,211,252,.2); stroke-width: 1px; stroke-dasharray: 4 8; vector-effect: non-scaling-stroke; }
+.vr-cc-ring-marker { fill: rgba(7,12,20,.95); stroke: #bae6fd; stroke-width: 3px; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px rgba(125,211,252,.8)); }
+.vr-cc-practice-node.draft-change,.vr-cc-spell-node.draft-change { cursor: context-menu; filter: drop-shadow(0 0 5px rgba(125,211,252,.55)); }
+.vr-cc-tree-world [data-tree-drag].node-dragging { z-index: 12; cursor: grabbing; filter: brightness(1.2); box-shadow: 0 0 0 2px rgba(255,255,255,.72),0 0 26px var(--tree-color,#d8b4fe); }
+.vr-cc-tree-board.node-moving { cursor: grabbing; box-shadow: inset 42px 0 38px -36px rgba(125,211,252,.5),inset -42px 0 38px -36px rgba(125,211,252,.5),inset 0 42px 38px -36px rgba(125,211,252,.35),inset 0 -42px 38px -36px rgba(125,211,252,.35); }
+.vr-cc-drag-guide-x,.vr-cc-drag-guide-y { position: absolute; z-index: 10; display: block; pointer-events: none; opacity: .68; }
+.vr-cc-drag-guide-x { left: 0; width: 100%; border-top: 1px dashed color-mix(in srgb,var(--tree-color,#d8b4fe) 70%,white); }
+.vr-cc-drag-guide-y { top: 0; height: 100%; border-left: 1px dashed color-mix(in srgb,var(--tree-color,#d8b4fe) 70%,white); }
+.vr-cc-drag-coordinate { position: absolute; z-index: 13; padding: 3px 7px; border: 1px solid color-mix(in srgb,var(--tree-color,#d8b4fe) 60%,white); border-radius: 3px; color: #fff; background: rgba(4,5,10,.92); font: 700 10px/1.2 monospace; pointer-events: none; white-space: nowrap; }
+.vr-cc-subcanvas-heading { position: absolute; z-index: 20; top: .7rem; left: .8rem; display: flex; align-items: center; gap: .75rem; padding: .4rem .55rem; border: 1px solid rgba(148,163,184,.28); background: rgba(7,9,15,.88); box-shadow: 0 8px 22px rgba(0,0,0,.35); }
+.vr-cc-subcanvas-heading div { display: grid; gap: 1px; }
+.vr-cc-subcanvas-heading span { color: #9ca3af; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+.vr-cc-subcanvas-heading strong { color: #f8fafc; font-size: 12px; }
+.vr-cc-root-node b,.vr-cc-school-node b { display: grid; place-items: center; min-width: 28px; min-height: 28px; padding: 2px; border: 1px solid color-mix(in srgb,var(--tree-color) 72%,white); border-radius: 50%; color: #fff; background: rgba(4,5,10,.82); font-size: 15px; line-height: 1; box-shadow: 0 0 10px color-mix(in srgb,var(--tree-color) 45%,transparent); }
+.vr-cc-root-node b { min-width: 38px; min-height: 38px; font-size: 20px; }
+.vr-cc-external-requirement { position: absolute; z-index: 3; display: grid; width: 170px; min-height: 64px; padding: 8px 10px; border: 1px dashed color-mix(in srgb,var(--tree-color) 72%,white); color: #e5e7eb; background: rgba(8,9,14,.9); box-shadow: 0 0 14px color-mix(in srgb,var(--tree-color) 22%,transparent); transform: translate(-50%,-50%); pointer-events: none; }
+.vr-cc-connection-clear { display: flex; align-items: end; gap: .35rem; }
+.vr-cc-mini-btn.danger { border-color: rgba(248,113,113,.55); color: #fecaca; }
+.vr-cc-external-requirement span { color: color-mix(in srgb,var(--tree-color) 70%,white); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
+.vr-cc-external-requirement strong { font-size: 11px; }
+.vr-cc-external-requirement small { color: #a8a3ad; font-size: 9px; }
 .vr-cc-axis { padding: .8rem; border: 1px solid rgba(148,163,184,.24); border-radius: 7px; background: rgba(15,23,42,.42); }
 .vr-cc-axis-heading { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .5rem; color: #94a3b8; font-size: .78rem; }
 .vr-cc-axis-heading b:last-child { text-align: right; }
@@ -2972,9 +3155,11 @@
 .veilrunner.sheet.actor .identity {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
+  gap: 12px;
   flex: 1;
   min-width: 0;
+  /* Match the portrait's 6px frame inset below. */
+  margin-left: 6px;
 }
 
 .veilrunner.sheet.actor .identity-discipline-icon {
@@ -3004,6 +3189,20 @@
 .veilrunner.sheet.actor .profession-discipline {
   color: var(--vr-text-dim);
   font-size: 0.88rem;
+}
+
+.veilrunner.sheet.actor .identity-profession-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .identity-profession-row .profession-discipline {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .vr-cc-persona-recommendation {
@@ -3039,9 +3238,12 @@
 
 .veilrunner.sheet.actor .header-resolve-track {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 6px;
-  margin-top: 2px;
+  margin-top: 0;
+  width: auto;
+  max-width: 100%;
 }
 
 .veilrunner.sheet.actor .header-resolve-label {
@@ -3054,7 +3256,9 @@
 
 .veilrunner.sheet.actor .header-resolve-icons {
   display: flex;
+  flex: 0 0 auto;
   gap: 3px;
+  justify-content: flex-end;
 }
 
 .veilrunner.sheet.actor .header-resolve-pip {
@@ -4927,6 +5131,44 @@
   gap: 10px;
 }
 
+.veilrunner.sheet.actor .vr-party-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.veilrunner.sheet.actor .vr-party-identity {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-identity img {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.veilrunner.sheet.actor .vr-party-identity div { display: grid; min-width: 0; }
+
+.veilrunner.sheet.actor .vr-party-identity span {
+  color: var(--vr-text-dim);
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .vr-party-identity strong {
+  overflow: hidden;
+  color: var(--vr-text);
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .veilrunner.sheet.actor .vr-party-columns {
   display: grid;
   grid-template-columns: minmax(180px, 0.42fr) minmax(260px, 1fr);
@@ -6288,7 +6530,7 @@
   font-size: 0.72rem;
 }
 
-.veilrunner.sheet.actor .window-content.inventory-carry-visible::after {
+.veilrunner.sheet.actor .window-content.inventory-carry-visible [data-application-part="main"]::before {
   content: "Carry Weight   " attr(data-carry-weight);
   position: absolute;
   right: 16px;
@@ -6308,7 +6550,7 @@
   z-index: 60;
 }
 
-.veilrunner.sheet.actor .window-content.inventory-carry-visible::before {
+.veilrunner.sheet.actor .window-content.inventory-carry-visible [data-application-part="main"] .main-panel::before {
   content: "";
   position: absolute;
   right: 13.6rem;
@@ -7828,6 +8070,10 @@
   border-color: var(--vr-character-border, #66717d) !important;
 }
 
+.veilrunner.sheet.actor .hero-image {
+  background-color: var(--vr-character-background, #000000);
+}
+
 .veilrunner.sheet.actor .hero-image-frame::after {
   border-right-color: color-mix(in srgb, var(--vr-character-border) 68%, #111820) !important;
   border-bottom-color: color-mix(in srgb, var(--vr-character-border) 52%, #0a0d12) !important;
@@ -7902,7 +8148,7 @@
 
 .veilrunner.sheet.actor .level-xp-ring::before,
 .veilrunner.sheet.actor .level-xp-ring::after {
-  border-image-source: conic-gradient(from -45deg, var(--vr-level-up, #22d3ee) 0 var(--level-xp), transparent var(--level-xp) 100%);
+  border-image-source: conic-gradient(from -45deg, var(--vr-earned-xp, #22d3ee) 0 var(--level-xp), transparent var(--level-xp) 100%);
   filter: brightness(var(--vr-level-brightness, 1));
   opacity: calc(var(--level-glow) * var(--vr-level-intensity, 1));
 }
@@ -8046,7 +8292,8 @@
 
 .vr-player-datapad {
   position: fixed;
-  z-index: 1000;
+  --vr-accent: var(--vr-datapad-accent, #a855f7);
+  z-index: 90;
   display: block;
   padding: 0;
   background: transparent;
@@ -8062,28 +8309,68 @@
 }
 
 .vr-datapad-shell {
-  --vr-dp-bg: #080910;
-  --vr-dp-panel: #10131c;
-  --vr-dp-border: rgba(226, 232, 240, 0.13);
+  --vr-dp-vision-bg: #080910;
+  --vr-dp-bg: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 12%, var(--vr-dp-vision-bg));
+  --vr-dp-panel: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 18%, var(--vr-dp-vision-bg));
+  --vr-dp-border: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 30%, rgba(255, 255, 255, 0.12));
   --vr-dp-text: #f3f4f8;
   --vr-dp-dim: #a6adbd;
-  --vr-dp-accent: #a855f7;
+  --vr-dp-accent: var(--vr-datapad-accent, #a855f7);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  width: min(1100px, 92vw);
-  height: min(760px, 90vh);
-  min-width: 720px;
-  min-height: 520px;
+  width: clamp(320px, 92vw, 1100px);
+  height: clamp(420px, 90vh, 760px);
+  min-width: min(720px, 92vw);
+  min-height: min(520px, 90vh);
   resize: both;
   overflow: hidden;
   color: var(--vr-dp-text);
-  background: radial-gradient(750px 360px at 0 0, rgba(168, 85, 247, .16), transparent 65%), var(--vr-dp-bg);
+  background: radial-gradient(750px 360px at 0 0, color-mix(in srgb, var(--vr-dp-accent) 16%, transparent), transparent 65%), var(--vr-dp-bg);
   border: 1px solid var(--vr-dp-border);
   border-radius: 16px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, .7);
 }
 
-.vr-datapad-shell button { color: inherit; text-shadow: none; }
+.vr-datapad-shell button {
+  color: inherit;
+  text-shadow: none;
+  transition:
+    color .18s ease,
+    background-color .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease,
+    transform .18s cubic-bezier(.2, .8, .2, 1);
+}
+
+.vr-datapad-shell button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.vr-datapad-shell button:active:not(:disabled) {
+  transform: translateY(0) scale(.97);
+  transition-duration: .08s;
+}
+
+.vr-datapad-shell button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--vr-dp-accent) 75%, white);
+  outline-offset: 2px;
+}
+
+.vr-datapad-shell button:disabled {
+  transition: color .18s ease, opacity .18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vr-datapad-shell button {
+    transition: none;
+  }
+
+  .vr-datapad-shell button:hover:not(:disabled),
+  .vr-datapad-shell button:active:not(:disabled) {
+    transform: none;
+  }
+}
 
 .vr-datapad-header, .vr-datapad-content > header, .vr-datapad-record, .vr-datapad-nav button, .vr-datapad-shell footer {
   display: flex;
@@ -8095,8 +8382,10 @@
 .vr-datapad-content h2 { margin: 2px 0 0; color: var(--vr-dp-text) !important; text-shadow: none; }
 .vr-datapad-header-actions { display: flex; flex: 0 0 auto; gap: 7px; }.vr-datapad-header-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 34px; height: 34px; color: var(--vr-dp-text); background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 7px; }.vr-datapad-header-actions button:has(span) { width: auto; padding: 0 10px; }
 .vr-datapad-layout { display: block; min-height: 0; overflow: hidden; }
-.vr-datapad-nav { display: flex; flex: 1 1 auto; gap: 0; min-width: 0; overflow: visible; }.vr-datapad-nav-group { position: relative; flex: 1 1 0; min-width: 82px; }.vr-datapad-nav > .vr-datapad-nav-group > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 100%; min-height: 56px; padding: 6px 7px 8px; color: var(--vr-text-dim); font-size: .64rem; font-weight: 700; line-height: 1.1; text-align: center; text-shadow: none; text-transform: uppercase; background: transparent; border: 0 !important; border-radius: 0; box-shadow: none !important; }.vr-datapad-nav > .vr-datapad-nav-group + .vr-datapad-nav-group > button::before { content: ""; position: absolute; top: 18%; bottom: 18%; left: 0; width: 1px; background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .075), transparent); }.vr-datapad-nav > .vr-datapad-nav-group > button::after { content: ""; position: absolute; right: 22%; bottom: 0; left: 22%; height: 2px; border-radius: 999px; background: transparent; transition: background .18s ease, box-shadow .18s ease; }.vr-datapad-nav > .vr-datapad-nav-group > button:hover { color: rgba(243, 244, 248, .86); }.vr-datapad-nav > .vr-datapad-nav-group > button:hover > i { color: rgba(243, 244, 248, .88); }.vr-datapad-nav > .vr-datapad-nav-group > button.active { color: var(--vr-text); background: radial-gradient(80% 60% at 50% 100%, rgba(168, 85, 247, .16), transparent 68%); }.vr-datapad-nav > .vr-datapad-nav-group > button.active::after { background: linear-gradient(90deg, transparent, var(--vr-accent), transparent); box-shadow: 0 0 8px rgba(168, 85, 247, .85), 0 -10px 24px rgba(168, 85, 247, .2); }.vr-datapad-nav > .vr-datapad-nav-group > button > i { color: rgba(188, 190, 202, .66); font-size: 1.3rem; line-height: 1; transition: color .18s ease, filter .18s ease; }.vr-datapad-nav > .vr-datapad-nav-group > button.active > i { color: var(--vr-accent); filter: drop-shadow(0 0 7px rgba(168, 85, 247, .8)) drop-shadow(0 0 16px rgba(168, 85, 247, .35)); }.vr-datapad-nav .menu-arrow { position: absolute; top: 8px; right: 8px; width: auto; color: #a6adbd; font-size: .55rem; }.vr-datapad-menu { position: absolute; z-index: 5; top: 100%; left: 0; display: none; min-width: 175px; padding: 9px 5px 5px; background: #10131c; border: 1px solid rgba(168, 85, 247, .45); border-radius: 0 0 8px 8px; box-shadow: 0 10px 28px rgba(0, 0, 0, .48); }.vr-datapad-nav-group:hover .vr-datapad-menu, .vr-datapad-nav-group:focus-within .vr-datapad-menu { display: grid; }.vr-datapad-menu button { display: flex; align-items: center; gap: 8px; padding: 8px 9px; color: #d8e3ef; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-datapad-menu button:hover, .vr-datapad-menu button.active { color: #f8fafc; background: rgba(34, 211, 238, .11); border-color: rgba(34, 211, 238, .28); }.vr-datapad-menu i { width: 17px; color: #67e8f9; text-align: center; }
-.vr-datapad-content { height: 100%; min-width: 0; padding: 22px; overflow: auto; }
+.vr-datapad-nav { position: relative; display: grid; grid-template-columns: repeat(6, minmax(82px, 1fr)); flex: 1 1 auto; gap: 0; min-width: 0; overflow: visible; isolation: isolate; }.vr-datapad-nav-group { position: relative; z-index: 1; min-width: 82px; }.vr-datapad-nav > .vr-datapad-nav-group > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 100%; min-height: 56px; padding: 6px 7px 8px; color: var(--vr-text-dim); font-size: .64rem; font-weight: 700; line-height: 1.1; text-align: center; text-shadow: none; text-transform: uppercase; background: transparent; border: 0 !important; border-radius: 0; box-shadow: none !important; -webkit-tap-highlight-color: transparent; }.vr-datapad-nav > .vr-datapad-nav-group + .vr-datapad-nav-group > button::before { content: ""; position: absolute; top: 18%; bottom: 18%; left: 0; width: 1px; background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .075), transparent); }.vr-datapad-nav > .vr-datapad-nav-group > button::after { content: ""; position: absolute; right: 22%; bottom: 0; left: 22%; height: 2px; border-radius: 999px; background: transparent; transition: background .18s ease, box-shadow .18s ease; }.vr-datapad-nav > .vr-datapad-nav-group > button:hover { color: rgba(243, 244, 248, .86); }.vr-datapad-nav > .vr-datapad-nav-group > button:hover > i { color: rgba(243, 244, 248, .88); }.vr-datapad-nav > .vr-datapad-nav-group > button.active { color: var(--vr-text); background: transparent; }.vr-datapad-nav > .vr-datapad-nav-group > button.active::after { background: transparent; box-shadow: none; }.vr-datapad-nav > .vr-datapad-nav-group > button > i { color: rgba(188, 190, 202, .66); font-size: 1.3rem; line-height: 1; transition: color .18s ease, filter .18s ease; }.vr-datapad-nav > .vr-datapad-nav-group > button.active > i { color: var(--vr-accent); filter: drop-shadow(0 0 7px rgba(168, 85, 247, .8)) drop-shadow(0 0 16px rgba(168, 85, 247, .35)); }.vr-datapad-nav .menu-arrow { position: absolute; top: 8px; right: 8px; width: auto; color: #a6adbd; font-size: .55rem; }.vr-datapad-menu { position: absolute; z-index: 5; top: 100%; left: 0; display: none; min-width: 175px; padding: 9px 5px 5px; background: #10131c; border: 1px solid rgba(168, 85, 247, .45); border-radius: 0 0 8px 8px; box-shadow: 0 10px 28px rgba(0, 0, 0, .48); }.vr-datapad-nav-group:hover .vr-datapad-menu, .vr-datapad-nav-group:focus-within .vr-datapad-menu { display: grid; }.vr-datapad-menu button { display: flex; align-items: center; gap: 8px; padding: 8px 9px; color: #d8e3ef; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-datapad-menu button:hover, .vr-datapad-menu button.active { color: #f8fafc; background: rgba(34, 211, 238, .11); border-color: rgba(34, 211, 238, .28); }.vr-datapad-menu i { width: 17px; color: #67e8f9; text-align: center; }
+.vr-datapad-menu { width: 100%; min-width: 0; }
+.vr-datapad-menu button { justify-content: flex-start; width: 100%; min-width: 0; }
+.vr-datapad-content { display: flex; height: 100%; min-width: 0; min-height: 0; flex-direction: column; padding: 22px; overflow: auto; }
 .vr-datapad-content > header { gap: 13px; padding-bottom: 16px; border-bottom: 1px solid var(--vr-dp-border); }
 .vr-datapad-content > header > div { flex: 1; }
 .vr-datapad-new { padding: 8px 11px; color: var(--vr-dp-text); background: rgba(168, 85, 247, .2); border: 1px solid rgba(168, 85, 247, .45); border-radius: 7px; white-space: nowrap; }
@@ -8110,12 +8399,14 @@
 .vr-datapad-record > i { color: #22d3ee; }.vr-datapad-record span { flex: 1; }.vr-datapad-record small { color: var(--vr-dp-dim); }
 .vr-datapad-entry.is-hidden { border-color: rgba(244, 114, 182, .55); }.vr-datapad-entry.is-hidden .vr-datapad-record { opacity: .64; }.vr-datapad-entry.is-locked { border-style: dashed; }.vr-datapad-record:disabled { cursor: default; opacity: .75; }.vr-datapad-gm-controls { display: flex; gap: 7px; align-items: center; color: var(--vr-dp-dim); font-size: .76rem; }.vr-datapad-gm-controls label { display: flex; gap: 4px; align-items: center; white-space: nowrap; }.vr-datapad-gm-controls select { width: 120px; min-height: 28px; color: var(--vr-dp-text); background: #080910; border: 1px solid var(--vr-dp-border); border-radius: 5px; }
 .vr-datapad-gm-controls > button { width: 29px; height: 28px; color: var(--vr-dp-text); background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 5px; }
-.vr-quest-workspace { display: grid; grid-template-columns: 210px minmax(190px, .58fr) minmax(0, 1.55fr); min-height: 460px; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }.vr-quest-workspace.directory-collapsed { grid-template-columns: 52px minmax(190px, .58fr) minmax(0, 1.55fr); }.vr-quest-directory, .vr-quest-list { border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }.vr-quest-directory > header, .vr-quest-list > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; border-bottom: 1px solid var(--vr-dp-border); text-transform: uppercase; }.vr-quest-directory > header button { width: 27px; height: 27px; color: var(--vr-dp-dim); background: transparent; border: 0; border-radius: 4px; }.vr-quest-directory > header button:hover { color: var(--vr-text); background: rgba(168, 85, 247, .14); }.vr-quest-directory-controls { display: grid; gap: 3px; padding: 8px; }.vr-quest-directory-controls button { display: flex; align-items: center; gap: 9px; padding: 8px; color: var(--vr-dp-dim); font-size: .78rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 6px; }.vr-quest-directory-controls button:hover, .vr-quest-directory-controls button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); border-color: rgba(168, 85, 247, .3); }.vr-quest-directory-controls i { width: 16px; color: #67e8f9; text-align: center; }.directory-collapsed .vr-quest-directory > header { justify-content: center; padding: 0; }.directory-collapsed .vr-quest-directory > header span, .directory-collapsed .vr-quest-directory-controls { display: none; }.directory-collapsed .vr-quest-directory > header button i { display: inline-block; transform: rotate(180deg); }.vr-quest-list { display: grid; align-content: start; overflow-y: auto; }.vr-quest-list > header small { color: #67e8f9; }.vr-quest-list-entry { display: grid; gap: 3px; width: 100%; padding: 11px; color: var(--vr-dp-text); text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255, 255, 255, .055); }.vr-quest-list-entry:hover, .vr-quest-list-entry.active { background: rgba(168, 85, 247, .13); box-shadow: inset 3px 0 0 var(--vr-accent); }.vr-quest-list-entry > span { font-weight: 700; }.vr-quest-list-entry small { color: var(--vr-dp-dim); font-size: .69rem; }.vr-quest-list-entry.is-hidden { opacity: .58; }.vr-quest-list-empty, .vr-quest-preview-empty { padding: 24px 14px; color: var(--vr-dp-dim); text-align: center; }.vr-quest-preview { min-width: 0; overflow-y: auto; background: rgba(4, 5, 10, .16); }.vr-quest-preview-empty { display: grid; place-content: center; min-height: 100%; gap: 9px; }.vr-quest-preview-empty i { color: var(--vr-accent); font-size: 1.6rem; }.vr-quest-preview-empty p { margin: 0; }.vr-quest-preview .vr-datapad-quest-view { margin: 0; padding: 16px; }
-.vr-quest-workspace { grid-template-columns: 270px minmax(175px, .42fr) minmax(0, 1.35fr); }.vr-quest-workspace.directory-collapsed { grid-template-columns: 52px minmax(175px, .42fr) minmax(0, 1.35fr); }.vr-quest-directory { display: flex; min-height: 0; flex-direction: column; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }.vr-quest-directory-list { min-height: 0; overflow-y: auto; border-top: 1px solid var(--vr-dp-border); }.vr-quest-outline { min-width: 0; overflow-y: auto; padding: 15px 13px; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .012); }.vr-quest-outline > header { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; color: var(--vr-dp-dim); font-size: .68rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }.vr-quest-outline > header i { color: #67e8f9; }.vr-quest-outline > div { display: grid; gap: 2px; }.vr-quest-outline button { padding: 5px 3px; color: var(--vr-dp-text); line-height: 1.3; text-align: left; background: transparent; border: 0; border-radius: 4px; }.vr-quest-outline button:hover { color: #67e8f9; background: rgba(34, 211, 238, .08); }.vr-quest-outline-empty { padding-top: 30px; color: var(--vr-dp-dim); font-size: .82rem; line-height: 1.5; text-align: center; }.directory-collapsed .vr-quest-directory-list { display: none; }
-.vr-quest-workspace { grid-template-columns: 270px minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr); }.vr-quest-workspace.directory-collapsed { grid-template-columns: 52px minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr); }.vr-quest-workspace.outline-collapsed { grid-template-columns: 270px 0 0 minmax(0, 1fr); }.vr-quest-workspace.directory-collapsed.outline-collapsed { grid-template-columns: 52px 0 0 minmax(0, 1fr); }.vr-quest-directory > header > div { display: flex; gap: 3px; }.vr-quest-outline-resizer { position: relative; cursor: col-resize; background: rgba(255, 255, 255, .025); }.vr-quest-outline-resizer::after { content: ""; position: absolute; top: 40%; bottom: 40%; left: 2px; width: 2px; background: rgba(34, 211, 238, .35); border-radius: 99px; }.vr-quest-outline-resizer:hover, .vr-quest-outline-resizer:active { background: rgba(34, 211, 238, .14); }.vr-quest-preview { grid-column: 4; }.outline-collapsed .vr-quest-outline, .outline-collapsed .vr-quest-outline-resizer { display: none; }
+.vr-quest-workspace { display: grid; grid-template-columns: 210px minmax(190px, .58fr) minmax(0, 1.55fr); min-height: 460px; flex: 1 1 auto; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }.vr-quest-workspace.directory-collapsed { grid-template-columns: 52px minmax(190px, .58fr) minmax(0, 1.55fr); }.vr-quest-directory, .vr-quest-list { border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }.vr-quest-directory > header, .vr-quest-list > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; border-bottom: 1px solid var(--vr-dp-border); text-transform: uppercase; }.vr-quest-directory > header button { width: 27px; height: 27px; color: var(--vr-dp-dim); background: transparent; border: 0; border-radius: 4px; }.vr-quest-directory > header button:hover { color: var(--vr-text); background: rgba(168, 85, 247, .14); }.vr-quest-directory-controls { display: grid; gap: 3px; padding: 8px; }.vr-quest-directory-controls button { display: flex; align-items: center; gap: 9px; padding: 8px; color: var(--vr-dp-dim); font-size: .78rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 6px; }.vr-quest-directory-controls button:hover, .vr-quest-directory-controls button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); border-color: rgba(168, 85, 247, .3); }.vr-quest-directory-controls i { width: 16px; color: #67e8f9; text-align: center; }.directory-collapsed .vr-quest-directory > header { justify-content: center; padding: 0; }.directory-collapsed .vr-quest-directory > header span, .directory-collapsed .vr-quest-directory-controls { display: none; }.directory-collapsed .vr-quest-directory > header button i { display: inline-block; transform: rotate(180deg); }.vr-quest-list { display: grid; align-content: start; overflow-y: auto; }.vr-quest-list > header small { color: #67e8f9; }.vr-quest-list-entry { display: grid; gap: 3px; width: 100%; padding: 11px; color: var(--vr-dp-text); text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255, 255, 255, .055); }.vr-quest-list-entry:hover, .vr-quest-list-entry.active { background: rgba(168, 85, 247, .13); box-shadow: inset 3px 0 0 var(--vr-accent); }.vr-quest-list-entry > span { font-weight: 700; }.vr-quest-list-entry small { color: var(--vr-dp-dim); font-size: .69rem; }.vr-quest-list-entry.is-hidden { opacity: .58; }.vr-quest-list-empty, .vr-quest-preview-empty { padding: 24px 14px; color: var(--vr-dp-dim); text-align: center; }.vr-quest-preview { min-width: 0; overflow-y: auto; background: rgba(4, 5, 10, .16); }.vr-quest-preview-empty { display: grid; place-content: center; min-height: 100%; gap: 9px; }.vr-quest-preview-empty i { color: var(--vr-accent); font-size: 1.6rem; }.vr-quest-preview-empty p { margin: 0; }.vr-quest-preview .vr-datapad-quest-view { margin: 0; padding: 16px; }
+.vr-quest-workspace { position: relative; grid-template-columns: 270px minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr); transition: grid-template-columns .32s cubic-bezier(.22, 1, .36, 1); }.vr-quest-workspace.directory-collapsed { grid-template-columns: 0 minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr); }.vr-quest-workspace.outline-collapsed { grid-template-columns: 270px 0 0 minmax(0, 1fr); }.vr-quest-workspace.directory-collapsed.outline-collapsed { grid-template-columns: 0 0 0 minmax(0, 1fr); }.vr-quest-directory { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); opacity: 1; transition: opacity .22s ease, visibility .22s ease; }.directory-collapsed .vr-quest-directory { visibility: hidden; opacity: 0; pointer-events: none; }.vr-quest-directory-list { min-height: 0; overflow-y: auto; border-top: 1px solid var(--vr-dp-border); }.vr-quest-outline { min-width: 0; overflow-y: auto; padding: 15px 13px; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .012); }.vr-quest-outline > header { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; color: var(--vr-dp-dim); font-size: .68rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }.vr-quest-outline > header i { color: #67e8f9; }.vr-quest-outline > div { display: grid; gap: 2px; }.vr-quest-outline button { padding: 5px 3px; color: var(--vr-dp-text); line-height: 1.3; text-align: left; background: transparent; border: 0; border-radius: 4px; }.vr-quest-outline button:hover { color: #67e8f9; background: rgba(34, 211, 238, .08); }.vr-quest-outline-empty { padding-top: 30px; color: var(--vr-dp-dim); font-size: .82rem; line-height: 1.5; text-align: center; }.directory-collapsed .vr-quest-directory-list { display: none; }.vr-quest-directory > header { padding-right: 43px; }.vr-quest-directory > header > div { display: flex; gap: 3px; }.vr-quest-directory-toggle { position: absolute; z-index: 4; top: 4px; left: 236px; display: grid; place-items: center; width: 28px; height: 34px; padding: 0; color: var(--vr-dp-dim); background: var(--vr-dp-panel); border: 1px solid var(--vr-dp-border); border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, .22); transition: left .32s cubic-bezier(.22, 1, .36, 1), top .24s ease, height .32s cubic-bezier(.22, 1, .36, 1), color .2s ease, border-color .2s ease, background .2s ease; }.vr-quest-directory-toggle:hover { color: var(--vr-dp-text); border-color: var(--vr-dp-accent); background: color-mix(in srgb, var(--vr-dp-accent) 14%, var(--vr-dp-panel)); }.directory-collapsed .vr-quest-directory-toggle { top: var(--quest-directory-handle-top, 50%); left: 0; height: 3rem; cursor: grab; border-radius: 0 6px 6px 0; transform: translateY(-50%); }.directory-collapsed .vr-quest-directory-toggle.is-dragging { cursor: grabbing; user-select: none; }.directory-collapsed .vr-quest-directory-toggle::before { display: none; }.directory-collapsed .vr-quest-directory-toggle i { transform: translateX(3px); }.directory-collapsed .vr-quest-directory-toggle.directory-handle-return { animation: vr-quest-directory-handle-return .42s cubic-bezier(.22, 1, .36, 1) both; }@keyframes vr-quest-directory-handle-return { from { opacity: 0; transform: translate(-14px, -50%); } to { opacity: 1; transform: translate(0, -50%); } }.vr-quest-outline-resizer { position: relative; cursor: col-resize; background: rgba(255, 255, 255, .025); }.vr-quest-outline-resizer::after { content: ""; position: absolute; top: 40%; bottom: 40%; left: 2px; width: 2px; background: rgba(34, 211, 238, .35); border-radius: 99px; }.vr-quest-outline-resizer:hover, .vr-quest-outline-resizer:active { background: rgba(34, 211, 238, .14); }.vr-quest-preview { grid-column: 4; }.outline-collapsed .vr-quest-outline, .outline-collapsed .vr-quest-outline-resizer { display: none; }
 .vr-quest-folder-list { display: grid; gap: 2px; padding: 0 8px 8px; border-bottom: 1px solid var(--vr-dp-border); }.vr-quest-folder-list button { display: flex; align-items: center; gap: 7px; padding: 6px 7px 6px calc(7px + var(--quest-folder-depth, 0) * 13px); color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-quest-folder-list button:hover, .vr-quest-folder-list button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .12); border-color: rgba(168, 85, 247, .28); }.vr-quest-folder-list button.drag-over { border-color: #67e8f9; background: rgba(34, 211, 238, .12); }.vr-quest-folder-list i { color: #facc15; }
 .vr-quest-folder-entry { padding-left: calc(23px + var(--quest-folder-depth, 0) * 13px) !important; }.vr-quest-folder-entry small { margin-left: auto; color: var(--vr-dp-dim); font-size: .65rem; }.vr-quest-folder-entry i { color: #a6adbd !important; }
-.vr-quest-folder-row { display: flex; align-items: center; min-width: 0; padding-left: calc(3px + var(--quest-folder-depth, 0) * 13px); text-align: left; }.vr-quest-tree-toggle, .vr-quest-tree-spacer { display: inline-grid; flex: 0 0 20px; place-items: center; width: 20px; height: 25px; padding: 0 !important; color: var(--vr-dp-dim); background: transparent; border: 0 !important; }.vr-quest-tree-toggle:hover { color: #67e8f9; }.vr-quest-tree-toggle i { color: inherit !important; font-size: .64rem; }.vr-quest-folder-select { display: flex !important; flex: 1; align-items: center; min-width: 0; padding: 5px 6px !important; text-align: left !important; }.vr-quest-folder-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.vr-quest-folder-entry { text-align: left !important; }
+.vr-datapad-directory-workspace { display: grid; grid-template-columns: 270px minmax(0, 1fr); flex: 1 1 auto; min-height: 460px; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }.vr-datapad-directory, .vr-datapad-directory-preview { min-width: 0; min-height: 0; }.vr-datapad-directory { display: flex; flex-direction: column; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }.vr-datapad-directory > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--vr-dp-border); }.vr-datapad-directory > header > div { display: flex; align-items: center; gap: 3px; }.vr-datapad-directory > header button { display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 7px; color: var(--vr-dp-dim); font: inherit; letter-spacing: normal; text-transform: none; background: transparent; border: 0; border-radius: 4px; }.vr-datapad-directory > header button:hover { color: var(--vr-dp-text); background: rgba(168, 85, 247, .14); }.vr-datapad-folder-list { min-height: 0; padding: 8px; overflow-y: auto; }.vr-datapad-folder-row { display: flex; min-width: 0; padding-left: calc(var(--datapad-folder-depth, 0) * 13px); }.vr-datapad-folder-select, .vr-datapad-folder-entry { display: flex; align-items: center; gap: 7px; width: 100%; padding: 6px 7px; color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-datapad-folder-select:hover, .vr-datapad-folder-select.active, .vr-datapad-folder-entry:hover, .vr-datapad-folder-entry.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .12); border-color: rgba(168, 85, 247, .28); }.vr-datapad-folder-select i { color: #facc15; }.vr-datapad-folder-select span, .vr-datapad-folder-entry span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.vr-datapad-folder-entry { width: calc(100% - (var(--datapad-folder-depth, 0) * 13px)); margin-left: calc(var(--datapad-folder-depth, 0) * 13px); }.vr-datapad-folder-entry i { color: #a6adbd; }.vr-datapad-folder-entry small { margin-left: auto; color: var(--vr-dp-dim); font-size: .65rem; white-space: nowrap; }.vr-datapad-directory-empty { padding: 16px 7px; color: var(--vr-dp-dim); font-size: .78rem; text-align: center; }.vr-datapad-directory-preview { display: grid; place-items: center; padding: 28px; overflow-y: auto; text-align: center; background: rgba(4, 5, 10, .16); }.vr-datapad-directory-preview > div { display: grid; justify-items: center; gap: 9px; color: var(--vr-dp-dim); }.vr-datapad-directory-preview i { color: var(--vr-dp-accent); font-size: 1.6rem; }.vr-datapad-directory-preview h3 { margin: 0; color: var(--vr-dp-text); }.vr-datapad-directory-preview p { margin: 0; }.vr-datapad-directory-preview button { padding: 7px 10px; color: var(--vr-dp-text); background: rgba(168, 85, 247, .14); border: 1px solid rgba(168, 85, 247, .4); border-radius: 5px; }
+.vr-quest-directory > header button[data-action="new-entry"] { display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 0 7px; font-size: .68rem; font-weight: 800; letter-spacing: normal; text-transform: none; }
+.vr-quest-folder-row, .vr-datapad-folder-row { padding-left: 0; }.vr-quest-folder-list button, .vr-quest-folder-entry, .vr-datapad-folder-entry { width: 100%; margin-left: 0; padding-left: 7px !important; }
+.vr-quest-folder-row { display: flex; align-items: center; min-width: 0; padding-left: calc(3px + var(--quest-folder-depth, 0) * 13px); text-align: left; }.vr-quest-tree-toggle, .vr-quest-tree-spacer { order: 2; display: inline-grid; flex: 0 0 20px; place-items: center; width: 20px; height: 25px; padding: 0 !important; color: var(--vr-dp-dim); background: transparent; border: 0 !important; }.vr-quest-tree-toggle:hover { color: #67e8f9; }.vr-quest-tree-toggle i { color: inherit !important; font-size: .64rem; }.vr-quest-folder-select { order: 1; display: flex !important; flex: 1; align-items: center; justify-content: flex-start !important; min-width: 0; padding: 5px 6px !important; text-align: left !important; }.vr-quest-folder-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.vr-quest-folder-entry { text-align: left !important; }
 .directory-collapsed .vr-quest-folder-list { display: none; }
 .vr-quest-sort-picker { position: relative; }.vr-quest-sort-picker > button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px; color: var(--vr-dp-dim); font-size: .78rem; text-align: left; background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 6px; }.vr-quest-sort-picker > button span { flex: 1; }.vr-quest-sort-picker > button > i:last-child { font-size: .6rem; }.vr-quest-sort-picker > button:hover { color: var(--vr-dp-text); border-color: rgba(168, 85, 247, .4); }.vr-quest-sort-picker i { width: 16px; color: #67e8f9; text-align: center; }.vr-quest-sort-menu { position: absolute; z-index: 6; top: 100%; left: 0; display: none; width: 100%; padding: 5px; background: #10131c; border: 1px solid rgba(168, 85, 247, .45); border-radius: 0 0 7px 7px; box-shadow: 0 10px 22px rgba(0, 0, 0, .45); }.vr-quest-sort-picker:hover .vr-quest-sort-menu, .vr-quest-sort-picker:focus-within .vr-quest-sort-menu { display: grid; }.vr-quest-sort-menu button { display: flex; align-items: center; gap: 8px; padding: 7px; color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-quest-sort-menu button:hover, .vr-quest-sort-menu button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); border-color: rgba(168, 85, 247, .3); }
 .vr-quest-sort-picker { display: flex; }.vr-quest-sort-picker > button.vr-quest-sort-cycle { flex: 1; border-radius: 6px 0 0 6px; }.vr-quest-sort-picker > button.vr-quest-sort-toggle { flex: 0 0 34px; width: 34px; justify-content: center; padding: 0; border-left: 0; border-radius: 0 6px 6px 0; }.vr-quest-sort-picker > button.vr-quest-sort-toggle i { width: auto; font-size: .6rem; }.vr-quest-sort-picker:hover .vr-quest-sort-menu:not(.open), .vr-quest-sort-picker:focus-within .vr-quest-sort-menu:not(.open) { display: none; }.vr-quest-sort-menu.open { display: grid; }
@@ -8131,7 +8422,7 @@
 
 @media (max-width: 700px) { .vr-player-datapad { padding: 0; }.vr-datapad-shell { width: 100vw; height: 100vh; min-width: 0; min-height: 0; resize: none; border-radius: 0; }.vr-datapad-header { padding: 7px; }.vr-datapad-nav { overflow-x: auto; overflow-y: visible; }.vr-datapad-nav > .vr-datapad-nav-group > button { justify-content: center; padding: 10px 9px; }.vr-datapad-nav > .vr-datapad-nav-group > button span, .vr-datapad-header-actions button span { display: none; }.vr-datapad-header-actions button:has(span) { width: 34px; padding: 0; }.vr-datapad-content { padding: 16px; }.vr-datapad-entry { grid-template-columns: 1fr; }.vr-datapad-gm-controls { justify-content: space-between; }.vr-quest-view-layout, .vr-quest-editor-title, .vr-quest-grid { grid-template-columns: 1fr; }.vr-datapad-quest-editor label.wide { grid-column: auto; } }
 
-@media (max-width: 850px) { .vr-quest-workspace, .vr-quest-workspace.directory-collapsed, .vr-quest-workspace.outline-collapsed, .vr-quest-workspace.directory-collapsed.outline-collapsed { grid-template-columns: 1fr; }.vr-quest-directory, .vr-quest-outline { border-right: 0; border-bottom: 1px solid var(--vr-dp-border); }.vr-quest-directory-list { max-height: 210px; }.directory-collapsed .vr-quest-directory { display: block; }.directory-collapsed .vr-quest-directory > header { justify-content: flex-start; padding: 0 11px; }.directory-collapsed .vr-quest-directory > header span { display: inline; }.vr-quest-outline-resizer { display: none; }.vr-quest-preview { grid-column: auto; min-height: 360px; } }
+@media (max-width: 850px) { .vr-quest-view-layout, .vr-quest-editor-title, .vr-quest-grid { grid-template-columns: 1fr; } }
 
 .veilrunner.sheet.actor .custom-effect-name {
   display: block;
@@ -8188,6 +8479,18 @@
   color: var(--vr-accent);
 }
 
+/* Keep Foundry's frame controls outside the portrait editor's content-button skin. */
+.vr-portrait-editor .window-header button,
+.vr-portrait-editor .window-header .header-button,
+.vr-portrait-editor .window-header .header-control {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .vr-portrait-editor .window-content {
   background:
     radial-gradient(700px 260px at 20% -10%, rgba(168, 85, 247, 0.1), transparent 62%),
@@ -8210,7 +8513,7 @@
   gap: 8px;
 }
 
-.vr-portrait-editor button {
+.vr-portrait-editor .window-content button {
   border: 1px solid rgba(168, 85, 247, 0.35);
   background:
     linear-gradient(180deg, rgba(20, 23, 34, 0.95), rgba(10, 12, 18, 0.95));
@@ -8220,7 +8523,7 @@
     0 0 14px rgba(168, 85, 247, 0.1);
 }
 
-.vr-portrait-editor button:hover {
+.vr-portrait-editor .window-content button:hover {
   border-color: rgba(34, 211, 238, 0.45);
   color: var(--vr-cyan);
   background:
@@ -8932,33 +9235,43 @@
     0 0 40px var(--vr-accent-soft);
 }
 
-.vr-portrait-editor .window-content {
+.vr-portrait-editor .window-header {
+  color: var(--vr-text, #f8fafc);
   background:
-    radial-gradient(700px 260px at 20% -10%, var(--vr-accent-soft), transparent 62%),
-    var(--vr-bg);
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-ui-color) 28%, #10131a), color-mix(in srgb, var(--vr-ui-color) 14%, #06070b)) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 36%, var(--vr-border));
 }
 
-.vr-portrait-editor button {
+.vr-portrait-editor .window-header .window-title {
+  color: var(--vr-text, #f8fafc);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .85);
+}
+
+.vr-portrait-editor .window-content {
+  background: var(--vr-bg);
+}
+
+.vr-portrait-editor .window-content button {
   border-color: color-mix(in srgb, var(--vr-accent) 45%, var(--vr-border));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--vr-panel-alt) 94%, #fff), var(--vr-bg));
+  background: linear-gradient(180deg, var(--vr-panel-alt), var(--vr-panel));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 0 14px var(--vr-accent-soft);
 }
 
-.vr-portrait-editor button:hover {
+.vr-portrait-editor .window-content button:hover {
   border-color: var(--vr-accent);
   color: var(--vr-accent);
   background:
     radial-gradient(80% 60% at 50% 50%, var(--vr-accent-soft), transparent 70%),
-    linear-gradient(180deg, var(--vr-panel-alt), var(--vr-bg));
+    linear-gradient(180deg, var(--vr-panel-alt), var(--vr-panel));
 }
 
 .vr-portrait-editor .vr-portrait-crop-dialog {
-  border-color: var(--vr-border);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--vr-panel-alt) 80%, transparent), color-mix(in srgb, var(--vr-bg) 72%, transparent)),
-    rgba(255, 255, 255, 0.018);
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .vr-portrait-editor .vr-portrait-crop-preview {
@@ -8991,8 +9304,7 @@
   accent-color: var(--vr-accent);
 }
 
-.vr-portrait-editor .window-header :not(i),
-.vr-portrait-editor .window-content :not(i) {
+.vr-portrait-editor .window-content .vr-portrait-crop-dialog :not(i) {
   font-family: Arial, Helvetica, sans-serif !important;
   text-shadow:
     1px 0 1px rgba(0, 0, 0, 0.96),
@@ -9038,3 +9350,896 @@
   border-color: color-mix(in srgb, var(--vr-ui-color) 36%, #050609);
   box-shadow: 0 0 12px color-mix(in srgb, var(--vr-ui-color) 42%, transparent);
 }
+
+/* Party sheets inherit the palette selected by the user who opens them. */
+.veilrunner.sheet.actor.basic {
+  --vr-ui-color: #101216;
+  --vr-vision-bg: #080910;
+  --vr-accent-soft: color-mix(in srgb, var(--vr-accent) 20%, transparent);
+  --vr-accent-glow: color-mix(in srgb, var(--vr-accent) 48%, transparent);
+  --vr-bg: color-mix(in srgb, var(--vr-ui-color) 12%, var(--vr-vision-bg));
+  --vr-panel: color-mix(in srgb, var(--vr-ui-color) 18%, var(--vr-vision-bg));
+  --vr-panel-alt: color-mix(in srgb, var(--vr-ui-color) 26%, var(--vr-vision-bg));
+  --vr-border: color-mix(in srgb, var(--vr-ui-color) 30%, rgba(255, 255, 255, 0.12));
+}
+
+.veilrunner.sheet.actor.basic .window-header,
+.veilrunner.sheet.actor.basic .window-content {
+  background-color: var(--vr-bg);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  min-height: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--vr-border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--vr-panel-alt), var(--vr-panel));
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary {
+  width: 100%;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--vr-text);
+  font-size: 1.12rem;
+  line-height: 1.2;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  min-height: 42px;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab span {
+  overflow: visible;
+  line-height: 1.1;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  width: 100%;
+  padding: 7px;
+  color: var(--vr-text);
+  text-align: left;
+  background: color-mix(in srgb, var(--vr-panel) 88%, transparent);
+  border: 1px solid var(--vr-border);
+  border-radius: 6px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member:hover {
+  border-color: var(--vr-accent);
+  background: color-mix(in srgb, var(--vr-accent) 10%, var(--vr-panel));
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-data,
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-title,
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-resources {
+  min-width: 0;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-title small {
+  margin-left: auto;
+  color: var(--vr-text-dim);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-journal-panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--vr-border);
+  border-radius: 8px;
+  background: var(--vr-panel);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-journal-panel > i { color: var(--vr-accent); font-size: 1.4rem; }
+.veilrunner.sheet.actor.basic .vr-party-journal-panel strong { display: block; color: var(--vr-text); }
+.veilrunner.sheet.actor.basic .vr-party-journal-panel p { margin: 3px 0 0; color: var(--vr-text-dim); font-size: 0.78rem; }
+.veilrunner.sheet.actor.basic .vr-party-journal-panel button { padding: 7px 9px; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); border-radius: 6px; white-space: nowrap; }
+
+/* Player Datapad inherits both the selected UI Style and Button Theme. */
+.vr-player-datapad .vr-datapad-header {
+  background: linear-gradient(180deg, var(--vr-dp-panel), var(--vr-dp-bg));
+}
+
+.vr-player-datapad .vr-datapad-header-actions button,
+.vr-player-datapad .vr-datapad-new {
+  border-color: color-mix(in srgb, var(--vr-dp-accent) 42%, var(--vr-dp-border));
+  background: color-mix(in srgb, var(--vr-dp-accent) 12%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-header-actions button:hover,
+.vr-player-datapad .vr-datapad-new:hover {
+  color: var(--vr-dp-text);
+  border-color: var(--vr-dp-accent);
+  background: color-mix(in srgb, var(--vr-dp-accent) 24%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--vr-dp-accent) 34%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active {
+  color: var(--vr-dp-text);
+  background: transparent !important;
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active::after {
+  background: linear-gradient(90deg, transparent, var(--vr-dp-accent), transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vr-dp-accent) 85%, transparent), 0 -10px 24px color-mix(in srgb, var(--vr-dp-accent) 20%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-nav-indicator {
+  position: absolute;
+  z-index: 0;
+  right: auto;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% / 6);
+  height: auto;
+  border-inline: 1px solid color-mix(in srgb, var(--vr-dp-accent) 18%, transparent);
+  border-radius: 0;
+  background:
+    radial-gradient(85% 70% at 50% 100%, color-mix(in srgb, var(--vr-dp-accent) 18%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-dp-accent) 10%, transparent), color-mix(in srgb, #22d3ee 4%, transparent));
+  box-shadow:
+    inset 0 -2px 0 color-mix(in srgb, var(--vr-dp-accent) 72%, transparent),
+    0 0 24px color-mix(in srgb, var(--vr-dp-accent) 16%, transparent);
+  transform: translateX(calc(var(--nav-from) * 100%));
+  transition: transform .26s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+
+.vr-player-datapad .vr-datapad-nav-indicator::after,
+.veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator::after {
+  content: "";
+  position: absolute;
+  right: 22%;
+  bottom: 0;
+  left: 22%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  box-shadow: 0 0 8px currentColor, 0 -10px 24px color-mix(in srgb, currentColor 24%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button::after {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active > i,
+.vr-player-datapad .vr-datapad-menu i,
+.vr-player-datapad .vr-datapad-record > i {
+  color: var(--vr-dp-accent);
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--vr-dp-accent) 68%, transparent));
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button > i {
+  transition: color .18s ease, filter .18s ease, transform .18s ease;
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button:hover > i,
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active > i {
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button > i,
+  .vr-player-datapad .vr-datapad-nav-indicator {
+    transition: none;
+  }
+
+  .vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button:hover > i,
+  .vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active > i {
+    transform: none;
+  }
+}
+
+.vr-player-datapad .vr-datapad-menu,
+.vr-player-datapad .vr-quest-sort-menu {
+  background: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 18%, #080910);
+  border-color: color-mix(in srgb, var(--vr-dp-accent) 45%, var(--vr-dp-border));
+  opacity: 1;
+}
+
+.vr-player-datapad .vr-datapad-menu button:hover,
+.vr-player-datapad .vr-datapad-menu button.active {
+  background: color-mix(in srgb, var(--vr-dp-accent) 13%, transparent);
+  border-color: color-mix(in srgb, var(--vr-dp-accent) 34%, transparent);
+}
+
+/* Directory drawer motion and compact collapsed handle. */
+.vr-quest-workspace { transition-duration: .75s; }
+.vr-quest-directory { transition-duration: .75s; }
+.vr-quest-directory-toggle {
+  left: 240px;
+  width: 20px;
+  transition-duration: .75s;
+}
+.directory-collapsed .vr-quest-directory-toggle {
+  height: 3.25rem;
+}
+.directory-collapsed .vr-quest-directory-toggle i { transform: translateX(2px); }
+.directory-collapsed .vr-quest-directory-toggle.directory-handle-return { animation-duration: .6s; }
+
+/* Foundry frame buttons need their native hit area even inside the portrait editor. */
+.vr-portrait-editor .window-header button,
+.vr-portrait-editor .window-header .header-button,
+.vr-portrait-editor .window-header .header-control {
+  width: auto;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0 4px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--vr-text, #f8fafc);
+  text-shadow: none !important;
+}
+
+.vr-portrait-editor .window-header button:hover,
+.vr-portrait-editor .window-header .header-button:hover,
+.vr-portrait-editor .window-header .header-control:hover {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--vr-accent);
+}
+
+/* Party-sheet structure: one title line, one stat row, no roster container. */
+.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet) {
+  min-height: 100%;
+  background: var(--vr-bg) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-sheet {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  margin: 0;
+  padding: 4px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-header {
+  display: block !important;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px !important;
+  overflow: visible;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-title-row {
+  display: block;
+  min-width: 0;
+  margin: 0 0 10px;
+  color: var(--vr-text);
+  font-size: 1.25rem;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-title-row strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100% !important;
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary > div {
+  min-width: 0;
+  padding: 8px;
+  background: var(--vr-panel) !important;
+  border-color: var(--vr-border) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary span,
+.veilrunner.sheet.actor.basic .vr-party-summary strong {
+  overflow: visible;
+  text-align: left;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-columns {
+  grid-template-columns: minmax(160px, .62fr) minmax(0, 1fr) !important;
+  gap: 14px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-column-members {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-column-members > .vr-party-block-heading {
+  padding: 0 0 6px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch;
+  gap: 5px;
+  padding: 4px;
+  background: var(--vr-panel) !important;
+  border-color: var(--vr-border) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
+  place-items: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 5px 3px;
+  overflow: hidden;
+  color: var(--vr-text-dim);
+  background: transparent;
+  border-color: transparent;
+  text-align: center;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-tab span { display: block; width: 100%; overflow: visible; font-size: .62rem; line-height: 1.05; text-align: center; text-overflow: clip; white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-tab:hover,
+.veilrunner.sheet.actor.basic .vr-party-tab.active { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); border-color: color-mix(in srgb, var(--vr-accent) 52%, var(--vr-border)); box-shadow: inset 0 -2px 0 var(--vr-accent), 0 0 10px color-mix(in srgb, var(--vr-accent) 24%, transparent); }
+
+@media (max-width: 540px) {
+  .veilrunner.sheet.actor.basic .vr-party-columns { grid-template-columns: 1fr !important; }
+}
+
+/* Isolated Party sheet. These classes intentionally do not share the hero-sheet party selectors. */
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 14px; color: var(--vr-text); background: var(--vr-bg); }
+.veilrunner.sheet.actor.basic .vr-party-v2-header { display: grid; gap: 9px; min-width: 0; padding: 12px; border: 1px solid var(--vr-border); border-radius: 8px; background: var(--vr-panel); }
+.veilrunner.sheet.actor.basic .vr-party-v2-name { display: block; min-width: 0; overflow: hidden; color: var(--vr-text); font-size: 1.25rem; line-height: 1.2; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div { display: grid; gap: 3px; min-width: 0; padding: 8px; border: 1px solid var(--vr-border); border-radius: 6px; background: var(--vr-panel-alt); }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary span { color: var(--vr-text-dim); font-size: .63rem; font-weight: 800; line-height: 1.1; text-align: left; text-transform: uppercase; white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong { color: var(--vr-accent); font-size: 1rem; text-align: left; }
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { display: grid; grid-template-columns: minmax(175px, .58fr) minmax(0, 1fr); gap: 14px; min-width: 0; align-items: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-members, .veilrunner.sheet.actor.basic .vr-party-v2-panel { display: grid; gap: 8px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--vr-text); font-size: .76rem; font-weight: 800; text-align: left; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading button, .veilrunner.sheet.actor.basic .vr-party-v2-currency button { flex: 0 0 auto; width: 28px; height: 28px; padding: 0; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 46%, var(--vr-border)); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-roster { display: grid !important; grid-auto-rows: minmax(62px, auto); gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member { position: relative !important; display: grid !important; grid-template-columns: 44px minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; min-width: 0; min-height: 62px; margin: 0 !important; padding: 5px 0; color: var(--vr-text); text-align: left; background: transparent !important; border: 0 !important; border-radius: 0; box-shadow: none !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member:hover { background: color-mix(in srgb, var(--vr-accent) 8%, transparent) !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--vr-border); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-data { display: grid; min-width: 0; gap: 4px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title { display: flex; gap: 7px; min-width: 0; align-items: baseline; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title > span { display: grid; min-width: 0; gap: 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title em { overflow: hidden; color: var(--vr-text-dim); font-size: .72rem; font-style: normal; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title small { margin-left: auto; color: var(--vr-text-dim); font-size: .66rem; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-resources { display: flex; flex-wrap: wrap; gap: 3px 6px; color: var(--vr-text-dim); font-size: .65rem; line-height: 1; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-resources i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { display: flex; flex-wrap: wrap; gap: 4px 9px; color: var(--vr-text-dim); font-size: .7rem; line-height: 1.1; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; min-width: 0; padding: 4px; border: 1px solid var(--vr-border); border-radius: 8px; background: var(--vr-panel); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button { display: grid; grid-template-rows: auto auto; place-items: center; gap: 3px; min-width: 0; min-height: 56px; padding: 5px 3px; overflow: hidden; color: var(--vr-text-dim); background: transparent; border: 1px solid transparent; border-radius: 5px; font-size: .62rem; font-weight: 800; line-height: 1.05; text-align: center; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button span { display: block; overflow: visible; white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover, .veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); border-color: color-mix(in srgb, var(--vr-accent) 54%, var(--vr-border)); box-shadow: inset 0 -2px 0 var(--vr-accent), 0 0 10px color-mix(in srgb, var(--vr-accent) 24%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-card, .veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-block, .veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-journal-panel { display: grid; gap: 9px; min-width: 0; padding: 10px; border: 1px solid var(--vr-border); border-radius: 8px; background: var(--vr-panel); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency { display: grid; grid-template-columns: 28px 28px minmax(0, 1fr) 72px 28px; gap: 6px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency input { min-width: 0; height: 30px; color: var(--vr-text); background: var(--vr-bg); border: 1px solid var(--vr-border); border-radius: 5px; }
+@media (max-width: 540px) {
+  .veilrunner.sheet.actor.basic .vr-party-v2-header,
+  .veilrunner.sheet.actor.basic .vr-party-v2-layout { grid-template-columns: 1fr; }
+}
+
+/* Party sheet uses the hero category-switcher language: surfaces are open, controls carry the emphasis. */
+.veilrunner.sheet.actor.basic .vr-party-v2-header,
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div,
+.veilrunner.sheet.actor.basic .vr-party-v2-card,
+.veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-block,
+.veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-journal-panel {
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-header { gap: 12px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div { gap: 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { border: 0; border-radius: 0; }
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs {
+  position: relative;
+  gap: 0;
+  padding: 0 var(--vr-category-pad-x, 12px);
+  border: 0;
+  border-inline: 1px solid var(--vr-border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vr-ui-color) 24%, #10131a), color-mix(in srgb, var(--vr-ui-color) 10%, #06070b)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03), inset 0 -1px 0 rgba(0, 0, 0, .28);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button {
+  position: relative;
+  z-index: 1;
+  min-height: 48px;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  transition: color 180ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+/* The tab indicator supplies the selected state; suppress Foundry's separate
+   persistent button-focus frame after selecting a tab. */
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button::after {
+  content: "";
+  position: absolute;
+  right: 18%;
+  bottom: 0;
+  left: 18%;
+  height: 2px;
+  background: transparent;
+  border-radius: 99px;
+  opacity: 0;
+  transform: scaleX(.35);
+  transition: opacity 180ms ease, transform 220ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active {
+  background: radial-gradient(85% 70% at 50% 100%, color-mix(in srgb, var(--vr-accent) 22%, transparent), transparent 70%) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active::after {
+  background: linear-gradient(90deg, transparent, var(--vr-accent), transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 82%, transparent), 0 -10px 24px color-mix(in srgb, var(--vr-accent) 22%, transparent);
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: var(--vr-category-pad-x, 12px);
+  width: calc((100% - var(--vr-category-pad-x, 12px) - var(--vr-category-pad-x, 12px)) / 3);
+  height: auto;
+  border-inline: 1px solid color-mix(in srgb, var(--vr-accent) 18%, transparent);
+  border-radius: 0;
+  background:
+    radial-gradient(85% 70% at 50% 100%, color-mix(in srgb, var(--vr-accent) 22%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-accent) 8%, transparent), color-mix(in srgb, #22d3ee 4%, transparent));
+  box-shadow:
+    inset 0 -2px 0 color-mix(in srgb, var(--vr-accent) 72%, transparent),
+    0 0 24px color-mix(in srgb, var(--vr-accent) 16%, transparent);
+  transform: translateX(calc(var(--party-tab-offset) * 100%));
+  transition: transform .26s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+
+.vr-player-datapad .vr-datapad-nav-indicator { color: var(--vr-dp-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator { color: var(--vr-accent); }
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button::after {
+  opacity: 0 !important;
+}
+
+/* Party controls share the hero sheet's lift-and-press interaction language. */
+.veilrunner.sheet.actor.basic button {
+  transition:
+    color .18s ease,
+    background-color .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease,
+    transform .18s cubic-bezier(.2, .8, .2, 1);
+}
+
+.veilrunner.sheet.actor.basic button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.veilrunner.sheet.actor.basic button:active:not(:disabled) {
+  transform: translateY(0) scale(.97);
+  transition-duration: .08s;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button > i,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label {
+  transition: color .18s ease, filter .18s ease, transform .18s ease;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover > i,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active > i {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--vr-accent) 68%, transparent));
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .veilrunner.sheet.actor.basic button,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button::after,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button > i,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator {
+    transition: none;
+  }
+
+  .veilrunner.sheet.actor.basic button:hover:not(:disabled),
+  .veilrunner.sheet.actor.basic button:active:not(:disabled),
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover > i,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active > i {
+    transform: none;
+  }
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-currency input {
+  border: 0;
+  border-bottom: 1px solid var(--vr-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Party currency and inventory tables share scan-friendly headers and alternating rows. */
+.veilrunner.sheet.actor.basic .vr-party-v2-list-head { position: sticky; top: 0; z-index: 2; display: grid; align-items: center; min-height: 28px; padding: 0 7px; color: var(--vr-text); background: var(--vr-panel-alt); border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 48%, var(--vr-border)); font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head { grid-template-columns: 28px 28px minmax(0, 1fr) 72px 28px; gap: 6px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head button { width: 28px; height: 28px; padding: 0; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 46%, var(--vr-border)); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-head, .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { grid-template-columns: minmax(0, 1fr) 42px 58px; gap: 7px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-list-head span:not(:first-child), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-head span:not(:first-child), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row span:not(:first-child) { text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-scroll-list { display: grid; grid-auto-rows: 40px; align-content: start; min-height: 0; overflow-y: auto; scrollbar-color: color-mix(in srgb, var(--vr-accent) 70%, #dce3ee) color-mix(in srgb, var(--vr-ui-color) 14%, #050609); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency, .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { min-width: 0; min-height: 0; height: 40px; padding: 4px 7px; border-bottom: 1px solid color-mix(in srgb, var(--vr-border) 70%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency:nth-child(odd), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:nth-child(odd) { background: color-mix(in srgb, var(--vr-ui-color) 9%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency:nth-child(even), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:nth-child(even) { background: color-mix(in srgb, var(--vr-ui-color) 18%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { display: grid; align-items: center; width: 100%; color: var(--vr-text); text-align: left; background-clip: padding-box; border-inline: 0; border-top: 0; border-radius: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:hover { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-stash-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; color: var(--vr-text-dim); font-size: .85rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-stash-value strong { color: var(--vr-accent); font-size: .95rem; text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-head { grid-template-columns: minmax(0, 1fr) 36px; gap: 7px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-head span:last-child { text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-list { grid-auto-rows: 48px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 20px; align-items: center; gap: 7px; width: 100%; min-width: 0; height: 48px; padding: 5px 7px; color: var(--vr-text); text-align: left; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--vr-border) 70%, transparent); border-radius: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:nth-child(odd) { background: color-mix(in srgb, var(--vr-ui-color) 9%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:nth-child(even) { background: color-mix(in srgb, var(--vr-ui-color) 18%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:hover { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row > i:first-child { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row > i:last-child { color: var(--vr-text-dim); font-size: .7rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row span { display: grid; min-width: 0; gap: 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row strong, .veilrunner.sheet.actor.basic .vr-party-v2-journal-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row small { color: var(--vr-text-dim); font-size: .72rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-card { position: relative; overflow: hidden; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay { position: absolute; z-index: 4; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; background: var(--vr-bg); border-left: 1px solid var(--vr-border); animation: vr-party-journal-slide-in .24s ease-out both; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay.is-closing { pointer-events: none; animation: vr-party-journal-slide-out .24s ease-in both; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 9px 12px; color: var(--vr-text); background: color-mix(in srgb, var(--vr-ui-color) 18%, var(--vr-panel)); border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 48%, var(--vr-border)); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay > header strong { overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay > header button { flex: 0 0 auto; width: 30px; height: 30px; padding: 0; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 46%, var(--vr-border)); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-pages { min-height: 0; padding: 14px; overflow: auto; scrollbar-color: color-mix(in srgb, var(--vr-accent) 70%, #dce3ee) color-mix(in srgb, var(--vr-ui-color) 14%, #050609); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page { color: var(--vr-text); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page + .vr-party-v2-journal-page { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--vr-border); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page h3 { margin: 0 0 10px; color: var(--vr-text); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page .journal-page-content { line-height: 1.5; }
+@keyframes vr-party-journal-slide-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes vr-party-journal-slide-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(28px); } }
+
+/* Fill and adapt to the resizable Party window; only the list body scrolls. */
+.veilrunner.sheet.actor.basic .window-content:has(.vr-party-sheet-v2),
+.veilrunner.sheet.actor.basic .window-content:has(.vr-party-sheet-v2) [data-application-part="body"],
+.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet-v2),
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { height: 100% !important; min-height: 0; }
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-rows: auto minmax(0, 1fr); }
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { height: 100%; min-height: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-height: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-card { grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-height: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-card:has(.vr-party-v2-currency-head),
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-card { grid-template-rows: auto minmax(0, 1fr); }
+
+/* Party sheet's spacious default presentation. */
+.veilrunner.sheet.actor.basic .vr-party-v2-members {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-member {
+  padding: 7px !important;
+  border: 1px solid var(--vr-border) !important;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vr-panel) 78%, transparent) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-name { font-size: 1.45rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary span { font-size: .72rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong { font-size: 1.12rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { font-size: .9rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title strong { font-size: .96rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title small { font-size: .76rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-resources { font-size: .75rem; gap: 5px 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { font-size: .75rem; gap: 5px 9px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; min-width: 0; padding: 5px 0 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail span { display: flex; align-items: center; justify-content: flex-start; gap: 6px; min-width: 0; min-height: 28px; padding-inline: 8px; color: var(--vr-text); background: color-mix(in srgb, var(--vr-ui-color) 14%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 46%, transparent); text-align: left; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail i { flex: 0 0 auto; color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail strong { min-width: 0; overflow: hidden; font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button { font-size: .72rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button { grid-template-columns: 20px minmax(0, 1fr); grid-template-rows: 1fr; align-items: center; justify-items: start; gap: 6px; padding: 5px 10px; text-align: left; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button > i { grid-column: 1; grid-row: 1; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label { display: grid; grid-column: 2; grid-row: 1; gap: 1px; min-width: 0; line-height: 1.05; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-list-head { font-size: .74rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency input, .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { font-size: .9rem; }
+
+.vr-party-v2-icon-prompt { display: grid; gap: 8px; min-width: 260px; color: var(--vr-text, #f8fafc); }
+.vr-party-v2-icon-prompt label { display: grid; gap: 6px; font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+.vr-party-v2-icon-prompt input { min-height: 32px; color: var(--vr-text, #f8fafc); background: color-mix(in srgb, var(--vr-ui-color, #101216) 30%, #050609); border: 1px solid color-mix(in srgb, var(--vr-accent, #67e8f9) 42%, #334155); border-radius: 5px; }
+
+/* Keep the header metrics above the matching right-hand panel. */
+.veilrunner.sheet.actor.basic .vr-party-v2-header { grid-template-columns: minmax(175px, .58fr) minmax(0, 1fr); align-items: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { align-self: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy { display: none; }
+
+/* Party identity and member cards scale with the denser four-line roster data. */
+.veilrunner.sheet.actor.basic .vr-party-v2-header,
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { grid-template-columns: minmax(300px, .72fr) minmax(0, 1fr); }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity > img,
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button { width: 58px; height: 58px; min-height: 58px; padding: 0; overflow: hidden; background: var(--vr-panel-alt); border: 1px solid var(--vr-border); border-radius: 6px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button { cursor: pointer; }
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button img { width: 100%; height: 100%; object-fit: cover; border: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity .vr-party-v2-name { white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-v2-roster { grid-auto-rows: minmax(82px, auto); }
+.veilrunner.sheet.actor.basic .vr-party-v2-member { grid-template-columns: 54px minmax(0, 1fr); min-height: 82px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { width: 52px; height: 52px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth > span:last-child { text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary span,
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong,
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-icon { display: grid; place-items: center; width: 28px; height: 30px; color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-icon input { display: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-track-button { color: var(--vr-text-dim) !important; background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-track-button:hover,
+.veilrunner.sheet.actor.basic .vr-party-v2-track-button.is-tracked { color: var(--vr-accent) !important; background: color-mix(in srgb, var(--vr-accent) 12%, transparent) !important; border-color: color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)) !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head > span:nth-child(3),
+.veilrunner.sheet.actor.basic .vr-party-v2-currency > input:nth-child(3) { text-align: left !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head > span:nth-child(4),
+.veilrunner.sheet.actor.basic .vr-party-v2-currency > input:nth-child(4) { text-align: right !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong { display: inline-flex; align-items: center; justify-content: flex-start; gap: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-member { align-items: stretch; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { align-self: stretch; width: 52px; height: 100%; min-height: 68px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-data { grid-template-rows: auto auto minmax(0, 1fr); align-content: stretch; height: 100%; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { align-self: end; }
+
+/* Keep the party sheet's two columns: the tab workspace starts at the top right. */
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-columns: minmax(300px, .72fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-header { display: contents; }
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { display: contents; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity { grid-column: 1; grid-row: 1; align-self: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-header > .vr-party-v2-summary { display: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; min-width: 0; padding: 5px 0 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy > div { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; min-height: 28px; padding: 0 8px; background: color-mix(in srgb, var(--vr-ui-color) 14%, transparent); border: 0; border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 46%, transparent); border-radius: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy span { display: block; width: auto; height: auto; min-width: 0; overflow: visible; font-size: .66rem; text-overflow: clip; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy strong { display: inline-flex; flex: 0 0 auto; width: auto; height: auto; font-size: .8rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-members { grid-column: 1; grid-row: 2; align-self: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-column: 2; grid-row: 1 / span 2; grid-template-rows: auto auto auto minmax(0, 1fr); align-self: stretch; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { margin-top: 34px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-roster { margin-top: 0; }
+@media (max-width: 540px) {
+  .veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-columns: 1fr; }
+  .veilrunner.sheet.actor.basic .vr-party-v2-identity,
+  .veilrunner.sheet.actor.basic .vr-party-v2-members,
+  .veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-column: 1; grid-row: auto; }
+  .veilrunner.sheet.actor.basic .vr-party-v2-heading { margin-top: 0; }
+}
+
+/* Foundry's Basic Actor form can shrink its child to min-content. Party sheets must fill the application body. */
+.veilrunner.sheet.actor.basic .window-content { position: relative; overflow: auto; }
+.veilrunner.sheet.actor.basic .window-content [data-application-part="body"] { display: block !important; width: 100% !important; min-width: 0 !important; }
+.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet-v2) { position: absolute !important; inset: 0 !important; display: block !important; width: auto !important; min-width: 0 !important; height: auto !important; margin: 0 !important; box-sizing: border-box; overflow: auto; }
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2, .veilrunner.sheet.actor.basic .vr-party-v2-header, .veilrunner.sheet.actor.basic .vr-party-v2-layout, .veilrunner.sheet.actor.basic .vr-party-v2-panel, .veilrunner.sheet.actor.basic .vr-party-v2-members { width: 100% !important; max-width: none !important; box-sizing: border-box; }
+
+/* Match the quest outline links to the directory header's tab spacing. */
+.vr-quest-outline button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 8px 11px;
+  text-align: left;
+}
+
+/* Directory folders share a left edge; pages sit beneath their folder. */
+.vr-quest-folder-row,
+.vr-datapad-folder-row {
+  padding-left: 0 !important;
+}
+
+.vr-datapad-folder-select,
+.vr-datapad-folder-entry {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.vr-quest-folder-entry,
+.vr-datapad-folder-entry {
+  width: 100%;
+  margin-left: 0;
+  padding-left: 30px !important;
+}
+
+.vr-quest-folder-entry {
+  /* Folder padding (7px) + one folder-icon column (16px) + its gap (7px). */
+  padding-left: 30px !important;
+}
+
+/* Quest authoring separates player-facing content from GM-only controls. */
+.vr-quest-editor-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, .9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.vr-quest-editor-column {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.vr-quest-editor-title {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 850px) {
+  .vr-quest-editor-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vr-quest-reward-drop {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  border: 1px dashed rgba(34, 211, 238, .35);
+  border-radius: 6px;
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.vr-quest-reward-drop.drag-over {
+  background: rgba(34, 211, 238, .1);
+  border-color: #22d3ee;
+}
+
+.vr-quest-reward-drop small {
+  color: var(--vr-dp-dim);
+  font-size: .69rem;
+  font-weight: 500;
+}
+
+.vr-quest-mode-list {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px 8px;
+  overflow-y: auto;
+}
+
+.vr-quest-directory-group {
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+
+.vr-quest-directory-group.drag-over {
+  background: rgba(34, 211, 238, .1);
+  outline: 1px dashed #22d3ee;
+  outline-offset: -2px;
+}
+
+.vr-quest-directory-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 5px;
+  color: var(--vr-dp-text);
+  font-size: .73rem;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-align: left;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+}
+
+.vr-quest-directory-group-toggle > i {
+  width: 10px;
+  color: #67e8f9;
+  font-size: .68rem;
+  text-align: center;
+}
+
+.vr-quest-directory-group-toggle > small {
+  margin-left: auto;
+  color: var(--vr-dp-dim);
+  font-size: .66rem;
+}
+
+.vr-quest-directory-group .vr-quest-folder-list,
+.vr-quest-status-list {
+  padding-top: 0;
+}
+
+.vr-quest-status-list {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 6px;
+}
+
+/* Keep navigation pop-out menus above the directory and fully opaque. */
+.vr-player-datapad .vr-datapad-header {
+  position: relative;
+  z-index: 20;
+}
+
+.vr-player-datapad .vr-datapad-nav {
+  z-index: 21;
+}
+
+.vr-player-datapad .vr-datapad-menu {
+  z-index: 100;
+  background-color: #10131c !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none;
+}
+
+/* Datapad achievements */
+.vr-achievement-workspace { display: grid; grid-template-columns: 210px 230px minmax(0, 1fr); flex: 1 1 auto; min-height: 460px; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }
+.vr-achievement-chapters { min-width: 0; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }
+.vr-achievement-chapters > header, .vr-achievement-cards > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; border-bottom: 1px solid var(--vr-dp-border); text-transform: uppercase; }
+.vr-achievement-chapters > header button, .vr-achievement-cards > header button { color: var(--vr-dp-text); background: transparent; border: 0; }
+.vr-achievement-chapter { display: flex; gap: 8px; align-items: center; width: 100%; padding: 9px 10px; color: var(--vr-dp-dim); text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.vr-achievement-chapter:hover, .vr-achievement-chapter.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); box-shadow: inset 3px 0 0 var(--vr-accent); }
+.vr-achievement-chapter > i { color: #facc15; }.vr-achievement-chapter span { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; }.vr-achievement-chapter small { color: var(--vr-dp-dim); }
+.vr-achievement-cards { min-width: 0; padding: 0 16px 18px; overflow-y: auto; background: rgba(4, 5, 10, .16); }.vr-achievement-cards > header { margin: 0 -16px 16px; }.vr-achievement-cards > header div { display: grid; gap: 2px; }.vr-achievement-cards > header small { color: var(--vr-dp-dim); font-size: .62rem; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.vr-achievement-card { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 13px; align-items: center; width: 100%; min-height: 108px; margin: 0 0 11px; padding: 9px; color: var(--vr-dp-text); text-align: left; background: rgba(255,255,255,.035); border: 1px solid color-mix(in srgb, var(--achievement-color, #facc15) 68%, transparent); border-radius: 8px; box-shadow: 0 0 14px color-mix(in srgb, var(--achievement-color, #facc15) 15%, transparent); }
+.vr-achievement-card:not(.is-locked):hover { background: rgba(255,255,255,.075); transform: translateY(-1px); }.vr-achievement-card-art { display: grid; place-items: center; width: 92px; height: 88px; overflow: hidden; color: var(--achievement-color, #facc15); font-size: 2rem; object-fit: cover; background: rgba(0,0,0,.3); border: 1px solid currentColor; border-radius: 6px; }.vr-achievement-card-art span { display: inline-block; margin: 0 -4px; }.vr-achievement-card h3 { margin: 0; font-size: 1rem; }.vr-achievement-card-copy p { display: flex; gap: 4px; margin: 10px 0 0; }.vr-achievement-card-copy p img { width: 24px; height: 24px; object-fit: cover; border: 1px solid var(--achievement-color, #facc15); border-radius: 50%; }.vr-achievement-card.is-locked { grid-template-columns: 92px minmax(0,1fr); cursor: default; color: var(--vr-dp-dim); border-style: dashed; filter: grayscale(1); }.vr-achievement-card.is-locked .vr-achievement-card-art { grid-auto-flow: column; color: #87909f; font-family: serif; }.vr-achievement-empty { padding: 20px; color: var(--vr-dp-dim); text-align: center; }
+.vr-achievement-card-description { display: -webkit-box; max-height: 3.6em; margin-top: 5px; overflow: hidden; color: var(--vr-dp-dim); font-size: .78rem; line-height: 1.2; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }.vr-achievement-card-description > * { display: inline; margin: 0; }
+.vr-achievement-page-config { display: grid; gap: 13px; margin: 16px 0 0; padding: 15px; background: rgba(250, 204, 21, .055); border: 1px solid rgba(250, 204, 21, .45); border-radius: 7px; }.vr-achievement-page-config > header { display: flex; gap: 9px; align-items: center; }.vr-achievement-page-config > header > i { color: #facc15; font-size: 1.2rem; }.vr-achievement-page-config h3, .vr-achievement-page-config h4, .vr-achievement-page-config p { margin: 0; }.vr-achievement-page-config p { color: var(--color-text-dark-secondary); font-size: .8rem; }.vr-achievement-config-fields { display: grid; grid-template-columns: minmax(0, 1fr) 125px; gap: 10px; }.vr-achievement-config-fields label { display: grid; gap: 5px; font-size: .8rem; font-weight: 700; }.vr-achievement-config-fields label > div { display: flex; gap: 4px; }.vr-achievement-config-fields input[type="text"] { min-width: 0; flex: 1; }.vr-achievement-config-fields button { min-width: 30px; }.vr-achievement-config-fields .vr-achievement-visible { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; }.vr-achievement-config-fields .vr-achievement-visible input { width: auto; }.vr-achievement-award-grid { display: grid; gap: 5px; }.vr-achievement-award-grid > div { display: flex; flex-wrap: wrap; gap: 8px; }.vr-achievement-award-grid button { position: relative; display: grid; gap: 3px; width: 64px; padding: 3px; color: var(--color-text-dark-secondary); font-size: .66rem; text-align: center; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-achievement-award-grid button:hover, .vr-achievement-award-grid button.awarded { color: var(--color-text-dark-primary); border-color: #d39d24; background: rgba(250,204,21,.12); }.vr-achievement-award-grid img { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; }.vr-achievement-award-grid button i { position: absolute; right: 0; bottom: 15px; display: none; place-items: center; width: 17px; height: 17px; color: #111; font-size: .6rem; background: #facc15; border-radius: 50%; }.vr-achievement-award-grid button.awarded i { display: grid; }.vr-achievement-page-config footer { display: flex; justify-content: flex-end; }.vr-achievement-page-config footer button { padding: 6px 10px; }
+@media (max-width: 700px) { .vr-achievement-workspace { grid-template-columns: 1fr; }.vr-achievement-workspace .vr-datapad-directory, .vr-achievement-chapters { border-right: 0; border-bottom: 1px solid var(--vr-dp-border); }.vr-achievement-cards { min-height: 300px; }.vr-achievement-config-fields { grid-template-columns: 1fr; } }

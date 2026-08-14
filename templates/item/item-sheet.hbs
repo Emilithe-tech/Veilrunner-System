@@ -7,6 +7,9 @@
   </header>
 
   {{#if isAction}}
+    <label>Kind
+      <select name="system.activationKind"><option value="action">Action</option><option value="ability" {{#if (eq system.activationKind "ability")}}selected{{/if}}>Ability (0 action points)</option></select>
+    </label>
     <label class="vr-check">
       <input type="checkbox" name="system.favorite" {{checked system.favorite}} />
       {{localize 'VEILRUNNER.Action.FIELDS.favorite.label'}}
@@ -26,7 +29,7 @@
       </select>
     </label>
     <label>{{localize 'VEILRUNNER.Action.FIELDS.actions.label'}}
-      <input type="number" name="system.actions" value="{{system.actions}}" min="0" />
+      <input type="number" name="system.actions" value="{{system.actions}}" min="0" {{#if (eq system.activationKind "ability")}}max="0"{{/if}} />
     </label>
     <label>{{localize 'VEILRUNNER.Action.FIELDS.damageType.label'}}
       <select name="system.damageType">
@@ -71,7 +74,7 @@
       <input type="text" name="system.recharge" value="{{system.recharge}}" />
     </label>
     <label>{{localize 'VEILRUNNER.Ability.FIELDS.actions.label'}}
-      <input type="number" name="system.actions" value="{{system.actions}}" min="0" />
+      <input type="number" name="system.actions" value="{{system.actions}}" min="0" max="0" />
     </label>
     <label>{{localize 'VEILRUNNER.Ability.FIELDS.damageType.label'}}
       <select name="system.damageType">
@@ -102,6 +105,36 @@
     </label>
     <label>{{localize 'VEILRUNNER.Ability.FIELDS.description.label'}}</label>
     {{editor system.description target="system.description" engine="prosemirror" button=true editable=editable}}
+  {{/if}}
+
+  {{#if isActionOrAbility}}
+    <section class="vr-item-panel vr-action-tree-fields">
+      <h3>Traits & Tree</h3>
+      <label>Traits <input type="text" name="system.traitsText" value="{{traitsText}}" placeholder="attack, pyro, manipulate" list="vr-item-action-traits" /></label>
+      <datalist id="vr-item-action-traits">{{#each actionTraits as |trait|}}<option value="{{trait.label}}"></option>{{/each}}</datalist>
+      <div class="vr-item-field-grid">
+        <label>School <input type="text" name="system.tree.school" value="{{system.tree.school}}" /></label>
+        <label>Practice <input type="text" name="system.tree.practice" value="{{system.tree.practice}}" /></label>
+        <label>Mana Cost <input type="number" name="system.resourceCosts.mana" value="{{system.resourceCosts.mana}}" min="0" /></label>
+        <label>Stamina Cost <input type="number" name="system.resourceCosts.stamina" value="{{system.resourceCosts.stamina}}" min="0" /></label>
+        <label>Health Cost <input type="number" name="system.resourceCosts.health" value="{{system.resourceCosts.health}}" min="0" /></label>
+        <label>First Purchase TP <input type="number" name="system.tree.talentCost" value="{{system.tree.talentCost}}" min="1" /></label>
+        <label>SP per Level <input type="number" name="system.tree.rankCost" value="{{system.tree.rankCost}}" min="0" /></label>
+        <label>Required Level <input type="number" name="system.tree.requiredLevel" value="{{system.tree.requiredLevel}}" min="1" /></label>
+      </div>
+      <label class="vr-check"><input type="checkbox" name="system.tree.enabled" {{checked system.tree.enabled}} /> Include in Talents & Skills tree</label>
+      <div class="vr-item-section-heading"><h4>Actor & Area Effects</h4><button type="button" class="vr-item-icon-btn" data-action="addActionEffect" title="Add effect"><i class="fa-solid fa-plus"></i></button></div>
+      {{#each actionEffects as |effect|}}
+        <div class="vr-action-effect-row">
+          <select name="system.effects.{{@index}}.scope"><option value="actor">Actor</option><option value="area" {{#if (eq effect.scope "area")}}selected{{/if}}>Area</option></select>
+          <input name="system.effects.{{@index}}.target" value="{{effect.target}}" placeholder="Target, e.g. resources.stamina.max" />
+          <input name="system.effects.{{@index}}.value" value="{{effect.value}}" placeholder="Value" />
+          <input name="system.effects.{{@index}}.duration" value="{{effect.duration}}" placeholder="Duration" />
+          <input name="system.effects.{{@index}}.notes" value="{{effect.notes}}" placeholder="Notes" />
+          <button type="button" class="vr-item-icon-btn" data-action="removeActionEffect" data-index="{{@index}}"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      {{/each}}
+    </section>
   {{/if}}
 
   {{#if isAccessory}}

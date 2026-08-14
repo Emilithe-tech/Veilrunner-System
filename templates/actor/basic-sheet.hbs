@@ -61,80 +61,114 @@
   {{/if}}
 
   {{#if isParty}}
-    <section class="vr-party-sheet">
-      <header class="vr-party-header">
-        <div class="vr-party-summary">
-          <div>
-            <span>{{localize 'VEILRUNNER.Members'}}</span>
-            <strong>{{partyOverview.memberCount}}</strong>
-          </div>
-          <div>
-            <span>{{localize 'VEILRUNNER.StashItems'}}</span>
-            <strong>{{partyOverview.itemCount}}</strong>
-          </div>
-          <div>
-            <span>{{localize 'VEILRUNNER.TotalWealth'}}</span>
-            <strong>{{partyOverview.totalWealth}}</strong>
-          </div>
+    <section class="vr-party-sheet-v2">
+      <div class="vr-party-v2-header">
+        <div class="vr-party-v2-identity">
+          {{#if isGM}}<button type="button" class="vr-party-v2-image-button" data-action="setPartyImage" title="{{localize 'VEILRUNNER.ChangeImage'}}"><img src="{{partyOverview.img}}" alt="" /></button>{{else}}<img src="{{partyOverview.img}}" alt="" />{{/if}}
+          <strong class="vr-party-v2-name">{{#if partyOverview.folderName}}{{partyOverview.folderName}}{{else}}{{actor.name}}{{/if}}</strong>
         </div>
-      </header>
+        <div class="vr-party-v2-summary">
+          <div><span>{{localize 'VEILRUNNER.StashItems'}}</span><strong>{{partyOverview.itemCount}}</strong></div>
+          <div><span>{{localize 'VEILRUNNER.Wealth'}}</span><strong title="Galactic Federation Credits"><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalCurrencyValue}}</strong></div>
+          <div><span>{{localize 'VEILRUNNER.TotalWealth'}}</span><strong><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalWealth}}</strong></div>
+        </div>
+      </div>
 
-      <div class="vr-party-columns">
-        <aside class="vr-party-column vr-party-column-members">
-          <div class="vr-party-block">
-            <div class="vr-party-block-heading">
-              <span><i class="fa-solid fa-users"></i> {{localize 'VEILRUNNER.PartyMembers'}}</span>
-            </div>
-            <div class="vr-party-roster">
-              {{#each partyOverview.members as |member|}}
-                <button type="button" class="vr-party-roster-row" data-action="openPartyMember" data-actor-id="{{member.id}}">
-                  <img src="{{member.img}}" alt="" />
-                  <span class="vr-party-member-text">
-                    <strong>{{member.name}}</strong>
-                    {{#if member.discipline}}
-                      <em>{{member.discipline}}</em>
-                    {{/if}}
+      <div class="vr-party-v2-layout">
+        <aside class="vr-party-v2-members">
+          <div class="vr-party-v2-heading">
+            <span><i class="fa-solid fa-users"></i> {{localize 'VEILRUNNER.PartyMembers'}}</span>
+          </div>
+          <div class="vr-party-v2-roster">
+            {{#each partyOverview.members as |member|}}
+              <button type="button" class="vr-party-v2-member" data-action="openPartyMember" data-actor-id="{{member.id}}">
+                <img src="{{member.img}}" alt="" />
+                <span class="vr-party-v2-member-data">
+                  <span class="vr-party-v2-member-title"><span><strong>{{member.name}}</strong>{{#if member.discipline}}<em>{{member.discipline}}</em>{{/if}}</span><small>{{localize 'VEILRUNNER.Level'}} {{member.level}}</small></span>
+                  <span class="vr-party-v2-member-resources">
+                    {{#if member.showHealth}}<span><i class="fa-solid fa-heart-pulse"></i> {{member.health}}</span>{{/if}}
+                    {{#if member.showArmor}}<span><i class="fa-solid fa-shield-halved"></i> {{member.armor}}</span>{{/if}}
+                    {{#if member.showShields}}<span><i class="fa-solid fa-shield"></i> {{member.shields}}</span>{{/if}}
+                    {{#if member.showBarriers}}<span><i class="fa-solid fa-hexagon"></i> {{member.barriers}}</span>{{/if}}
                   </span>
-                  <small>{{localize 'VEILRUNNER.Level'}} {{member.level}}</small>
-                </button>
-              {{else}}
-                <p class="empty-row">{{localize 'VEILRUNNER.NoPartyMembers'}}</p>
-              {{/each}}
-            </div>
+                  <span class="vr-party-v2-member-wealth"><span><i class="fa-solid fa-coins"></i> {{localize 'VEILRUNNER.Wealth'}} {{member.wealth}}</span><span><i class="fa-solid fa-vault"></i> {{localize 'VEILRUNNER.TotalWealth'}} <i class="fa-solid fa-sim-card"></i> {{member.totalWealth}}</span></span>
+                </span>
+              </button>
+            {{else}}
+              <p class="empty-row">{{localize 'VEILRUNNER.NoPartyMembers'}}</p>
+            {{/each}}
           </div>
         </aside>
 
-        <div class="vr-party-column vr-party-column-panel">
-          <nav class="vr-party-tabs" aria-label="{{localize 'VEILRUNNER.Party'}}">
-            <button type="button" class="vr-party-tab {{#if (eq partyTab "currencies")}}active{{/if}}" data-action="setPartyTab" data-tab="currencies">
+        <div class="vr-party-v2-panel">
+          <nav class="vr-party-v2-tabs" aria-label="{{localize 'VEILRUNNER.Party'}}">
+            <span class="vr-party-v2-tab-indicator" style="--party-tab-offset: {{partyTabIndicatorFrom}};" aria-hidden="true"></span>
+            <button type="button" class="{{#if (eq partyTab "currencies")}}active{{/if}}" data-action="setPartyTab" data-tab="currencies">
               <i class="fa-solid fa-coins"></i>
-              <span>{{localize 'VEILRUNNER.SharedCurrencies'}}</span>
+              <span class="vr-party-v2-tab-label"><span>{{localize 'VEILRUNNER.Shared'}}</span><span>{{localize 'VEILRUNNER.Currencies'}}</span></span>
             </button>
-            <button type="button" class="vr-party-tab {{#if (eq partyTab "inventory")}}active{{/if}}" data-action="setPartyTab" data-tab="inventory">
+            <button type="button" class="{{#if (eq partyTab "inventory")}}active{{/if}}" data-action="setPartyTab" data-tab="inventory">
               <i class="fa-solid fa-boxes-stacked"></i>
-              <span>{{localize 'VEILRUNNER.PartyInventory'}}</span>
+              <span class="vr-party-v2-tab-label"><span>{{localize 'VEILRUNNER.Party'}}</span><span>{{localize 'VEILRUNNER.Inventory'}}</span></span>
+            </button>
+            <button type="button" class="{{#if (eq partyTab "journal")}}active{{/if}}" data-action="setPartyTab" data-tab="journal">
+              <i class="fa-solid fa-book-bookmark"></i>
+              <span class="vr-party-v2-tab-label"><span>{{localize 'VEILRUNNER.Party'}}</span><span>{{localize 'VEILRUNNER.Journal'}}</span></span>
             </button>
           </nav>
-
+          <div class="vr-party-v2-summary vr-party-v2-summary-legacy">
+            <div><span>{{localize 'VEILRUNNER.StashItems'}}</span><strong>{{partyOverview.itemCount}}</strong></div>
+            <div><span>{{localize 'VEILRUNNER.Wealth'}}</span><strong title="Galactic Federation Credits"><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalCurrencyValue}}</strong></div>
+            <div><span>{{localize 'VEILRUNNER.TotalWealth'}}</span><strong><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalWealth}}</strong></div>
+          </div>
+          <div class="vr-party-v2-tracked-rail" aria-label="{{localize 'VEILRUNNER.TrackedCurrencies'}}">
+            {{#each partyOverview.trackedCurrencies as |currency|}}
+              <span title="{{currency.name}}"><i class="{{currency.icon}}"></i><strong>{{currency.value}}</strong></span>
+            {{/each}}
+          </div>
           {{#if (eq partyTab "currencies")}}
-            {{> "systems/veilrunner/templates/actor/party/parts/currencies.hbs"}}
-          {{else}}
-            <div class="vr-party-block">
-              <div class="vr-party-block-heading">
-                <span><i class="fa-solid fa-boxes-stacked"></i> {{localize 'VEILRUNNER.PartyInventory'}}</span>
-                <small>{{localize 'VEILRUNNER.StashValue'}} {{partyOverview.totalInventoryValue}}</small>
+            <div class="vr-party-v2-card">
+              <div class="vr-party-v2-list-head vr-party-v2-currency-head"><span></span><span></span><span>{{localize 'VEILRUNNER.Currency'}}</span><span>Value</span><button type="button" data-action="addPartyCurrency" title="{{localize 'VEILRUNNER.AddCurrency'}}"><i class="fa-solid fa-plus"></i></button></div>
+              <div class="vr-party-v2-scroll-list">
+                {{#each partyOverview.currencies as |currency|}}
+                  <div class="vr-party-v2-currency"><button type="button" class="vr-party-v2-track-button {{#if currency.tracked}}is-tracked{{/if}}" data-action="toggleCurrencyTracking" data-index="{{currency.index}}" title="{{#if currency.tracked}}{{localize 'VEILRUNNER.UntrackCurrency'}}{{else}}{{localize 'VEILRUNNER.TrackCurrency'}}{{/if}}"><i class="{{#if currency.tracked}}fa-solid fa-eye{{else}}fa-regular fa-eye-slash{{/if}}"></i></button><span class="vr-party-v2-currency-icon" title="{{currency.icon}}"><i class="{{currency.icon}}"></i><input type="hidden" name="system.currencies.{{currency.index}}.icon" value="{{currency.icon}}" /></span><input type="text" name="system.currencies.{{currency.index}}.name" value="{{currency.name}}" placeholder="{{localize 'VEILRUNNER.Currency'}}" {{#if currency.isBaseCurrency}}readonly{{/if}} /><input type="number" name="system.currencies.{{currency.index}}.value" value="{{currency.value}}" />{{#if currency.isBaseCurrency}}<span></span>{{else}}<button type="button" data-action="removePartyCurrency" data-index="{{currency.index}}"><i class="fa-solid fa-trash"></i></button>{{/if}}</div>
+                {{else}}<p class="empty-row">{{localize 'VEILRUNNER.NoCurrencies'}}</p>{{/each}}
               </div>
-              <div class="vr-party-stash">
+            </div>
+          {{else if (eq partyTab "inventory")}}
+            <div class="vr-party-v2-card">
+              <div class="vr-party-v2-stash-value"><span>{{localize 'VEILRUNNER.StashValue'}}</span><strong>{{partyOverview.totalInventoryValue}}</strong></div>
+              <div class="vr-party-v2-list-head vr-party-v2-inventory-head"><span>Item</span><span>Qty</span><span>Value</span></div>
+              <div class="vr-party-v2-scroll-list">
                 {{#each partyOverview.inventory as |item|}}
-                  <button type="button" class="vr-party-stash-row" data-action="openPartyItem" data-item-id="{{item.id}}">
-                    <img src="{{item.img}}" alt="" />
-                    <span>{{item.name}}</span>
-                    <small>{{item.quantity}} x {{item.price}}</small>
+                  <button type="button" class="vr-party-v2-inventory-row" data-action="openPartyItem" data-item-id="{{item.id}}">
+                    <span>{{item.name}}</span><span>{{item.quantity}}</span><span>{{item.totalPrice}}</span>
                   </button>
                 {{else}}
                   <p class="empty-row">{{localize 'VEILRUNNER.NoStashItems'}}</p>
                 {{/each}}
               </div>
+            </div>
+          {{else}}
+            <div class="vr-party-v2-card vr-party-v2-journal-card">
+              <div class="vr-party-v2-list-head vr-party-v2-journal-head"><span>{{localize 'VEILRUNNER.Journals'}}</span><span>{{partyJournals.length}}</span></div>
+              <div class="vr-party-v2-scroll-list vr-party-v2-journal-list">
+                {{#each partyJournals as |journal|}}
+                  <button type="button" class="vr-party-v2-journal-row" data-action="openPartyJournalEntry" data-journal-id="{{journal.id}}"><i class="fa-solid fa-book-bookmark"></i><span><strong>{{journal.name}}</strong>{{#if journal.folder}}<small>{{journal.folder}}</small>{{/if}}</span><i class="fa-solid fa-chevron-right"></i></button>
+                {{else}}
+                  <p class="empty-row">{{localize 'VEILRUNNER.NoAvailableJournals'}}</p>
+                {{/each}}
+              </div>
+              {{#if partyJournalEntry}}
+                <section class="vr-party-v2-journal-overlay {{#if partyJournalClosing}}is-closing{{/if}}" aria-label="{{partyJournalEntry.name}}">
+                  <header><strong>{{partyJournalEntry.name}}</strong><button type="button" data-action="closePartyJournalEntry" title="{{localize 'VEILRUNNER.ClosePartyJournalEntry'}}"><i class="fa-solid fa-xmark"></i></button></header>
+                  <div class="vr-party-v2-journal-pages">
+                    {{#each partyJournalEntry.pages as |page|}}
+                      <article class="vr-party-v2-journal-page"><h3>{{page.name}}</h3>{{#if (eq page.type "text")}}<div class="journal-page-content">{{{page.content}}}</div>{{else}}<p>{{localize 'VEILRUNNER.UnsupportedJournalPage'}}</p>{{/if}}</article>
+                    {{/each}}
+                  </div>
+                </section>
+              {{/if}}
             </div>
           {{/if}}
         </div>
@@ -142,8 +176,10 @@
     </section>
   {{/if}}
 
+  {{#unless isParty}}
   {{#if hasBiography}}
     <label class="vr-basic-bio">{{localize 'VEILRUNNER.Biography'}}</label>
     {{editor system.biography target="system.biography" engine="prosemirror" button=true editable=editable}}
   {{/if}}
+  {{/unless}}
 </section>

@@ -1,5 +1,3 @@
-2026/08/12-00:06:00.362 5580 Delete type=3 #1
-2026/08/12-00:27:49.386 70d4 Level-0 table #5: started
-2026/08/12-00:27:49.407 70d4 Level-0 table #5: 2424 bytes OK
-2026/08/12-00:27:49.410 70d4 Delete type=0 #3
-2026/08/12-00:27:49.421 70d4 Manual compaction at level-0 from '!items!VrTestAbl001' @ 72057594037927935 : 1 .. '!items!VrTestTech02' @ 0 : 0; will stop at (end)
+2026/08/13-13:52:07.991 41c Recovering log #19
+2026/08/13-13:52:08.000 41c Delete type=0 #19
+2026/08/13-13:52:08.000 41c Delete type=3 #18

@@ -1,3 +1,5 @@
+import { ACTION_TRAIT_SEED } from "./data/item/action-tree.mjs";
+
 export const VEILRUNNER_SETTINGS = {
   allowPlayerDatapad: "allowPlayerDatapad",
   createDatapadFolders: "createDatapadFolders",
@@ -21,7 +23,9 @@ export const VEILRUNNER_SETTINGS = {
   combatCarouselGmCompact: "combatCarouselGmCompact",
   combatCarouselHideDead: "combatCarouselHideDead",
   combatCarouselLocked: "combatCarouselLocked",
-  combatCarouselPosition: "combatCarouselPosition"
+  combatCarouselPosition: "combatCarouselPosition",
+  talentTreeCatalog: "talentTreeCatalog",
+  actionTraits: "actionTraits"
 };
 
 const QUEST_OBJECTIVE_VISIBILITY = {
@@ -111,6 +115,25 @@ export function refreshVeilrunnerCombatUi() {
 
 export function registerSettings() {
   const sid = game.system.id;
+
+  game.settings.register(sid, VEILRUNNER_SETTINGS.talentTreeCatalog, {
+    name: "Talents & Skills Catalog", hint: "Shared GM-authored School, Practice, and Spell or Skill layout with global prerequisite paths.",
+    scope: "world", config: false, type: Object, default: {}, restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.actionTraits, {
+    name: "Action Traits", hint: "GM-managed Action and Ability trait registry.",
+    scope: "world", config: false, type: Array,
+    default: ACTION_TRAIT_SEED.map(id => ({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), retired: false })), restricted: true
+  });
+  Hooks.once("ready", async () => {
+    if (!game.user?.isGM) return;
+    const current = foundry.utils.deepClone(game.settings.get(sid, VEILRUNNER_SETTINGS.actionTraits) ?? []);
+    const known = new Set(current.map(entry => entry.id));
+    const missing = ACTION_TRAIT_SEED.filter(id => !known.has(id));
+    if (!missing.length) return;
+    current.push(...missing.map(id => ({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), retired: false })));
+    await game.settings.set(sid, VEILRUNNER_SETTINGS.actionTraits, current);
+  });
 
   game.settings.register(sid, VEILRUNNER_SETTINGS.allowPlayerDatapad, {
     name: "VEILRUNNER.Settings.allowPlayerDatapad.Name",

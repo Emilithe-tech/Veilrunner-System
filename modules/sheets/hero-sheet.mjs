@@ -655,6 +655,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     content.style.setProperty("--inventory-carry-percent", `${percent}%`);
     content.dataset.carryWeight = `${weight} kg / ${capacity} kg`;
     content.setAttribute("aria-label", isInventory ? `Carry Weight: ${weight} kg / ${capacity} kg` : "");
+
+    // The carry footer is rendered by the main application part so it cannot
+    // collide with the right drawer's window-content pseudo-elements.
+    const mainPart = content.querySelector('[data-application-part="main"]');
+    if (mainPart) mainPart.dataset.carryWeight = content.dataset.carryWeight;
   }
 
   /** @override */
@@ -767,9 +772,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       uiColor: "#101216",
       categoryHighlightColor: "#a855f7",
       characterBorderColor: "#66717d",
+      characterBackgroundColor: "#000000",
       manaTextColor: "#60a5fa",
       staminaTextColor: "#f59e0b",
       levelUpColor: "#22d3ee",
+      earnedXpColor: "#22d3ee",
       totalXpColor: "#12141c",
       levelUpGlowColor: "#22d3ee",
       panOffColor: "#ff0000",
@@ -782,9 +789,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       panOnColor: "--vr-pan-on",
       panInterferenceColor: "--vr-pan-interference",
       characterBorderColor: "--vr-character-border",
+      characterBackgroundColor: "--vr-character-background",
       manaTextColor: "--vr-mana-text",
       staminaTextColor: "--vr-stamina-text",
       levelUpColor: "--vr-level-up",
+      earnedXpColor: "--vr-earned-xp",
       totalXpColor: "--vr-total-xp",
       levelUpGlowColor: "--vr-level-up-glow"
     };
@@ -1419,7 +1428,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
 
     context.actor = actor;
     context.inspirationDots = inspirationDots;
-    context.resolvePoints = trackPoints(resolveValue);
+    context.resolvePoints = trackPoints(resolveValue, 5);
     context.dyingPoints = trackPoints(dyingValue);
     context.woundedPoints = trackPoints(woundedValue);
     context.system = system;
@@ -1493,9 +1502,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       panOnColor: normalizeUiColor(system.sheetOptions?.panOnColor, "#00ff49"),
       panInterferenceColor: normalizeUiColor(system.sheetOptions?.panInterferenceColor, "#fbbf24")
       ,characterBorderColor: normalizeUiColor(system.sheetOptions?.characterBorderColor, "#66717d")
+      ,characterBackgroundColor: normalizeUiColor(system.sheetOptions?.characterBackgroundColor, "#000000")
       ,manaTextColor: normalizeUiColor(system.sheetOptions?.manaTextColor, "#60a5fa")
       ,staminaTextColor: normalizeUiColor(system.sheetOptions?.staminaTextColor, "#f59e0b")
       ,levelUpColor: normalizeUiColor(system.sheetOptions?.levelUpColor, "#22d3ee")
+      ,earnedXpColor: normalizeUiColor(system.sheetOptions?.earnedXpColor, "#22d3ee")
       ,totalXpColor: normalizeUiColor(system.sheetOptions?.totalXpColor, "#12141c")
       ,levelUpGlowColor: normalizeUiColor(system.sheetOptions?.levelUpGlowColor, "#22d3ee")
       ,levelUpBrightness: Math.max(0.25, Math.min(2, Number(system.sheetOptions?.levelUpBrightness) || 1))
@@ -1591,15 +1602,15 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.favoriteActions = context.actions.filter(i => i.system?.favorite);
     context.standardActions = context.actions.filter(i => {
       const category = i.system?.category || "actions";
-      return category === "actions" && i.system?.actionType !== "reaction";
+      return i.system?.activationKind !== "ability" && category === "actions" && i.system?.actionType !== "reaction";
     });
     context.reactionActions = context.actions.filter(i => {
       const category = i.system?.category || "actions";
-      return category === "reactions" || (category === "actions" && i.system?.actionType === "reaction");
+      return i.system?.activationKind !== "ability" && (category === "reactions" || (category === "actions" && i.system?.actionType === "reaction"));
     });
-    context.magicActions = context.actions.filter(i => i.system?.category === "magic");
-    context.techActions = context.actions.filter(i => i.system?.category === "tech");
-    context.abilities = sortedItems.filter(i => i.type === "ability");
+    context.magicActions = context.actions.filter(i => i.system?.activationKind !== "ability" && i.system?.category === "magic");
+    context.techActions = context.actions.filter(i => i.system?.activationKind !== "ability" && i.system?.category === "tech");
+    context.abilities = sortedItems.filter(i => i.type === "ability" || (i.type === "action" && i.system?.activationKind === "ability"));
     context.featuredAbilities = context.abilities.filter(i => i.system?.featured);
     context.favoriteItems = [...context.favoriteActions, ...context.featuredAbilities]
       .sort((a, b) => a.sort - b.sort);
@@ -1613,7 +1624,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       ? "VEILRUNNER.ActionWorkspace.MagicType"
       : "VEILRUNNER.ActionWorkspace.DamageType";
     const actionMetadata = item => {
-      const isAbility = item.type === "ability";
+      const isAbility = item.type === "ability" || item.system?.activationKind === "ability";
       const damageType = ACTION_DAMAGE_TYPES.includes(item.system?.damageType) ? item.system.damageType : "";
       const maxLevel = Math.max(1, Number(item.system?.maxLevel) || 1);
       const currentLevel = Math.min(maxLevel, Math.max(1, Number(item.system?.currentLevel) || 1));
@@ -1640,7 +1651,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         damageTooltip: damageValue
           ? `${damageValue} ${damageType ? game.i18n.localize(`VEILRUNNER.DamageTrait.${damageType}`) : ""}`.trim()
           : game.i18n.localize("VEILRUNNER.None"),
-        cost: isAbility ? String(item.system?.recharge ?? "") : String(item.system?.cost ?? ""),
+        traitsText: (item.system?.traits ?? []).join(" · "),
+        cost: [
+          Number(item.system?.resourceCosts?.mana) > 0 ? `${item.system.resourceCosts.mana} Mana` : "",
+          Number(item.system?.resourceCosts?.stamina) > 0 ? `${item.system.resourceCosts.stamina} Stamina` : "",
+          Number(item.system?.resourceCosts?.health) > 0 ? `${item.system.resourceCosts.health} Health` : ""
+        ].filter(Boolean).join(" · ") || (isAbility ? String(item.system?.recharge ?? "") : String(item.system?.cost ?? "")),
         costLabel: isAbility ? "VEILRUNNER.ActionWorkspace.Recharge" : "VEILRUNNER.ActionWorkspace.Cost"
       };
     };
@@ -1845,9 +1861,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     normalizeSheetOption("panOnColor", "#00ff49");
     normalizeSheetOption("panInterferenceColor", "#fbbf24");
     normalizeSheetOption("characterBorderColor", "#66717d");
+    normalizeSheetOption("characterBackgroundColor", "#000000");
     normalizeSheetOption("manaTextColor", "#60a5fa");
     normalizeSheetOption("staminaTextColor", "#f59e0b");
     normalizeSheetOption("levelUpColor", "#22d3ee");
+    normalizeSheetOption("earnedXpColor", "#22d3ee");
     normalizeSheetOption("totalXpColor", "#12141c");
     normalizeSheetOption("levelUpGlowColor", "#22d3ee");
 
@@ -1975,15 +1993,20 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     target.classList.toggle("is-active", value);
     target.setAttribute("aria-pressed", String(value));
     target.querySelector(".ui-toggle-check")?.classList.toggle("is-active", value);
-    if (key === "hidePartyList") this.element?.querySelector(".party-view")?.toggleAttribute("hidden", value);
+    if (key === "hidePartyList") this.render({ parts: ["main"] });
     else if (key === "showAllPartyResources") this.render({ parts: ["main"] });
     else this.#syncResourceBarVisibility();
   }
 
-  static async #onTogglePan(event) {
+  static async #onTogglePan(event, target) {
     event.preventDefault();
     if (!this.actor.isOwner) return ui.notifications.warn("You do not have permission to change PAN status.");
-    await this.actor.update({ "system.networkLinked": !Boolean(this.actor.system.networkLinked) });
+    const value = !Boolean(this.actor.system.networkLinked);
+    await this.actor.update({ "system.networkLinked": value }, {
+      render: false,
+      veilrunnerPreserveMainPosition: true
+    });
+    this.render({ parts: ["main"] });
   }
 
   static #onSetInventoryWeaponFilter(event, target) {
@@ -2161,9 +2184,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const key = target.dataset.track;
     if (!["resolve", "dying", "wounded"].includes(key)) return;
 
-    const currentValue = Math.max(0, Math.min(3, Number(this.actor.system.resources?.[key]?.value) || 0));
+    const max = key === "resolve" ? 5 : 3;
+    const currentValue = Math.max(0, Math.min(max, Number(this.actor.system.resources?.[key]?.value) || 0));
     const delta = event?.type === "contextmenu" ? -1 : 1;
-    const nextValue = Math.max(0, Math.min(3, currentValue + delta));
+    const nextValue = Math.max(0, Math.min(max, currentValue + delta));
     await this.actor.update({ [`system.resources.${key}.value`]: nextValue });
   }
 
@@ -2267,9 +2291,31 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const editorColorVision = ["default", "protanopia", "deuteranopia", "tritanopia"].includes(sheetOptions.colorVision)
       ? sheetOptions.colorVision
       : "default";
-    const storedEditorUiColor = normalizeUiColor(sheetOptions.uiColor, "#101216");
-    const editorUiColor = storedEditorUiColor.toLowerCase() === "#a855f7" ? "#101216" : storedEditorUiColor;
-    const editorHighlightColor = normalizeUiColor(sheetOptions.categoryHighlightColor, "#a855f7");
+    const themeSources = [
+      this.element?.querySelector(".window-content"),
+      this.element,
+      this.element?.closest(".application")
+    ].filter(Boolean);
+    const themeValue = (property, fallback = "") => {
+      for (const source of themeSources) {
+        const value = getComputedStyle(source).getPropertyValue(property).trim();
+        if (value) return value;
+      }
+      return fallback;
+    };
+    const editorUiColor = normalizeUiColor(themeValue("--vr-ui-color", sheetOptions.uiColor), "#101216");
+    const editorHighlightColor = normalizeUiColor(themeValue("--vr-accent", sheetOptions.categoryHighlightColor), "#a855f7");
+    const editorTheme = {
+      "--vr-ui-color": editorUiColor,
+      "--vr-accent": editorHighlightColor,
+      "--vr-bg": themeValue("--vr-bg", `color-mix(in srgb, ${editorUiColor} 12%, #080910)`),
+      "--vr-panel": themeValue("--vr-panel", `color-mix(in srgb, ${editorUiColor} 18%, #080910)`),
+      "--vr-panel-alt": themeValue("--vr-panel-alt", `color-mix(in srgb, ${editorUiColor} 26%, #080910)`),
+      "--vr-border": themeValue("--vr-border", `color-mix(in srgb, ${editorUiColor} 30%, rgba(255, 255, 255, 0.12))`),
+      "--vr-text": themeValue("--vr-text", "#f3f4f8"),
+      "--vr-text-dim": themeValue("--vr-text-dim", "#8b90a0")
+    };
+    const editorThemeStyle = Object.entries(editorTheme).map(([property, value]) => `${property}:${value}`).join(";");
     const editorState = { dialog: null };
     VeilrunnerHeroSheet.#portraitEditorsByUser.set(userId, editorState);
     const cleanupEditor = () => {
@@ -2288,11 +2334,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         rejectClose: false,
         render: (event, dialog) => {
           editorState.dialog = dialog;
-          dialog.element?.style.setProperty("--vr-ui-color", editorUiColor);
-          dialog.element?.style.setProperty("--vr-accent", editorHighlightColor);
+          for (const element of [dialog.element, dialog.element?.closest(".application"), dialog.element?.querySelector(".vr-portrait-crop-dialog")].filter(Boolean)) {
+            for (const [property, value] of Object.entries(editorTheme)) element.style.setProperty(property, value);
+          }
           activatePortraitCrop(event, dialog);
         },
-        content: `<div class="veilrunner vr-portrait-crop-dialog" style="--vr-ui-color:${editorUiColor};--vr-accent:${editorHighlightColor}">
+        content: `<div class="veilrunner vr-portrait-crop-dialog" style="${editorThemeStyle}">
           <p>${game.i18n.localize("VEILRUNNER.PortraitEditorHint")}</p>
           <div class="vr-portrait-crop-stage">
             <div class="vr-portrait-crop-preview" style="--crop-x:${crop.x}%;--crop-y:${crop.y}%;--crop-zoom:${crop.zoom};--crop-rotation:${crop.rotation}deg;--crop-flip-x:${crop.flipX ? -1 : 1}"><img src="${safePath}" alt="" /></div>
