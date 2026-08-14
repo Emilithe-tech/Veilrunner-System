@@ -929,17 +929,27 @@ class PlayerDatapad {
 
   async #saveQuest(event) {
     const form = event.target.closest("form");
+    if (!game.user.isGM || !form || !this.editingJournal) return;
     const values = Object.fromEntries(new FormData(form));
     const journal = this.editingJournal;
-    const { name, status, hidden, displayPageTitle, rewardItems, ...quest } = values;
-    quest.displayPageTitle = form.elements.displayPageTitle.checked;
-    quest.order = Number(quest.order) || 0;
+    const text = key => String(values[key] ?? "").trim();
+    const validStatuses = new Set(["undiscovered", "inProgress", "complete", "failed"]);
+    const safeStatus = validStatuses.has(text("status")) ? text("status") : "inProgress";
+    const quest = {
+      level: text("level"),
+      displayPageTitle: form.elements.displayPageTitle.checked,
+      image: text("image"),
+      aspectRatio: ["landscape", "portrait", "square"].includes(text("aspectRatio")) ? text("aspectRatio") : "landscape",
+      observerObjectivePermission: ["default", "allow", "deny"].includes(text("observerObjectivePermission")) ? text("observerObjectivePermission") : "default",
+      questGiver: text("questGiver"), location: text("location"), difficulty: text("difficulty"), deadline: text("deadline"),
+      reward: text("reward"), description: text("description"), order: Number(text("order")) || 0
+    };
     quest.rewardItems = Array.from(form.elements.rewardItems.selectedOptions).map(option => ({
       uuid: option.value,
       name: option.dataset.itemName ?? Array.from(game.items ?? []).find(item => item.uuid === option.value)?.name ?? "Linked Item"
     }));
-    await journal.update({ name });
-    await journal.setFlag(game.system.id, "datapad", { ...journalDatapadData(journal), status, hidden: form.elements.hidden.checked });
+    await journal.update({ name: text("name") || journal.name });
+    await journal.setFlag(game.system.id, "datapad", { ...journalDatapadData(journal), status: safeStatus, hidden: form.elements.hidden.checked });
     await journal.setFlag(game.system.id, "datapadQuest", quest);
     this.editingJournal = null;
     this.viewingJournal = null;

@@ -1,6 +1,7 @@
 import { VEILRUNNER_PERSONA_INDEX_MODIFIERS, VEILRUNNER_PROFESSIONS } from "../data/professions.mjs";
 import { attributePointsForLevel, attributePointsGainedAtLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
 import { xpForLevel } from "../data/xp.mjs";
+import { applyHeroLevelUp } from "../data/level-up.mjs";
 import { talentTreeCatalog, talentTreePage, talentTreeRoot, saveTalentTreeCatalog, skillPointCostForLevel } from "../data/talent-tree.mjs";
 import { VEILRUNNER_STARTER_STORE } from "../data/starter-store.mjs";
 
@@ -112,6 +113,7 @@ const STEP_GROUPS = Object.freeze([
 ]);
 const LEVEL_UP_STEP_KEYS = Object.freeze(["attributes", "talents", "qualitiesFlaws", "review"]);
 const existingCreators = new Map();
+const UNSAFE_PROPERTY_PATH_SEGMENT = /(?:^|\.)(?:__proto__|constructor|prototype)(?:\.|$)/i;
 
 function normalizeArchetype(value) {
   const archetype = String(value ?? "").trim();
@@ -137,6 +139,10 @@ function escape(value) {
 function number(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function isSafePropertyPath(path) {
+  return typeof path === "string" && path.length > 0 && !UNSAFE_PROPERTY_PATH_SEGMENT.test(path);
 }
 
 function listFromText(value) {
@@ -1296,21 +1302,6 @@ class CharacterCreationOverlay {
 
   #authorNodeMarkup() {
     return this.#authorNodeMarkupV2();
-    /* Legacy constellation editor retained below for migration reference. */
-    const node = this.authorNode;
-    const traits = game.settings.get(game.system.id, "actionTraits") ?? [];
-    return `<div class="vr-cc-author-shade"><form class="vr-cc-author-panel"><header><div><span>GM Authoring</span><h2>Create ${this.treePage === "magic" ? "Magic" : "Skill"} Node</h2></div><button type="button" class="vr-cc-icon" data-action="cancel-tree-node"><i class="fa-solid fa-xmark"></i></button></header><div class="vr-cc-author-grid">
-      <label>School / Root<input name="authorNode.school" value="${escape(node.school)}" required /></label><label>Title<input name="authorNode.name" value="${escape(node.name)}" required /></label>
-      <label>Kind<select name="authorNode.type"><option value="action">Action</option><option value="ability" ${node.type === "ability" ? "selected" : ""}>Ability (0 action points)</option></select></label>
-      <label>Category<select name="authorNode.category">${["actions", "reactions", "magic", "tech"].map(value => `<option value="${value}" ${node.category === value ? "selected" : ""}>${value}</option>`).join("")}</select></label>
-      <label>Action Points<input type="number" name="authorNode.actions" value="${number(node.actions)}" min="0" ${node.type === "ability" ? "max=\"0\"" : ""} /></label>
-      <label>Traits<input name="authorNode.traitsText" value="${escape(node.traitsText)}" list="vr-action-traits" /></label><datalist id="vr-action-traits">${traits.filter(entry => !entry.retired).map(entry => `<option value="${escape(entry.label)}"></option>`).join("")}</datalist>
-      <label>Mana<input type="number" name="authorNode.mana" value="${number(node.mana)}" min="0" /></label><label>Stamina<input type="number" name="authorNode.stamina" value="${number(node.stamina)}" min="0" /></label><label>Health<input type="number" name="authorNode.health" value="${number(node.health)}" min="0" /></label>
-      <label>Talent Cost<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="0" /></label><label>Rank Cost<input type="number" name="authorNode.rankCost" value="${number(node.rankCost, 1)}" min="0" /></label><label>Maximum Rank<input type="number" name="authorNode.maxRank" value="${number(node.maxRank, 1)}" min="1" /></label>
-      <label>Required Level<input type="number" name="authorNode.requiredLevel" value="${number(node.requiredLevel, 1)}" min="1" /></label><label>Prerequisite IDs<input name="authorNode.requiresText" value="${escape(node.requiresText)}" placeholder="node-one, node-two" /></label><label>Artwork<input name="authorNode.img" value="${escape(node.img)}" placeholder="icons/svg/light.svg" /></label>
-      <label class="wide">Description<textarea name="authorNode.description">${escape(node.description)}</textarea></label>
-      <fieldset class="wide"><legend>Actor or Area Effect</legend><label>Scope<select name="authorNode.effectScope"><option value="actor">Actor</option><option value="area" ${node.effectScope === "area" ? "selected" : ""}>Area</option></select></label><label>Target<input name="authorNode.effectTarget" value="${escape(node.effectTarget)}" placeholder="resources.stamina.max" /></label><label>Value<input name="authorNode.effectValue" value="${escape(node.effectValue)}" /></label><label>Duration<input name="authorNode.effectDuration" value="${escape(node.effectDuration)}" /></label></fieldset>
-      </div><footer>${node.editLeafId ? `<button type="button" class="vr-cc-btn danger" data-action="delete-tree-node"><i class="fa-solid fa-trash"></i><span>Delete Node</span></button>` : ""}<button type="button" class="vr-cc-btn primary" data-action="save-tree-node"><i class="fa-solid fa-floppy-disk"></i><span>Save Node</span></button></footer></form></div>`;
   }
 
   #traitEditorMarkup() {
@@ -1415,65 +1406,12 @@ class CharacterCreationOverlay {
   }
 
   #authorTreeNode(source = null) {
+    if (!game.user.isGM) return;
     this.#authorTreeNodeV2(source);
-    return;
-    /* Legacy constellation editor retained below for migration reference. */
-    const page = this.treePage === "magic" ? "magic" : "skills";
-    this.authorNode = {
-      editBranchId: source?.branch?.id ?? "", editLeafId: source?.leaf?.id ?? "", school: source?.branch?.name ?? "",
-      name: source?.leaf?.name ?? "", type: source?.leaf?.type ?? "action", category: source?.leaf?.category ?? (page === "magic" ? "magic" : "actions"),
-      actions: source?.leaf?.type === "ability" ? 0 : number(source?.leaf?.actions, 1), traitsText: (source?.leaf?.traits ?? []).join(", "),
-      mana: number(source?.leaf?.resourceCosts?.mana), stamina: number(source?.leaf?.resourceCosts?.stamina), health: number(source?.leaf?.resourceCosts?.health),
-      talentCost: number(source?.leaf?.talentCost, 1), rankCost: number(source?.leaf?.rankCost, 1), maxRank: number(source?.leaf?.maxRank, 5), requiredLevel: number(source?.leaf?.requiredLevel, 1),
-      requiresText: (source?.leaf?.requires ?? []).join(", "), img: source?.leaf?.img ?? "", description: source?.leaf?.description ?? "",
-      effectScope: source?.leaf?.effects?.[0]?.scope ?? "actor", effectTarget: source?.leaf?.effects?.[0]?.target ?? "", effectValue: source?.leaf?.effects?.[0]?.value ?? "", effectDuration: source?.leaf?.effects?.[0]?.duration ?? ""
-    };
-    this.#draw();
   }
 
   async #saveAuthoredTreeNode() {
     return this.#saveAuthoredTreeNodeV2();
-    /* Legacy constellation editor retained below for migration reference. */
-    this.#saveVisibleInputs();
-    const source = this.authorNode;
-    if (!source) return;
-    const page = this.treePage === "magic" ? "magic" : "skills";
-    const school = String(source.school ?? "").trim();
-    const name = String(source.name ?? "").trim();
-    if (!school || !name) return ui.notifications.warn("Enter both a school and node title.");
-    const type = source.type === "ability" ? "ability" : "action";
-    const category = ["actions", "reactions", "magic", "tech"].includes(source.category) ? source.category : "actions";
-    const registry = game.settings.get(game.system.id, "actionTraits") ?? [];
-    const traitIds = new Map(registry.flatMap(entry => [[String(entry.id).toLowerCase(), entry.id], [String(entry.label).toLowerCase(), entry.id]]));
-    const traits = String(source.traitsText ?? "").split(",").map(value => value.trim()).filter(Boolean).map(value => traitIds.get(value.toLowerCase()) ?? value.toLowerCase().replace(/[^a-z0-9]+/g, "-")).filter(Boolean);
-    const catalog = foundry.utils.deepClone(talentTreeCatalog());
-    const trees = catalog[page] ?? (catalog[page] = []);
-    const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "node";
-    let branch = trees.find(entry => entry.id === source.editBranchId) ?? trees.find(entry => entry.name.toLowerCase() === school.toLowerCase());
-    if (!branch) {
-      branch = { id: slug(school), name: school, color: "#67e8f9", x: 50, y: 18, talentCost: 1, leaves: [] };
-      while (trees.some(entry => entry.id === branch.id)) branch.id = `${branch.id}-${trees.length + 1}`;
-      trees.push(branch);
-    }
-    branch.name = school;
-    let leaf = branch.leaves.find(entry => entry.id === source.editLeafId);
-    if (!leaf) {
-      leaf = { id: slug(name), x: 50, y: 55 };
-      while (branch.leaves.some(entry => entry.id === leaf.id)) leaf.id = `${leaf.id}-${branch.leaves.length + 1}`;
-      branch.leaves.push(leaf);
-    }
-    Object.assign(leaf, { name, type, category, actions: type === "ability" ? 0 : Math.max(1, number(source.actions, 1)), traits: [...new Set(traits)], img: String(source.img ?? "").trim(), description: String(source.description ?? ""), talentCost: Math.max(0, number(source.talentCost, 1)), rankCost: Math.max(0, number(source.rankCost, 1)), maxRank: Math.max(1, number(source.maxRank, 1)), requiredLevel: Math.max(1, number(source.requiredLevel, 1)), requires: listFromText(source.requiresText), resourceCosts: { mana: Math.max(0, number(source.mana)), stamina: Math.max(0, number(source.stamina)), health: Math.max(0, number(source.health)) }, effects: source.effectTarget ? [{ scope: source.effectScope === "area" ? "area" : "actor", target: source.effectTarget, value: String(source.effectValue ?? ""), duration: String(source.effectDuration ?? ""), notes: "" }] : [] });
-    const itemData = { name, type: "action", img: leaf.img || "icons/svg/light.svg", system: { activationKind: type, category, actionType: category === "reactions" ? "reaction" : "standard", actions: leaf.actions, currentLevel: 1, maxLevel: leaf.maxRank, traits: leaf.traits, resourceCosts: leaf.resourceCosts, effects: leaf.effects, tree: { enabled: true, page, school, x: leaf.x, y: leaf.y, requires: leaf.requires, talentCost: leaf.talentCost, rankCost: leaf.rankCost, requiredLevel: leaf.requiredLevel }, description: leaf.description } };
-    let actionDocument = leaf.sourceUuid ? await fromUuid(leaf.sourceUuid) : null;
-    if (actionDocument?.documentName === "Item") await actionDocument.update(itemData);
-    else {
-      actionDocument = await Item.create(itemData, { renderSheet: false });
-      leaf.sourceUuid = actionDocument.uuid;
-    }
-    await saveTalentTreeCatalog(catalog);
-    await this.#registerCustomTraits(traits);
-    this.authorNode = null;
-    this.#draw();
   }
 
   #authorTreeNodeV2(source = null) {
@@ -1502,6 +1440,7 @@ class CharacterCreationOverlay {
   }
 
   async #saveAuthoredTreeNodeV2() {
+    if (!game.user.isGM) return;
     this.#saveVisibleInputs();
     const source = this.authorNode;
     if (!source) return;
@@ -1558,6 +1497,7 @@ class CharacterCreationOverlay {
   }
 
   async #deleteAuthoredTreeNodeV2() {
+    if (!game.user.isGM) return;
     const source = this.authorNode;
     if (!source?.editId) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({ window: { title: "Delete Shared Tree Node" }, content: `<p>Delete <strong>${escape(source.name)}</strong> from the shared ${escape(this.treePage)} catalog?</p>`, modal: true });
@@ -1616,23 +1556,6 @@ class CharacterCreationOverlay {
 
   async #deleteAuthoredTreeNode() {
     return this.#deleteAuthoredTreeNodeV2();
-    /* Legacy constellation editor retained below for migration reference. */
-    const source = this.authorNode;
-    if (!source?.editLeafId) return;
-    const confirmed = await foundry.applications.api.DialogV2.confirm({ window: { title: "Delete Tree Node" }, content: `<p>Delete <strong>${escape(source.name)}</strong> from the shared tree catalog?</p>`, modal: true });
-    if (!confirmed) return;
-    const catalog = foundry.utils.deepClone(talentTreeCatalog());
-    const branch = (catalog[this.treePage] ?? []).find(entry => entry.id === source.editBranchId);
-    const leaf = branch?.leaves?.find(entry => entry.id === source.editLeafId);
-    if (!leaf) return;
-    const requiredBy = (catalog[this.treePage] ?? []).flatMap(entry => entry.leaves ?? []).filter(entry => (entry.requires ?? []).includes(leaf.id));
-    if (requiredBy.length) return ui.notifications.warn(`Remove this prerequisite from ${requiredBy.map(entry => entry.name).join(", ")} first.`);
-    const document = leaf.sourceUuid ? await fromUuid(leaf.sourceUuid) : null;
-    branch.leaves = branch.leaves.filter(entry => entry.id !== leaf.id);
-    await saveTalentTreeCatalog(catalog);
-    if (document?.documentName === "Item") await document.delete();
-    this.authorNode = null;
-    this.#draw();
   }
 
   #onTreeWheel(event) {
@@ -2871,7 +2794,7 @@ class CharacterCreationOverlay {
   }
 
   #setStateValue(path, value) {
-    if (!path) return;
+    if (!isSafePropertyPath(path)) return;
     if (path.startsWith("authorNode.")) {
       if (this.authorNode) foundry.utils.setProperty(this.authorNode, path.slice("authorNode.".length), value);
       return;
@@ -2995,10 +2918,8 @@ class CharacterCreationOverlay {
     const initialTree = this.#treeSpent(this.initialTalentTree);
     const talents = pool("talentPoints", talentPointsForLevel(nextLevel), number(this.actor.system?.talentPoints?.total) - number(this.actor.system?.talentPoints?.available) + treeDelta.talent - initialTree.talent);
     const skills = pool("skillPoints", skillPointsForLevel(nextLevel), number(this.actor.system?.skillPoints?.total) - number(this.actor.system?.skillPoints?.available) + treeDelta.skill - initialTree.skill);
-    await this.actor.update({
+    const applied = await applyHeroLevelUp(this.actor, {
       "system.level": nextLevel,
-      "system.experience.value": xp - max,
-      "system.experience.max": xpForLevel(nextLevel),
       "system.attributes": this.state.attributes,
       "system.qualitiesTaken": this.state.qualitiesTaken,
       "system.flawsTaken": this.state.flawsTaken,
@@ -3007,6 +2928,7 @@ class CharacterCreationOverlay {
       "system.talentPoints.total": talents.total, "system.talentPoints.available": talents.available,
       "system.skillPoints.total": skills.total, "system.skillPoints.available": skills.available
     });
+    if (!applied) return;
     await this.#grantTreeItems();
     ui.notifications.info(`${this.actor.name} reached Level ${nextLevel}.`);
     this.close({ renderSheet: true });

@@ -201,15 +201,6 @@ function storedHeroExperience(actor) {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
-async function updateHeroLevel(actor, update) {
-  if (game.user.isGM || actor.isOwner) return actor.update(update);
-  game.socket?.emit(`system.${game.system.id}`, {
-    type: "veilrunnerLevelUp",
-    actorId: actor.id,
-    userId: game.user.id
-  });
-}
-
 /** Crop dialog. */
 function clampCropNumber(value, min, max, fallback) {
   const number = Number(value);
