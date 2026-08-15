@@ -3,6 +3,7 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 
 import { buildPartyOverview } from "../helpers/party.mjs";
 import { journalDatapadData } from "../apps/datapad.mjs";
+import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
 
 const BASE_CURRENCY_NAME = "Galactic Federation Credits";
 const BASE_CURRENCY_ICON = "fa-solid fa-sim-card";
@@ -115,6 +116,10 @@ export default class VeilrunnerActorSheet extends HandlebarsApplicationMixin(Act
   /** Apply the opening player's hero-sheet palette to Party sheets. */
   async _onRender(context, options) {
     await super._onRender(context, options);
+    if (this.element && !this.element.dataset.veilrunnerFrontBinding) {
+      this.element.dataset.veilrunnerFrontBinding = "true";
+      this.element.addEventListener("pointerdown", () => bringVeilrunnerApplicationToFront(this.element, this), { passive: true });
+    }
     if (this.actor.type !== "party") return;
 
     const indicator = this.element?.querySelector(".vr-party-v2-tab-indicator");

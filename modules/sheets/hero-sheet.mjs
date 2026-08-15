@@ -7,11 +7,12 @@ import { VEILRUNNER_PROFESSIONS, findDiscipline } from "../data/professions.mjs"
 import { openCharacterCreation } from "../apps/character-creation.mjs";
 import { openPlayerDatapad } from "../apps/datapad.mjs";
 import { buildPartyOverview, findPartyActorForFolder, findPartyForHero, getPartyMembers } from "../helpers/party.mjs";
+import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
 
-const EQUIPMENT_SLOTS = [
-  "helmet", "back", "neck", "mainHand", "shoulders", "offHand",
-  "chest", "waist", "arms", "legs", "hands", "feet"
-];
+const EQUIPMENT_SLOT_COLUMNS = {
+  left: ["head", "chest", "arms", "legs", "feet", "mainHand"],
+  right: ["ears", "neck", "wrists", "leftRing", "rightRing", "offhand"]
+};
 
 const DETAILS_CATEGORIES = [
   { key: "party", icon: "fa-solid fa-users", label: "VEILRUNNER.Party" },
@@ -524,8 +525,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       unequip: VeilrunnerHeroSheet.#onUnequip,
       toggleEditMode: VeilrunnerHeroSheet.#onToggleEditMode,
       setAppearanceImage: VeilrunnerHeroSheet.#onSetAppearanceImage,
+      setCharacterBackgroundImage: VeilrunnerHeroSheet.#onSetCharacterBackgroundImage,
       setPortraitImage: VeilrunnerHeroSheet.#onSetPortraitImage,
       setEquipmentImage: VeilrunnerHeroSheet.#onSetEquipmentImage,
+      setEquipmentBackgroundImage: VeilrunnerHeroSheet.#onSetEquipmentBackgroundImage,
       setTokenImage: VeilrunnerHeroSheet.#onSetTokenImage,
       setStatusTrack: VeilrunnerHeroSheet.#onSetStatusTrack,
       toggleEquipment: VeilrunnerHeroSheet.#onToggleEquipment,
@@ -606,6 +609,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   /** @override */
   async _onRender(context, options) {
     await super._onRender(context, options);
+    if (this.element && !this.element.dataset.veilrunnerFrontBinding) {
+      this.element.dataset.veilrunnerFrontBinding = "true";
+      this.element.addEventListener("pointerdown", () => bringVeilrunnerApplicationToFront(this.element, this), { passive: true });
+    }
     this.#syncFrameEditToggle();
     this.#applyCarryWeightState(context);
     this.#bindPersonaAxisControls();
@@ -1473,6 +1480,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.appearanceImage = system.appearanceImage || actor.img;
     context.portraitImage = system.portraitImage || actor.img;
     context.equipmentImage = system.equipmentImage || context.appearanceImage || context.portraitImage;
+    context.equipmentBackgroundImage = system.equipmentBackgroundImage || "";
+    context.characterBackgroundImage = system.characterBackgroundImage || "";
     const storedUiColor = normalizeUiColor(system.sheetOptions?.uiColor, "#101216");
     const storedHidePartyList = foundry.utils.getProperty(actor._source, "system.sheetOptions.hidePartyList");
     const sheetOptions = {
@@ -1494,6 +1503,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       panInterferenceColor: normalizeUiColor(system.sheetOptions?.panInterferenceColor, "#fbbf24")
       ,characterBorderColor: normalizeUiColor(system.sheetOptions?.characterBorderColor, "#66717d")
       ,characterBackgroundColor: normalizeUiColor(system.sheetOptions?.characterBackgroundColor, "#000000")
+      ,characterBackgroundColorEnabled: Boolean(system.sheetOptions?.characterBackgroundColorEnabled ?? true)
       ,manaTextColor: normalizeUiColor(system.sheetOptions?.manaTextColor, "#60a5fa")
       ,staminaTextColor: normalizeUiColor(system.sheetOptions?.staminaTextColor, "#f59e0b")
       ,levelUpColor: normalizeUiColor(system.sheetOptions?.levelUpColor, "#22d3ee")
@@ -1726,11 +1736,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.inventoryCarryWeightPercent = Math.min(100, (context.inventoryCarryWeightKg / context.inventoryCarryCapacityKg) * 100);
 
     const equipmentData = system.equipment ?? {};
-    context.equipmentSlots = EQUIPMENT_SLOTS.map(slot => {
+    context.equipmentSlotColumns = Object.fromEntries(Object.entries(EQUIPMENT_SLOT_COLUMNS).map(([column, slots]) => [column, slots.map(slot => {
       const itemId = equipmentData[slot];
       const item = itemId ? actor.items.get(itemId) : null;
       return { slot, label: game.i18n.localize(`VEILRUNNER.Slot.${slot}`), item };
-    });
+    })]));
     const quickEquipSource = Array.isArray(system.quickEquip) ? system.quickEquip : [];
     context.quickEquip = quickEquipSource
       .slice(0, 4)
@@ -1975,7 +1985,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   static async #onToggleSheetOption(event, target) {
     event.preventDefault();
     const key = target.dataset.sheetOption;
-    if (!["showAllPartyResources", "showAllResourceBars", "showArmorResourceBar", "showShieldsResourceBar", "showBarriersResourceBar", "hidePartyList"].includes(key)) return;
+    if (!["showAllPartyResources", "showAllResourceBars", "showArmorResourceBar", "showShieldsResourceBar", "showBarriersResourceBar", "hidePartyList", "characterBackgroundColorEnabled"].includes(key)) return;
     const value = !Boolean(this.actor.system.sheetOptions?.[key]);
     await this.actor.update({ [`system.sheetOptions.${key}`]: value }, {
       render: false,
@@ -1984,7 +1994,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     target.classList.toggle("is-active", value);
     target.setAttribute("aria-pressed", String(value));
     target.querySelector(".ui-toggle-check")?.classList.toggle("is-active", value);
-    if (key === "hidePartyList") this.render({ parts: ["main"] });
+    if (["hidePartyList", "characterBackgroundColorEnabled"].includes(key)) this.render({ parts: ["main"] });
     else if (key === "showAllPartyResources") this.render({ parts: ["main"] });
     else this.#syncResourceBarVisibility();
   }
@@ -2240,11 +2250,32 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     });
   }
 
+  static async #onSetCharacterBackgroundImage(event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!this.actor.isOwner) return;
+
+    await this.#pickImage(this.actor.system.characterBackgroundImage || "",
+      path => this.actor.update({
+        "system.characterBackgroundImage": path,
+        "system.sheetOptions.characterBackgroundColorEnabled": false
+      }));
+  }
+
   static async #onSetEquipmentImage(event) {
     event?.preventDefault();
     event?.stopPropagation();
     await this.#pickImage(this.actor.system.equipmentImage || this.actor.system.appearanceImage || this.actor.img,
       path => this.actor.update({ "system.equipmentImage": path }));
+  }
+
+  static async #onSetEquipmentBackgroundImage(event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!this.actor.isOwner) return;
+
+    await this.#pickImage(this.actor.system.equipmentBackgroundImage || "",
+      path => this.actor.update({ "system.equipmentBackgroundImage": path }));
   }
 
   static async #onSetTokenImage(event) {

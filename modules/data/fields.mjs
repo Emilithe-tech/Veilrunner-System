@@ -59,18 +59,18 @@ export function imageField() {
 export function equipmentSchema() {
   const slot = () => new StringField({ required: true, blank: true, initial: "" });
   return new SchemaField({
-    helmet: slot(),
-    back: slot(),
-    neck: slot(),
-    mainHand: slot(),
-    shoulders: slot(),
-    offHand: slot(),
+    head: slot(),
     chest: slot(),
-    waist: slot(),
     arms: slot(),
     legs: slot(),
-    hands: slot(),
-    feet: slot()
+    feet: slot(),
+    mainHand: slot(),
+    ears: slot(),
+    neck: slot(),
+    wrists: slot(),
+    leftRing: slot(),
+    rightRing: slot(),
+    offhand: slot()
   });
 }
 

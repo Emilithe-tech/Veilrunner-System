@@ -18,23 +18,20 @@
   <div class="equipment-tab-body {{equipmentTabAnimationClass}}">
   {{#if (eq equipTab "equipped")}}
     <div class="equipment-art-area" style="--portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}};">
+      {{#if equipmentBackgroundImage}}<img class="equipment-art-background" src="{{equipmentBackgroundImage}}" alt="" />{{/if}}
       <img class="equipment-art-bg" src="{{equipmentImage}}" alt="" />
       <div class="equip-grid">
         <div class="equip-column left">
-          {{#each equipmentSlots as |slot|}}
-            {{#if (isLeftSlot slot.slot)}}
-              {{> "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs" slot=slot}}
-            {{/if}}
+          {{#each equipmentSlotColumns.left as |slot|}}
+            {{> "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs" slot=slot}}
           {{/each}}
         </div>
 
         <div class="portrait-frame"></div>
 
         <div class="equip-column right">
-          {{#each equipmentSlots as |slot|}}
-            {{#unless (isLeftSlot slot.slot)}}
-              {{> "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs" slot=slot}}
-            {{/unless}}
+          {{#each equipmentSlotColumns.right as |slot|}}
+            {{> "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs" slot=slot}}
           {{/each}}
         </div>
       </div>
@@ -65,6 +62,10 @@
         <i class="fa-solid fa-image"></i>
         <span>{{localize 'VEILRUNNER.ChangeAllImages'}}</span>
       </button>
+      <button type="button" class="appearance-pick-btn" data-action="setCharacterBackgroundImage">
+        <i class="fa-solid fa-images"></i>
+        <span>{{localize 'VEILRUNNER.ChangeCharacterBackground'}}</span>
+      </button>
       {{#if canEditPortrait}}
         <button type="button" class="appearance-pick-btn" data-action="setPortraitImage">
           <i class="fa-solid fa-user"></i>
@@ -74,6 +75,10 @@
       <button type="button" class="appearance-pick-btn" data-action="setEquipmentImage">
         <i class="fa-solid fa-shirt"></i>
         <span>{{localize 'VEILRUNNER.ChangeEquipmentImage'}}</span>
+      </button>
+      <button type="button" class="appearance-pick-btn" data-action="setEquipmentBackgroundImage">
+        <i class="fa-solid fa-images"></i>
+        <span>{{localize 'VEILRUNNER.ChangeEquipmentBackground'}}</span>
       </button>
       <button type="button" class="appearance-pick-btn" data-action="setTokenImage">
         <i class="fa-solid fa-map-marker-alt"></i>

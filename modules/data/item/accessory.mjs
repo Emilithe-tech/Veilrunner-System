@@ -13,16 +13,11 @@ export default class AccessoryData extends foundry.abstract.TypeDataModel {
         blank: true,
         initial: "",
         choices: {
-          head: "VEILRUNNER.EquipmentSlot.head",
-          chest: "VEILRUNNER.EquipmentSlot.chest",
-          cloak: "VEILRUNNER.EquipmentSlot.cloak",
-          shoulders: "VEILRUNNER.EquipmentSlot.shoulders",
-          arms: "VEILRUNNER.EquipmentSlot.arms",
-          hands: "VEILRUNNER.EquipmentSlot.hands",
-          waist: "VEILRUNNER.EquipmentSlot.waist",
-          legs: "VEILRUNNER.EquipmentSlot.legs",
-          feet: "VEILRUNNER.EquipmentSlot.feet",
-          accessory: "VEILRUNNER.EquipmentSlot.accessory"
+          ears: "VEILRUNNER.EquipmentSlot.ears",
+          neck: "VEILRUNNER.EquipmentSlot.neck",
+          wrists: "VEILRUNNER.EquipmentSlot.wrists",
+          leftRing: "VEILRUNNER.EquipmentSlot.leftRing",
+          rightRing: "VEILRUNNER.EquipmentSlot.rightRing"
         }
       }),
       weight: new NumberField({ required: true, min: 0, initial: 0, nullable: false }),

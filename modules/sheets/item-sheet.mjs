@@ -1,6 +1,8 @@
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
+import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
+
 const ARMOR_TRAITS = ["pyro", "hydro", "cryo", "floral", "geo", "aero", "electric", "sonic", "light", "void", "slashing", "bludgeoning", "piercing"];
 const ARMOR_EFFECT_TARGETS = ["action", "trait", "attribute"];
 
@@ -87,6 +89,10 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
   /** @override */
   async _onRender(context, options) {
     await super._onRender(context, options);
+    if (this.element && !this.element.dataset.veilrunnerFrontBinding) {
+      this.element.dataset.veilrunnerFrontBinding = "true";
+      this.element.addEventListener("pointerdown", () => bringVeilrunnerApplicationToFront(this.element, this), { passive: true });
+    }
     this.element.querySelectorAll("[data-action='addArmorEntry']").forEach(button => {
       button.addEventListener("click", event => this.#onAddArmorEntry(event));
     });

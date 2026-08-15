@@ -70,6 +70,8 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
       appearanceImage: imageField(),
       portraitImage: imageField(),
       equipmentImage: imageField(),
+      equipmentBackgroundImage: imageField(),
+      characterBackgroundImage: imageField(),
       portraitCrop: portraitCropSchema(),
       sheetOptions: new SchemaField({
         showPartyList: booleanFlag(true),
@@ -88,6 +90,7 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
         panInterferenceColor: new StringField({ required: true, blank: false, initial: "#fbbf24" }),
         characterBorderColor: new StringField({ required: true, blank: false, initial: "#66717d" }),
         characterBackgroundColor: new StringField({ required: true, blank: false, initial: "#000000" }),
+        characterBackgroundColorEnabled: booleanFlag(true),
         manaTextColor: new StringField({ required: true, blank: false, initial: "#60a5fa" }),
         staminaTextColor: new StringField({ required: true, blank: false, initial: "#f59e0b" }),
         levelUpColor: new StringField({ required: true, blank: false, initial: "#22d3ee" }),
@@ -151,6 +154,11 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
     if (source.saves) {
       for (const save of ["fortitude", "willpower", "reflex"]) {
         if (source.saves[save] !== undefined) source.saves[save] = Math.max(0, Number(source.saves[save]) || 0);
+      }
+    }
+    if (source.equipment) {
+      for (const slot of ["helmet", "back", "shoulders", "offHand", "waist", "hands"]) {
+        delete source.equipment[slot];
       }
     }
     // Data-model migrations also receive partial update payloads. Do not add

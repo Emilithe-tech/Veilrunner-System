@@ -68,7 +68,6 @@
           <strong class="vr-party-v2-name">{{#if partyOverview.folderName}}{{partyOverview.folderName}}{{else}}{{actor.name}}{{/if}}</strong>
         </div>
         <div class="vr-party-v2-summary">
-          <div><span>{{localize 'VEILRUNNER.StashItems'}}</span><strong>{{partyOverview.itemCount}}</strong></div>
           <div><span>{{localize 'VEILRUNNER.Wealth'}}</span><strong title="Galactic Federation Credits"><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalCurrencyValue}}</strong></div>
           <div><span>{{localize 'VEILRUNNER.TotalWealth'}}</span><strong><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalWealth}}</strong></div>
         </div>
@@ -117,14 +116,8 @@
             </button>
           </nav>
           <div class="vr-party-v2-summary vr-party-v2-summary-legacy">
-            <div><span>{{localize 'VEILRUNNER.StashItems'}}</span><strong>{{partyOverview.itemCount}}</strong></div>
             <div><span>{{localize 'VEILRUNNER.Wealth'}}</span><strong title="Galactic Federation Credits"><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalCurrencyValue}}</strong></div>
             <div><span>{{localize 'VEILRUNNER.TotalWealth'}}</span><strong><i class="fa-solid fa-sim-card"></i> {{partyOverview.totalWealth}}</strong></div>
-          </div>
-          <div class="vr-party-v2-tracked-rail" aria-label="{{localize 'VEILRUNNER.TrackedCurrencies'}}">
-            {{#each partyOverview.trackedCurrencies as |currency|}}
-              <span title="{{currency.name}}"><i class="{{currency.icon}}"></i><strong>{{currency.value}}</strong></span>
-            {{/each}}
           </div>
           {{#if (eq partyTab "currencies")}}
             <div class="vr-party-v2-card">

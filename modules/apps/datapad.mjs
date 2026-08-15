@@ -1,4 +1,6 @@
 import { VEILRUNNER_SETTINGS, getVeilrunnerSetting } from "../settings.mjs";
+import { findPartyActorForFolder, getPartyFolderMembers } from "../helpers/party.mjs";
+import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
 
 const SECTIONS = [
   { key: "quests", label: "Quests", icon: "fa-solid fa-list-check" },
@@ -152,6 +154,15 @@ function achievementHeroes() {
   return game.actors.filter(actor => actor.type === "hero");
 }
 
+function achievementPartyFolders() {
+  return game.folders
+    .filter(folder => folder.type === "Actor" && (
+      findPartyActorForFolder(folder, { requirePermission: false })
+      || game.actors.some(actor => actor.type === "hero" && (actor.folder?.id ?? actor.folder) === folder.id)
+    ))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
 function isAchievementChapter(journal) {
   return categoryForJournal(journal) === "achievements";
 }
@@ -176,12 +187,15 @@ function addAchievementPageConfig(app, html) {
   const root = achievementPageSheetRoot(app, html);
   if (!root?.querySelector || root.querySelector(".vr-achievement-page-config")) return;
   const data = achievementData(page);
-  const heroes = achievementHeroes();
+  const partyFolders = achievementPartyFolders();
   const panel = document.createElement("section");
   panel.className = "vr-achievement-page-config";
   panel.innerHTML = `<header><i class="fa-solid fa-trophy"></i><div><h3>Achievement</h3><p>This Journal Page is one achievement.</p></div></header>
     <div class="vr-achievement-config-fields"><label>Artwork<div><input type="text" name="achievement-image" value="${escape(data.image)}" placeholder="Image path or URL"><button type="button" data-action="browse-achievement-image" title="Browse Foundry files"><i class="fa-solid fa-folder-open"></i></button></div></label><label>Accent color<input type="color" name="achievement-color" value="${escape(data.color)}"></label><label class="vr-achievement-visible"><input type="checkbox" name="achievement-visible" ${data.visibleWhenUnearned ? "checked" : ""}> Show as ??? before it is earned</label></div>
-    <div class="vr-achievement-award-grid"><h4>Awarded Heroes</h4><p>Click a portrait to grant or revoke this achievement immediately.</p><div>${heroes.map(actor => `<button type="button" class="${data.awardedActorIds.includes(actor.id) ? "awarded" : ""}" data-achievement-hero="${actor.id}" title="${escape(actor.name)}"><img src="${escape(actor.system?.portraitImage || actor.img)}" alt="${escape(actor.name)}"><span>${escape(actor.name)}</span><i class="fa-solid fa-check"></i></button>`).join("") || '<small>No Hero actors are available.</small>'}</div></div>
+    <div class="vr-achievement-award-grid"><h4>Grant to Party Members</h4><p>Each row is a Party folder. Click a portrait to grant or revoke this achievement for that Hero.</p><div>${partyFolders.map(folder => {
+      const heroes = getPartyFolderMembers(folder, { user: game.user });
+      return `<section class="vr-achievement-party-row"><header><i class="fa-solid fa-users"></i><span>${escape(folder.name)}</span></header><div>${heroes.map(actor => `<button type="button" class="${data.awardedActorIds.includes(actor.id) ? "awarded" : ""}" data-achievement-hero="${actor.id}" title="${escape(actor.name)}"><img src="${escape(actor.system?.portraitImage || actor.img)}" alt="${escape(actor.name)}"><span>${escape(actor.name)}</span><i class="fa-solid fa-check"></i></button>`).join("") || '<small>No Hero members in this Party folder.</small>'}</div></section>`;
+    }).join("") || '<small>No Party folders are available.</small>'}</div></div>
     <footer><button type="button" data-action="save-achievement-config"><i class="fa-solid fa-floppy-disk"></i> Save Achievement Settings</button></footer>`;
   (root.querySelector("form") ?? root).append(panel);
   panel.querySelector('[data-action="browse-achievement-image"]')?.addEventListener("click", () => {
@@ -234,6 +248,8 @@ class PlayerDatapad {
     this.root.className = "veilrunner vr-player-datapad";
     this.root.tabIndex = -1;
     this.position = { x: Math.max(20, Math.round((window.innerWidth - 1100) / 2)), y: Math.max(20, Math.round((window.innerHeight - 760) / 2)) };
+    this.size = null;
+    this.root.addEventListener("pointerdown", () => this.bringToFront(), { passive: true });
   }
 
   render() {
@@ -243,11 +259,12 @@ class PlayerDatapad {
     this.root.style.setProperty("--vr-datapad-accent", theme.accent);
     this.#applyPosition();
     this.#draw();
-    this.root.focus();
+    this.bringToFront();
   }
 
   bringToFront() {
-    this.root.focus();
+    bringVeilrunnerApplicationToFront(this.root);
+    this.root.focus({ preventScroll: true });
   }
 
   show({ section, partyId = null } = {}) {
@@ -289,6 +306,7 @@ class PlayerDatapad {
   }
 
   #draw() {
+    this.#captureSize();
     const section = SECTIONS.find(entry => entry.key === this.section) ?? SECTIONS[0];
     const documents = this.#documents();
     const databaseActive = DATABASE_SECTIONS.includes(this.section);
@@ -298,7 +316,7 @@ class PlayerDatapad {
     const questEditor = this.section === "quests" && this.editingJournal ? this.#questEditor() : "";
     const directoryWorkspace = !questEditor ? (this.section === "quests" ? this.#questWorkspace(documents) : this.section === "achievements" ? this.#achievementWorkspace(documents) : this.#categoryWorkspace(documents)) : "";
     this.root.innerHTML = `
-      <div class="vr-datapad-shell" role="dialog" aria-modal="true" aria-label="Player Datapad">
+      <div class="vr-datapad-shell"${this.size ? ` style="width:${this.size.width};height:${this.size.height}"` : ""} role="dialog" aria-modal="true" aria-label="Player Datapad">
         <header class="vr-datapad-header">
           <nav class="vr-datapad-nav" aria-label="Datapad sections">
             <span class="vr-datapad-nav-indicator" style="--nav-from: ${indicatorFrom}; --nav-offset: ${activeTopIndex};" aria-hidden="true"></span>
@@ -335,6 +353,7 @@ class PlayerDatapad {
     this.navIndicatorFrom = null;
     this.root.querySelector('[data-action="close"]')?.addEventListener("click", () => this.close());
     this.root.querySelector('[data-action="fullscreen"]')?.addEventListener("click", () => this.#toggleFullscreen());
+    this.root.addEventListener("contextmenu", event => this.#openDatapadContextMenu(event));
     this.#bindDrag();
     this.root.querySelectorAll("[data-top-section]").forEach(button => button.addEventListener("click", () => {
       this.navIndicatorFrom = activeTopIndex;
@@ -389,9 +408,39 @@ class PlayerDatapad {
     this.root.querySelector('[data-action="open-achievement-chapter"]')?.addEventListener("click", () => {
       game.journal.get(this.selectedAchievementChapterId)?.sheet?.render(true);
     });
-    this.root.querySelectorAll('[data-achievement-page]').forEach(button => button.addEventListener("click", () => {
+    this.root.querySelectorAll('[data-achievement-page]:not([data-achievement-grant-hero]):not([data-achievement-grant-all])').forEach(button => button.addEventListener("click", () => {
       const chapter = game.journal.get(this.selectedAchievementChapterId);
       chapter?.pages?.get(button.dataset.achievementPage)?.sheet?.render(true);
+    }));
+    this.root.querySelectorAll('[data-achievement-grant-hero]').forEach(button => button.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!game.user.isGM) return;
+      const chapter = game.journal.get(this.selectedAchievementChapterId);
+      const page = chapter?.pages?.get(button.dataset.achievementPage);
+      if (!page) return;
+      const current = achievementData(page);
+      const actorId = button.dataset.achievementGrantHero;
+      const awardedActorIds = current.awardedActorIds.includes(actorId)
+        ? current.awardedActorIds.filter(id => id !== actorId)
+        : [...current.awardedActorIds, actorId];
+      await page.setFlag(game.system.id, "achievement", { ...current, awardedActorIds });
+      this.#draw();
+    }));
+    this.root.querySelectorAll('[data-achievement-grant-all]').forEach(button => button.addEventListener("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!game.user.isGM) return;
+      const chapter = game.journal.get(this.selectedAchievementChapterId);
+      const page = chapter?.pages?.get(button.dataset.achievementPage);
+      const folder = achievementPartyFolders().find(entry => entry.id === button.dataset.achievementPartyFolder);
+      if (!page || !folder) return;
+      const current = achievementData(page);
+      const memberIds = getPartyFolderMembers(folder, { user: game.user }).map(actor => actor.id);
+      if (!memberIds.length) return;
+      const awardedActorIds = [...new Set([...current.awardedActorIds, ...memberIds])];
+      await page.setFlag(game.system.id, "achievement", { ...current, awardedActorIds });
+      this.#draw();
     }));
     this.root.querySelector('[data-action="create-category-folder"]')?.addEventListener("click", () => this.#createCategoryFolder());
     this.root.querySelector('[data-action="cancel-quest-edit"]')?.addEventListener("click", () => {
@@ -531,10 +580,114 @@ class PlayerDatapad {
     else await this.root.requestFullscreen?.();
   }
 
+  async #openDatapadContextMenu(event) {
+    if (!game.user.isGM) return;
+    const target = event.target.closest("[data-uuid], [data-category-folder], [data-quest-folder], [data-achievement-chapter]");
+    if (!target || target.matches("[data-achievement-grant-hero], [data-achievement-grant-all]")) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const uuid = target.dataset.uuid;
+    const record = uuid ? await fromUuid(uuid) : target.dataset.achievementChapter ? game.journal.get(target.dataset.achievementChapter) : null;
+    const folderId = target.dataset.categoryFolder ?? target.dataset.questFolder;
+    const folder = folderId ? game.folders.get(folderId) : null;
+    if (!record && !folder) return;
+
+    this.root.querySelector(".vr-datapad-context-menu")?.remove();
+    const menu = document.createElement("menu");
+    menu.className = "vr-datapad-context-menu";
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+    const statusItems = ["undiscovered", "inProgress", "complete", "failed"]
+      .map(status => `<button type="button" data-context-status="${status}">${statusLabel(status)}</button>`).join("");
+    const moveItems = SECTIONS.filter(section => folderForCategory(section.key))
+      .map(section => `<button type="button" data-context-move="${section.key}">${escape(section.label)}</button>`).join("");
+    menu.innerHTML = `<div class="vr-datapad-context-submenu"><button type="button">New <i class="fa-solid fa-chevron-right"></i></button><div><button type="button" data-context-new="entry">New Entry</button><button type="button" data-context-new="folder">New Folder</button></div></div>
+      ${record ? `<div class="vr-datapad-context-submenu"><button type="button">Set To <i class="fa-solid fa-chevron-right"></i></button><div>${statusItems}</div></div><div class="vr-datapad-context-submenu"><button type="button">Move To <i class="fa-solid fa-chevron-right"></i></button><div>${moveItems}</div></div>` : ""}
+      <button type="button" data-context-action="rename">Rename</button><button type="button" class="danger" data-context-action="delete">Delete</button>`;
+    this.root.append(menu);
+    const close = () => menu.remove();
+    menu.querySelectorAll("[data-context-new]").forEach(button => button.addEventListener("click", () => {
+      const kind = button.dataset.contextNew;
+      const destination = folder ?? game.folders.get(record?.folder?.id ?? record?.folder) ?? folderForCategory(this.section);
+      if (!destination) return ui.notifications?.warn("Choose a Datapad folder before creating content.");
+      const form = document.createElement("form");
+      form.className = "vr-datapad-context-rename";
+      form.innerHTML = `<label>${kind === "folder" ? "New Folder" : "New Entry"}<input name="name" type="text" value="" autofocus></label><div><button type="submit">Create</button><button type="button" data-context-cancel>Cancel</button></div>`;
+      menu.replaceChildren(form);
+      const input = form.querySelector('[name="name"]');
+      input.focus();
+      form.addEventListener("submit", async submitEvent => {
+        submitEvent.preventDefault();
+        const name = input.value.trim();
+        if (!name) return;
+        try {
+          if (kind === "folder") {
+            const created = await Folder.create({ name, type: "JournalEntry", folder: destination.id });
+            if (!created) throw new Error("Foundry did not return the new folder.");
+            if (this.section === "quests") this.selectedQuestFolderId = created.id;
+            else this.selectedCategoryFolderIds.set(this.section, created.id);
+          } else {
+            await JournalEntry.create({ name, folder: destination.id, flags: { [game.system.id]: { datapad: { category: this.section, hidden: false, status: "undiscovered" } } } });
+          }
+          close(); this.#draw();
+        } catch (error) {
+          console.error("Veilrunner | Datapad creation failed", error);
+          ui.notifications?.error(`Could not create the new ${kind}. Check the browser console for details.`);
+        }
+      });
+      form.querySelector("[data-context-cancel]")?.addEventListener("click", close);
+    }));
+    menu.querySelectorAll("[data-context-status]").forEach(button => button.addEventListener("click", async () => {
+      await record.setFlag(game.system.id, "datapad", { ...journalDatapadData(record), status: button.dataset.contextStatus });
+      close(); this.#draw();
+    }));
+    menu.querySelectorAll("[data-context-move]").forEach(button => button.addEventListener("click", async () => {
+      const category = button.dataset.contextMove;
+      const destination = folderForCategory(category);
+      if (destination) await record.update({ folder: destination.id });
+      await record.setFlag(game.system.id, "datapad", { ...journalDatapadData(record), category });
+      close(); this.#draw();
+    }));
+    menu.querySelector('[data-context-action="rename"]')?.addEventListener("click", async () => {
+      const subject = record ?? folder;
+      const form = document.createElement("form");
+      form.className = "vr-datapad-context-rename";
+      form.innerHTML = `<label>Rename<input name="name" type="text" value="${escape(subject.name)}" autofocus></label><div><button type="submit">Save</button><button type="button" data-context-cancel>Cancel</button></div>`;
+      menu.replaceChildren(form);
+      const input = form.querySelector('[name="name"]');
+      input.focus();
+      input.select();
+      form.addEventListener("submit", async submitEvent => {
+        submitEvent.preventDefault();
+        const name = input.value.trim();
+        if (name) await subject.update({ name });
+        close(); this.#draw();
+      });
+      form.querySelector("[data-context-cancel]")?.addEventListener("click", close);
+    });
+    menu.querySelector('[data-context-action="delete"]')?.addEventListener("click", async () => {
+      const subject = record ?? folder;
+      if (window.confirm(`Delete ${subject.name}?`)) await subject.delete();
+      close(); this.#draw();
+    });
+    setTimeout(() => this.root.addEventListener("pointerdown", outsideEvent => {
+      if (!menu.contains(outsideEvent.target)) close();
+    }, { once: true }), 0);
+  }
+
   #applyPosition() {
     if (document.fullscreenElement === this.root) return;
     this.root.style.left = `${this.position.x}px`;
     this.root.style.top = `${this.position.y}px`;
+  }
+
+  #captureSize() {
+    if (document.fullscreenElement === this.root) return;
+    const shell = this.root.querySelector(".vr-datapad-shell");
+    if (!shell) return;
+    const style = getComputedStyle(shell);
+    this.size = { width: style.width, height: style.height };
   }
 
   #bindDrag() {
@@ -701,11 +854,20 @@ class PlayerDatapad {
   async #createCategoryFolder() {
     if (!game.user.isGM) return;
     const root = folderForCategory(this.section);
-    if (!root) return;
-    const parent = game.folders.get(this.selectedCategoryFolderIds.get(this.section)) ?? root;
-    const folder = await Folder.create({ name: `New ${SECTIONS.find(entry => entry.key === this.section)?.label ?? "Datapad"} Folder`, type: "JournalEntry", folder: parent.id });
-    this.selectedCategoryFolderIds.set(this.section, folder.id);
-    this.#draw();
+    if (!root) {
+      ui.notifications?.warn("The Datapad folders are still being created. Please try again in a moment.");
+      return;
+    }
+    try {
+      const parent = game.folders.get(this.selectedCategoryFolderIds.get(this.section)) ?? root;
+      const folder = await Folder.create({ name: `New ${SECTIONS.find(entry => entry.key === this.section)?.label ?? "Datapad"} Folder`, type: "JournalEntry", folder: parent.id });
+      if (!folder) throw new Error("Folder creation returned no folder.");
+      this.selectedCategoryFolderIds.set(this.section, folder.id);
+      this.#draw();
+    } catch (error) {
+      console.error("Veilrunner | Failed to create Datapad folder", error);
+      ui.notifications?.error("Could not create the Datapad folder.");
+    }
   }
 
   #questEditor() {
@@ -784,9 +946,13 @@ class PlayerDatapad {
       const data = achievementData(page);
       const earned = game.user.isGM || playerEarnedAchievement(page);
       if (!earned) return `<article class="vr-achievement-card is-locked"><div class="vr-achievement-card-art"><span>?</span><span>?</span><span>?</span></div><h3>???</h3></article>`;
-      const recipients = achievementHeroes().filter(actor => data.awardedActorIds.includes(actor.id));
       const content = page.text?.content ?? "";
-      return `<button type="button" class="vr-achievement-card" data-achievement-page="${page.id}" style="--achievement-color:${escape(data.color)}">${data.image ? `<img class="vr-achievement-card-art" src="${escape(data.image)}" alt="">` : '<div class="vr-achievement-card-art"><i class="fa-solid fa-trophy"></i></div>'}<div class="vr-achievement-card-copy"><h3>${escape(page.name)}</h3>${content ? `<div class="vr-achievement-card-description">${content}</div>` : ""}<p>${recipients.map(actor => `<img src="${escape(actor.system?.portraitImage || actor.img)}" title="${escape(actor.name)}" alt="${escape(actor.name)}">`).join("")}</p></div></button>`;
+      const grants = game.user.isGM ? `<section class="vr-achievement-card-grants"><h4>Grant to Party Members</h4>${achievementPartyFolders().map(folder => {
+        const heroes = getPartyFolderMembers(folder, { user: game.user });
+        const allAwarded = heroes.length > 0 && heroes.every(actor => data.awardedActorIds.includes(actor.id));
+        return `<div class="vr-achievement-party-row"><header><i class="fa-solid fa-users"></i><span>${escape(folder.name)}</span><div class="vr-achievement-party-members">${heroes.map(actor => `<button type="button" class="${data.awardedActorIds.includes(actor.id) ? "awarded" : ""}" data-achievement-grant-hero="${actor.id}" data-achievement-page="${page.id}" title="${escape(actor.name)}" aria-label="${escape(actor.name)}"><img src="${escape(actor.system?.portraitImage || actor.img)}" alt=""><i class="fa-solid fa-check"></i></button>`).join("") || '<small>No Hero members in this Party folder.</small>'}</div></header><button type="button" class="vr-achievement-grant-all${allAwarded ? " awarded" : ""}" data-achievement-grant-all data-achievement-page="${page.id}" data-achievement-party-folder="${folder.id}" ${heroes.length ? "" : "disabled"}>Grant All</button></div>`;
+      }).join("") || '<p class="vr-achievement-empty">No Party folders are available.</p>'}</section>` : "";
+      return `<article class="vr-achievement-card" style="--achievement-color:${escape(data.color)}"><button type="button" class="vr-achievement-card-open" data-achievement-page="${page.id}">${data.image ? `<img class="vr-achievement-card-art" src="${escape(data.image)}" alt="">` : '<div class="vr-achievement-card-art"><i class="fa-solid fa-trophy"></i></div>'}<div class="vr-achievement-card-copy"><h3>${escape(page.name)}</h3>${content ? `<div class="vr-achievement-card-description">${content}</div>` : ""}</div></button>${grants}</article>`;
     }).join("");
     return `<div class="vr-achievement-workspace">
       <aside class="vr-datapad-directory"><header><span>Folders</span>${game.user.isGM ? '<button type="button" data-action="create-category-folder" title="New adventure folder"><i class="fa-solid fa-folder-plus"></i></button>' : ""}</header><div class="vr-datapad-folder-list">${folderMarkup}</div></aside>
@@ -921,10 +1087,19 @@ class PlayerDatapad {
   async #createQuestFolder() {
     if (!game.user.isGM) return;
     const parent = folderForCategory("quests");
-    if (!parent) return;
-    const folder = await Folder.create({ name: "New Quest Folder", type: "JournalEntry", folder: parent.id });
-    this.selectedQuestFolderId = folder.id;
-    this.#draw();
+    if (!parent) {
+      ui.notifications?.warn("The Datapad folders are still being created. Please try again in a moment.");
+      return;
+    }
+    try {
+      const folder = await Folder.create({ name: "New Quest Folder", type: "JournalEntry", folder: parent.id });
+      if (!folder) throw new Error("Folder creation returned no folder.");
+      this.selectedQuestFolderId = folder.id;
+      this.#draw();
+    } catch (error) {
+      console.error("Veilrunner | Failed to create quest folder", error);
+      ui.notifications?.error("Could not create the quest folder.");
+    }
   }
 
   async #saveQuest(event) {

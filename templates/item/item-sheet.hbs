@@ -144,7 +144,7 @@
         <div class="vr-item-field-grid">
           <label class="vr-item-field">{{localize 'VEILRUNNER.AccessoryItem.FIELDS.equipmentSlot.label'}}
             <select name="system.equipmentSlot">
-              {{#each (array "" "head" "chest" "cloak" "shoulders" "arms" "hands" "waist" "legs" "feet" "accessory") as |slot|}}
+              {{#each (array "" "ears" "neck" "wrists" "leftRing" "rightRing") as |slot|}}
                 <option value="{{slot}}" {{#if (eq ../system.equipmentSlot slot)}}selected{{/if}}>{{#if slot}}{{localize (concat "VEILRUNNER.EquipmentSlot." slot)}}{{else}}{{localize 'VEILRUNNER.None'}}{{/if}}</option>
               {{/each}}
             </select>
@@ -192,7 +192,7 @@
           </label>
           <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.equipmentSlot.label'}}
             <select name="system.equipmentSlot">
-              {{#each (array "" "head" "chest" "cloak" "shoulders" "arms" "hands" "waist" "legs" "feet" "shield") as |slot|}}
+              {{#each (array "" "head" "chest" "arms" "legs" "feet" "offhand") as |slot|}}
                 <option value="{{slot}}" {{#if (eq ../system.equipmentSlot slot)}}selected{{/if}}>{{#if slot}}{{localize (concat "VEILRUNNER.EquipmentSlot." slot)}}{{else}}{{localize 'VEILRUNNER.None'}}{{/if}}</option>
               {{/each}}
             </select>

@@ -1,10 +1,6 @@
-const LEFT_SLOTS = new Set(["helmet", "neck", "shoulders", "chest", "arms", "hands"]);
-
 /** Register helpers. */
 export function registerHandlebarsHelpers() {
   Handlebars.registerHelper("array", (...args) => args.slice(0, -1));
-
-  Handlebars.registerHelper("isLeftSlot", (slot) => LEFT_SLOTS.has(slot));
 
   Handlebars.registerHelper("subtract", (a, b) => Math.max(0, (Number(a) || 0) - (Number(b) || 0)));
 

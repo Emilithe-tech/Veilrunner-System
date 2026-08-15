@@ -42,14 +42,10 @@ export default class ArmorData extends foundry.abstract.TypeDataModel {
         choices: {
           head: "VEILRUNNER.EquipmentSlot.head",
           chest: "VEILRUNNER.EquipmentSlot.chest",
-          cloak: "VEILRUNNER.EquipmentSlot.cloak",
-          shoulders: "VEILRUNNER.EquipmentSlot.shoulders",
           arms: "VEILRUNNER.EquipmentSlot.arms",
-          hands: "VEILRUNNER.EquipmentSlot.hands",
-          waist: "VEILRUNNER.EquipmentSlot.waist",
           legs: "VEILRUNNER.EquipmentSlot.legs",
           feet: "VEILRUNNER.EquipmentSlot.feet",
-          shield: "VEILRUNNER.EquipmentSlot.shield"
+          offhand: "VEILRUNNER.EquipmentSlot.offhand"
         }
       }),
       capacity: new SchemaField({
