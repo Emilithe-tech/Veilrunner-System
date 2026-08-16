@@ -547,7 +547,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       template: "systems/veilrunner/templates/actor/hero/parts/equipment.hbs",
       templates: ["systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs"]
     },
-    main: { template: "systems/veilrunner/templates/actor/hero/parts/main.hbs" },
+    main: {
+      template: "systems/veilrunner/templates/actor/hero/parts/main.hbs",
+      templates: [
+        "systems/veilrunner/templates/actor/hero/parts/drawer-handles.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/top-nav.hbs"
+      ]
+    },
     details: { template: "systems/veilrunner/templates/actor/hero/parts/details.hbs" }
   };
 

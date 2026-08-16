@@ -1,0 +1,6 @@
+<div class="vr-party-v2-card vr-party-v2-journal-card">
+  <div class="vr-party-v2-panel-toolbar" aria-hidden="true"></div>
+  <div class="vr-party-v2-list-head vr-party-v2-journal-head"><span>{{localize 'VEILRUNNER.Journals'}}</span><span>{{partyJournals.length}}</span></div>
+  <div class="vr-party-v2-scroll-list vr-party-v2-journal-list">{{#each partyJournals as |journal|}}{{> "systems/veilrunner/templates/actor/party/parts/journal-row.hbs" journal}}{{else}}<p class="empty-row">{{localize 'VEILRUNNER.NoAvailableJournals'}}</p>{{/each}}</div>
+  {{#if partyJournalEntry}}{{> "systems/veilrunner/templates/actor/party/parts/journal-overlay.hbs"}}{{/if}}
+</div>

@@ -1,0 +1,9 @@
+{{#unless equipmentOpen}}
+  <div class="drawer-handle handle-left" role="group" aria-label="{{localize 'VEILRUNNER.Equipment'}}">
+    <button type="button" class="drawer-handle-segment" data-action="openEquipmentTab" data-tab="equipped" title="{{localize 'VEILRUNNER.Equipment'}}" aria-label="{{localize 'VEILRUNNER.Equipment'}}"><i class="fa-solid fa-shirt" aria-hidden="true"></i></button>
+    <button type="button" class="drawer-handle-segment" data-action="openEquipmentTab" data-tab="appearance" title="{{localize 'VEILRUNNER.Appearance'}}" aria-label="{{localize 'VEILRUNNER.Appearance'}}"><i class="fa-solid fa-user" aria-hidden="true"></i></button>
+  </div>
+{{/unless}}
+<div class="drawer-handle handle-right" role="group" aria-label="{{localize 'VEILRUNNER.Details'}}">
+  <button type="button" class="drawer-handle-segment" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Details'}}" aria-label="{{localize 'VEILRUNNER.Details'}}"><i class="fa-solid fa-list" aria-hidden="true"></i></button>
+</div>

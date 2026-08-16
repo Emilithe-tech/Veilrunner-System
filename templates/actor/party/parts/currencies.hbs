@@ -1,21 +1,5 @@
-<div class="vr-party-block vr-party-currency-part">
-  <div class="vr-party-block-heading">
-    <span><i class="fa-solid fa-coins"></i> {{localize 'VEILRUNNER.SharedCurrencies'}}</span>
-    <button type="button" class="panel-icon-btn" data-action="addPartyCurrency" title="{{localize 'VEILRUNNER.AddCurrency'}}" aria-label="{{localize 'VEILRUNNER.AddCurrency'}}">
-      <i class="fa-solid fa-plus"></i>
-    </button>
-  </div>
-  <div class="vr-party-currencies">
-    {{#each partyOverview.currencies as |currency|}}
-      <div class="vr-party-currency-row">
-        <input type="text" name="system.currencies.{{currency.index}}.name" value="{{currency.name}}" placeholder="{{localize 'VEILRUNNER.Currency'}}" />
-        <input type="number" name="system.currencies.{{currency.index}}.value" value="{{currency.value}}" />
-        <button type="button" class="panel-icon-btn" data-action="removePartyCurrency" data-index="{{currency.index}}" title="{{localize 'VEILRUNNER.RemoveCurrency'}}" aria-label="{{localize 'VEILRUNNER.RemoveCurrency'}}">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </div>
-    {{else}}
-      <p class="empty-row">{{localize 'VEILRUNNER.NoCurrencies'}}</p>
-    {{/each}}
-  </div>
+<div class="vr-party-v2-card">
+  <div class="vr-party-v2-panel-toolbar" aria-hidden="true"></div>
+  <div class="vr-party-v2-list-head vr-party-v2-currency-head"><span></span><span></span><span>{{localize 'VEILRUNNER.Currency'}}</span><span>Value</span>{{> "systems/veilrunner/templates/actor/party/parts/currency-add-button.hbs"}}</div>
+  <div class="vr-party-v2-scroll-list">{{#each partyOverview.currencies as |currency|}}{{> "systems/veilrunner/templates/actor/party/parts/currency-row.hbs" currency}}{{else}}<p class="empty-row">{{localize 'VEILRUNNER.NoCurrencies'}}</p>{{/each}}</div>
 </div>

@@ -7,6 +7,7 @@ import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.
 
 const BASE_CURRENCY_NAME = "Galactic Federation Credits";
 const BASE_CURRENCY_ICON = "fa-solid fa-sim-card";
+const PARTY_INVENTORY_CATEGORIES = ["all", "weapon", "ammo", "armor", "consumable", "tech", "keyItem", "junk", "other"];
 
 function validIconClass(icon) {
   const value = String(icon ?? "").trim();
@@ -53,6 +54,7 @@ export default class VeilrunnerActorSheet extends HandlebarsApplicationMixin(Act
       removePartyCurrency: VeilrunnerActorSheet.#onRemovePartyCurrency,
       toggleCurrencyTracking: VeilrunnerActorSheet.#onToggleCurrencyTracking,
       setPartyImage: VeilrunnerActorSheet.#onSetPartyImage,
+      togglePartyEditMode: VeilrunnerActorSheet.#onTogglePartyEditMode,
       setPartyTab: VeilrunnerActorSheet.#onSetPartyTab,
       openPartyJournalEntry: VeilrunnerActorSheet.#onOpenPartyJournalEntry,
       closePartyJournalEntry: VeilrunnerActorSheet.#onClosePartyJournalEntry,
@@ -64,14 +66,39 @@ export default class VeilrunnerActorSheet extends HandlebarsApplicationMixin(Act
   static PARTS = {
     body: {
       template: "systems/veilrunner/templates/actor/basic-sheet.hbs",
-      templates: ["systems/veilrunner/templates/actor/party/parts/currencies.hbs"]
+      templates: [
+        "systems/veilrunner/templates/actor/party/parts/party.hbs",
+        "systems/veilrunner/templates/actor/party/parts/summary.hbs",
+        "systems/veilrunner/templates/actor/party/parts/members.hbs",
+        "systems/veilrunner/templates/actor/party/parts/party-image-button.hbs",
+        "systems/veilrunner/templates/actor/party/parts/member-button.hbs",
+        "systems/veilrunner/templates/actor/party/parts/panel.hbs",
+        "systems/veilrunner/templates/actor/party/parts/tab-currencies.hbs",
+        "systems/veilrunner/templates/actor/party/parts/tab-inventory.hbs",
+        "systems/veilrunner/templates/actor/party/parts/tab-journal.hbs",
+        "systems/veilrunner/templates/actor/party/parts/currencies.hbs",
+        "systems/veilrunner/templates/actor/party/parts/currency-add-button.hbs",
+        "systems/veilrunner/templates/actor/party/parts/currency-row.hbs",
+        "systems/veilrunner/templates/actor/party/parts/currency-track-button.hbs",
+        "systems/veilrunner/templates/actor/party/parts/currency-delete-button.hbs",
+        "systems/veilrunner/templates/actor/party/parts/inventory.hbs",
+        "systems/veilrunner/templates/actor/party/parts/inventory-row.hbs",
+        "systems/veilrunner/templates/actor/party/parts/journal.hbs",
+        "systems/veilrunner/templates/actor/party/parts/journal-row.hbs",
+        "systems/veilrunner/templates/actor/party/parts/journal-overlay.hbs",
+        "systems/veilrunner/templates/actor/party/parts/journal-close-button.hbs"
+      ]
     }
   };
 
   partyTab = "currencies";
   partyTabPrevious = null;
+  partyInventoryCategory = "all";
   partyJournalEntryId = null;
   partyJournalClosing = false;
+  partyEditMode = false;
+  #partyMemberContextMenu = null;
+  #partyMemberContextDismiss = null;
 
   /** @override */
   async _prepareContext(options) {
@@ -89,7 +116,15 @@ export default class VeilrunnerActorSheet extends HandlebarsApplicationMixin(Act
     context.hasBiography = Object.hasOwn(system, "biography");
     context.isParty = this.actor.type === "party";
     if (context.isParty) {
+      context.partyEditMode = context.isGM && this.partyEditMode;
       context.partyOverview = buildPartyOverview(this.actor);
+      context.partyInventoryCategory = PARTY_INVENTORY_CATEGORIES.includes(this.partyInventoryCategory)
+        ? this.partyInventoryCategory
+        : "all";
+      if (context.partyInventoryCategory !== "all") {
+        context.partyOverview.inventory = context.partyOverview.inventory
+          .filter(item => item.category === context.partyInventoryCategory);
+      }
       context.partyTab = this.partyTab;
       context.partyTabIndicatorFrom = this.partyTabPrevious === null
         ? ["currencies", "inventory", "journal"].indexOf(this.partyTab)
@@ -113,6 +148,19 @@ export default class VeilrunnerActorSheet extends HandlebarsApplicationMixin(Act
     return context;
   }
 
+  /** Place the GM-only Party edit toggle in Foundry's native window header. */
+  _getFrameButtons(options) {
+    const buttons = super._getFrameButtons(options);
+    if (this.actor.type === "party" && game.user.isGM) {
+      buttons.unshift({
+        action: "togglePartyEditMode",
+        icon: `fa-solid ${this.partyEditMode ? "fa-toggle-on" : "fa-toggle-off"}`,
+        label: "VEILRUNNER.EditMode"
+      });
+    }
+    return buttons;
+  }
+
   /** Apply the opening player's hero-sheet palette to Party sheets. */
   async _onRender(context, options) {
     await super._onRender(context, options);
@@ -122,12 +170,49 @@ export default class VeilrunnerActorSheet extends HandlebarsApplicationMixin(Act
     }
     if (this.actor.type !== "party") return;
 
+    this.#syncPartyEditToggle();
+
     const indicator = this.element?.querySelector(".vr-party-v2-tab-indicator");
     if (indicator && this.partyTabPrevious !== null && this.partyTabPrevious !== this.partyTab) {
       const target = ["currencies", "inventory", "journal"].indexOf(this.partyTab);
       requestAnimationFrame(() => indicator.style.setProperty("--party-tab-offset", target));
     }
     this.partyTabPrevious = null;
+
+    const inventoryCategorySelect = this.element?.querySelector(".vr-party-v2-inventory-filter select");
+    if (inventoryCategorySelect && !inventoryCategorySelect.dataset.veilrunnerBinding) {
+      inventoryCategorySelect.dataset.veilrunnerBinding = "true";
+      inventoryCategorySelect.addEventListener("change", event => {
+        const category = event.currentTarget.value;
+        if (!PARTY_INVENTORY_CATEGORIES.includes(category) || this.partyInventoryCategory === category) return;
+        this.partyInventoryCategory = category;
+        this.render();
+      });
+    }
+
+    const inventorySearch = this.element?.querySelector(".vr-party-v2-inventory-search input");
+    if (inventorySearch && !inventorySearch.dataset.veilrunnerBinding) {
+      inventorySearch.dataset.veilrunnerBinding = "true";
+      inventorySearch.addEventListener("input", event => {
+        const query = event.currentTarget.value.trim().toLocaleLowerCase();
+        const inventoryList = this.element?.querySelector(".vr-party-v2-scroll-list");
+        if (!inventoryList) return;
+        const rows = inventoryList.querySelectorAll(".vr-party-v2-inventory-row");
+        let visible = 0;
+        for (const row of rows) {
+          const matches = !query || row.textContent.toLocaleLowerCase().includes(query);
+          row.hidden = !matches;
+          if (matches) visible += 1;
+        }
+        const emptyRow = inventoryList.querySelector(".empty-row");
+        if (emptyRow) emptyRow.hidden = Boolean(rows.length) && visible > 0;
+      });
+    }
+
+    if (this.partyEditMode && game.user.isGM && !this.element?.dataset.veilrunnerPartyContextBinding) {
+      this.element.dataset.veilrunnerPartyContextBinding = "true";
+      this.element.addEventListener("contextmenu", event => this.#onPartyMemberContextMenu(event));
+    }
 
     const sheetOptions = game.user?.character?.system?.sheetOptions ?? {};
     const color = (value, fallback) => /^#[0-9a-f]{6}$/i.test(String(value ?? "").trim()) ? String(value).trim() : fallback;
@@ -238,6 +323,106 @@ export default class VeilrunnerActorSheet extends HandlebarsApplicationMixin(Act
       console.error("Veilrunner | Failed to open party image picker", err);
       ui.notifications.error(game.i18n.localize("VEILRUNNER.ImagePickerFailed"));
     }
+  }
+
+  /** Toggle the GM-only controls which may change Party Actor identity data. */
+  static #onTogglePartyEditMode() {
+    if (!game.user.isGM || this.actor.type !== "party") return;
+    this.partyEditMode = !this.partyEditMode;
+    if (!this.partyEditMode) this.#closePartyMemberContextMenu();
+    this.render();
+  }
+
+  /** Keep the native header control's icon and pressed state in sync. */
+  #syncPartyEditToggle() {
+    const buttons = new Set();
+    let root = this.element;
+    while (root) {
+      if (root.matches?.("[data-action='togglePartyEditMode']")) buttons.add(root);
+      for (const button of root.querySelectorAll?.("[data-action='togglePartyEditMode']") ?? []) buttons.add(button);
+      if (root.matches?.(".application, .app, .window-app")) break;
+      root = root.parentElement;
+    }
+    for (const button of buttons) {
+      const control = button.closest("li") ?? button;
+      control.classList?.toggle("active", this.partyEditMode);
+      button.classList?.toggle("active", this.partyEditMode);
+      button.dataset.editMode = this.partyEditMode ? "on" : "off";
+      button.setAttribute?.("aria-pressed", this.partyEditMode ? "true" : "false");
+      button.classList.remove("fa-toggle-on", "fa-toggle-off");
+      button.classList.add("fa-solid", this.partyEditMode ? "fa-toggle-on" : "fa-toggle-off");
+    }
+  }
+
+  /** GM-only context menu for moving a Hero between Party Actor folders. */
+  #onPartyMemberContextMenu(event) {
+    if (!this.partyEditMode || !game.user.isGM) return;
+    const memberButton = event.target.closest?.(".vr-party-v2-member[data-actor-id]");
+    const member = game.actors.get(memberButton?.dataset.actorId);
+    if (!member || member.type !== "hero") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.#openPartyMemberContextMenu(event, member);
+  }
+
+  #openPartyMemberContextMenu(event, member) {
+    this.#closePartyMemberContextMenu();
+    const destinations = game.actors
+      .filter(actor => actor.type === "party")
+      .map(party => ({ party, folderId: party.folder?.id ?? party.folder ?? "" }))
+      .filter(({ folderId }) => Boolean(folderId));
+    if (!destinations.length) return;
+
+    const menu = document.createElement("menu");
+    menu.className = "vr-party-member-context-menu";
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+    const submenu = document.createElement("div");
+    submenu.className = "vr-party-member-context-submenu";
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.innerHTML = `<span>Send To</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i>`;
+    const options = document.createElement("div");
+    for (const { party, folderId } of destinations) {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.disabled = (member.folder?.id ?? member.folder) === folderId;
+      option.textContent = party.name;
+      option.addEventListener("click", async () => {
+        if (!game.user.isGM || option.disabled) return;
+        try {
+          await member.update({ folder: folderId });
+          this.#closePartyMemberContextMenu();
+          await this.render();
+        } catch (error) {
+          console.error("Veilrunner | Failed to move Party member", error);
+          ui.notifications.error(`Could not move ${member.name} to ${party.name}.`);
+        }
+      });
+      options.append(option);
+    }
+    submenu.append(trigger, options);
+    menu.append(submenu);
+    menu.addEventListener("contextmenu", innerEvent => innerEvent.preventDefault());
+    document.body.append(menu);
+    this.#partyMemberContextMenu = menu;
+    this.#partyMemberContextDismiss = dismissEvent => {
+      if (!menu.contains(dismissEvent.target)) this.#closePartyMemberContextMenu();
+    };
+    document.addEventListener("pointerdown", this.#partyMemberContextDismiss, true);
+  }
+
+  #closePartyMemberContextMenu() {
+    this.#partyMemberContextMenu?.remove();
+    this.#partyMemberContextMenu = null;
+    if (this.#partyMemberContextDismiss) document.removeEventListener("pointerdown", this.#partyMemberContextDismiss, true);
+    this.#partyMemberContextDismiss = null;
+  }
+
+  async _onClose(options) {
+    this.#closePartyMemberContextMenu();
+    return super._onClose(options);
   }
 
   static #onSetPartyTab(event, target) {

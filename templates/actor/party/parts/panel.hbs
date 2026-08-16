@@ -1,0 +1,10 @@
+<div class="vr-party-v2-panel">
+  <nav class="vr-party-v2-tabs" aria-label="{{localize 'VEILRUNNER.Party'}}">
+    <span class="vr-party-v2-tab-indicator" style="--party-tab-offset: {{partyTabIndicatorFrom}};" aria-hidden="true"></span>
+    {{> "systems/veilrunner/templates/actor/party/parts/tab-currencies.hbs"}}
+    {{> "systems/veilrunner/templates/actor/party/parts/tab-inventory.hbs"}}
+    {{> "systems/veilrunner/templates/actor/party/parts/tab-journal.hbs"}}
+  </nav>
+  {{> "systems/veilrunner/templates/actor/party/parts/summary.hbs" legacy=true}}
+  {{#if (eq partyTab "currencies")}}{{> "systems/veilrunner/templates/actor/party/parts/currencies.hbs"}}{{else if (eq partyTab "inventory")}}{{> "systems/veilrunner/templates/actor/party/parts/inventory.hbs"}}{{else}}{{> "systems/veilrunner/templates/actor/party/parts/journal.hbs"}}{{/if}}
+</div>

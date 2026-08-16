@@ -105,7 +105,10 @@ export function partyInventory(party) {
   return sortedItems([...party.items.contents]).map(item => {
     const quantity = Number(item.system?.quantity ?? 1);
     const price = Number(item.system?.price ?? 0);
-    const category = item.type === "treasure" ? item.system?.category || "junk" : item.type;
+    const rawCategory = item.type === "treasure" ? item.system?.category || "junk" : item.type;
+    const category = ["weapon", "ammo", "armor", "consumable", "tech", "keyItem", "junk"].includes(rawCategory)
+      ? rawCategory
+      : "other";
     return {
       id: item.id,
       name: item.name,

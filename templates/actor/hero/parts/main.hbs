@@ -1,19 +1,5 @@
 <section class="main-panel" style="--vr-accent: {{sheetOptions.categoryHighlightColor}}; --vr-pan-off: {{sheetOptions.panOffColor}}; --vr-pan-on: {{sheetOptions.panOnColor}}; --vr-pan-interference: {{sheetOptions.panInterferenceColor}}; --vr-character-border: {{sheetOptions.characterBorderColor}}; --vr-character-background: {{#if sheetOptions.characterBackgroundColorEnabled}}{{sheetOptions.characterBackgroundColor}}{{else}}transparent{{/if}};{{#if characterBackgroundImage}} --vr-character-background-image: url('{{characterBackgroundImage}}');{{/if}} --vr-mana-text: {{sheetOptions.manaTextColor}}; --vr-stamina-text: {{sheetOptions.staminaTextColor}}; --vr-level-up: {{sheetOptions.levelUpColor}}; --vr-earned-xp: {{sheetOptions.earnedXpColor}}; --vr-total-xp: {{sheetOptions.totalXpColor}}; --vr-level-up-glow: {{sheetOptions.levelUpGlowColor}}; --vr-level-brightness: {{sheetOptions.levelUpBrightness}}; --vr-level-intensity: {{sheetOptions.levelUpGlowIntensity}}; --vr-level-rate-duration: {{sheetOptions.levelUpRateDuration}}s;">
-  {{#unless equipmentOpen}}
-    <div class="drawer-handle handle-left" role="group" aria-label="{{localize 'VEILRUNNER.Equipment'}}">
-      <button type="button" class="drawer-handle-segment" data-action="openEquipmentTab" data-tab="equipped" title="{{localize 'VEILRUNNER.Equipment'}}" aria-label="{{localize 'VEILRUNNER.Equipment'}}">
-        <i class="fa-solid fa-shirt" aria-hidden="true"></i>
-      </button>
-      <button type="button" class="drawer-handle-segment" data-action="openEquipmentTab" data-tab="appearance" title="{{localize 'VEILRUNNER.Appearance'}}" aria-label="{{localize 'VEILRUNNER.Appearance'}}">
-        <i class="fa-solid fa-user" aria-hidden="true"></i>
-      </button>
-    </div>
-  {{/unless}}
-  <div class="drawer-handle handle-right" role="group" aria-label="{{localize 'VEILRUNNER.Details'}}">
-    <button type="button" class="drawer-handle-segment" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Details'}}" aria-label="{{localize 'VEILRUNNER.Details'}}">
-      <i class="fa-solid fa-list" aria-hidden="true"></i>
-    </button>
-  </div>
+  {{> "systems/veilrunner/templates/actor/hero/parts/drawer-handles.hbs"}}
   <div class="hero-row">
     <div class="hero-column">
       <div class="hero-image-frame">
@@ -253,34 +239,7 @@
     </div>
 
     <div class="main-field">
-      <nav class="bottom-nav">
-        <div class="nav-indicator" style="--nav-width: {{sectionIndicatorWidth}}%; --nav-offset: {{sectionIndicatorOffset}}%;"></div>
-        <button type="button" class="bottom-nav-btn {{#if (eq section "character")}}active{{/if}}"
-                data-action="setSection" data-section="character">
-          <i class="fa-solid fa-user"></i>
-          <span>{{localize 'VEILRUNNER.Section.character'}}</span>
-        </button>
-        <button type="button" class="bottom-nav-btn {{#if (eq section "actions")}}active{{/if}}"
-                data-action="setSection" data-section="actions">
-          <i class="fa-solid fa-bolt"></i>
-          <span>{{localize 'VEILRUNNER.Section.actions'}}</span>
-        </button>
-        <button type="button" class="bottom-nav-btn {{#if (eq section "inventory")}}active{{/if}}"
-                data-action="setSection" data-section="inventory">
-          <i class="fa-solid fa-boxes-stacked"></i>
-          <span>{{localize 'VEILRUNNER.Section.inventory'}}</span>
-        </button>
-        <button type="button" class="bottom-nav-btn {{#if (eq section "datapad")}}active{{/if}}"
-                data-action="setSection" data-section="datapad">
-          <i class="fa-solid fa-tablet-screen-button"></i>
-          <span>{{localize 'VEILRUNNER.Section.datapad'}}</span>
-        </button>
-        <button type="button" class="bottom-nav-btn {{#if (eq section "settings")}}active{{/if}}"
-                data-action="setSection" data-section="settings">
-          <i class="fa-solid fa-gear"></i>
-          <span>{{localize 'VEILRUNNER.Section.settings'}}</span>
-        </button>
-      </nav>
+      {{> "systems/veilrunner/templates/actor/hero/parts/top-nav.hbs"}}
 
       {{#if subNavList}}
       <nav class="sub-nav-row {{#if (and (eq section "inventory") hasInventoryFilters)}}has-filter-row{{/if}}">

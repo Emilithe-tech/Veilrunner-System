@@ -1,5 +1,5 @@
 <nav class="bottom-nav">
-  <div class="nav-indicator" style="left: {{percent sectionIndex sectionCount}}%; width: {{percent 1 sectionCount}}%;"></div>
+  <div class="nav-indicator" style="--nav-width: {{sectionIndicatorWidth}}%; --nav-offset: {{sectionIndicatorOffset}}%;"></div>
   <button type="button" class="bottom-nav-btn {{#if (eq section "character")}}active{{/if}}"
           data-action="setSection" data-section="character">
     <i class="fa-solid fa-user"></i>

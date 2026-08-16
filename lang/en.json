@@ -397,13 +397,15 @@
     },
     "InventoryCategory": {
       "all": "All",
+      "label": "Category",
       "weapon": "Weapons",
       "ammo": "Ammo",
       "armor": "Armor",
       "consumable": "Consumables",
       "tech": "Tech",
       "keyItem": "Key Items",
-      "junk": "Junk"
+      "junk": "Junk",
+      "other": "Other"
     },
     "WeaponFilter": {
       "label": "Weapon filters",
@@ -714,6 +716,7 @@
     "UntrackCurrency": "Stop tracking currency",
     "PartyStash": "Party Stash",
     "PartyInventory": "Party Inventory",
+    "SearchInventory": "Search Inventory",
     "PartyJournal": "Party Journal",
     "Journal": "Journal",
     "Journals": "Journals",
@@ -725,6 +728,8 @@
     "StashItems": "Stash Items",
     "NoStashItems": "No stash items.",
     "StashValue": "Stash Value",
+    "InventoryValueShort": "Inv. Value",
+    "InventoryValue": "Inventory Value",
     "TotalWealth": "Total Wealth",
     "Wealth": "Wealth",
     "Overview": "Overview",

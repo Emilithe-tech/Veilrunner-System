@@ -5,13 +5,47 @@ import { registerHandlebarsHelpers } from "./modules/helpers/handlebars.mjs";
 import { registerConfig } from "./modules/config.mjs";
 import { registerCharacterCreation } from "./modules/apps/character-creation.mjs";
 import { registerPartyFolders } from "./modules/apps/party-folders.mjs";
-import { registerDatapad } from "./modules/apps/datapad.mjs";
+import { DATAPAD_TEMPLATE_PARTIALS, registerDatapad } from "./modules/apps/datapad.mjs";
 import { registerReferenceJournals } from "./modules/apps/reference-journals.mjs";
 import { registerInitiativeBandDecider } from "./modules/apps/initiative-band-decider.mjs";
 import { registerCombatCarousel } from "./modules/apps/combat-carousel.mjs";
 import { registerSettings } from "./modules/settings.mjs";
 
-Hooks.once("init", () => {
+const PARTY_SHEET_PARTIALS = [
+  "systems/veilrunner/templates/actor/party/parts/party.hbs",
+  "systems/veilrunner/templates/actor/party/parts/summary.hbs",
+  "systems/veilrunner/templates/actor/party/parts/members.hbs",
+  "systems/veilrunner/templates/actor/party/parts/party-image-button.hbs",
+  "systems/veilrunner/templates/actor/party/parts/member-button.hbs",
+  "systems/veilrunner/templates/actor/party/parts/panel.hbs",
+  "systems/veilrunner/templates/actor/party/parts/tab-currencies.hbs",
+  "systems/veilrunner/templates/actor/party/parts/tab-inventory.hbs",
+  "systems/veilrunner/templates/actor/party/parts/tab-journal.hbs",
+  "systems/veilrunner/templates/actor/party/parts/currencies.hbs",
+  "systems/veilrunner/templates/actor/party/parts/currency-add-button.hbs",
+  "systems/veilrunner/templates/actor/party/parts/currency-row.hbs",
+  "systems/veilrunner/templates/actor/party/parts/currency-track-button.hbs",
+  "systems/veilrunner/templates/actor/party/parts/currency-delete-button.hbs",
+  "systems/veilrunner/templates/actor/party/parts/inventory.hbs",
+  "systems/veilrunner/templates/actor/party/parts/inventory-row.hbs",
+  "systems/veilrunner/templates/actor/party/parts/journal.hbs",
+  "systems/veilrunner/templates/actor/party/parts/journal-row.hbs",
+  "systems/veilrunner/templates/actor/party/parts/journal-overlay.hbs",
+  "systems/veilrunner/templates/actor/party/parts/journal-close-button.hbs"
+];
+
+const HERO_SHEET_PARTIALS = [
+  "systems/veilrunner/templates/actor/hero/parts/header.hbs",
+  "systems/veilrunner/templates/actor/hero/parts/equipment.hbs",
+  "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs",
+  "systems/veilrunner/templates/actor/hero/parts/details.hbs",
+  "systems/veilrunner/templates/actor/hero/parts/drawer-handles.hbs",
+  "systems/veilrunner/templates/actor/hero/parts/top-nav.hbs"
+];
+
+Hooks.once("init", async () => {
+  await foundry.applications.handlebars.loadTemplates([...PARTY_SHEET_PARTIALS, ...HERO_SHEET_PARTIALS, ...DATAPAD_TEMPLATE_PARTIALS]);
+
   registerConfig();
   registerSettings();
   registerHandlebarsHelpers();

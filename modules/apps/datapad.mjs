@@ -1,5 +1,5 @@
 import { VEILRUNNER_SETTINGS, getVeilrunnerSetting } from "../settings.mjs";
-import { findPartyActorForFolder, getPartyFolderMembers } from "../helpers/party.mjs";
+import { findPartyActorForFolder, findPartyForHero, getPartyFolderMembers, getPartyMembers } from "../helpers/party.mjs";
 import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
 
 const SECTIONS = [
@@ -10,8 +10,8 @@ const SECTIONS = [
   { key: "factions", label: "Factions", icon: "fa-solid fa-flag" },
   { key: "places", label: "Places", icon: "fa-solid fa-location-dot" },
   { key: "maps", label: "Maps", icon: "fa-solid fa-map" },
-  { key: "my-journal", label: "My Journal", icon: "fa-solid fa-pen-to-square" },
-  { key: "shared-journal", label: "Shared Journal", icon: "fa-solid fa-book-bookmark" },
+  { key: "my-journal", label: "Player Journals", icon: "fa-solid fa-pen-to-square" },
+  { key: "shared-journal", label: "Shared Journals", icon: "fa-solid fa-book-bookmark" },
   { key: "party-journal", label: "Party Journal", icon: "fa-solid fa-book-bookmark" },
   { key: "timeline", label: "Timeline", icon: "fa-solid fa-timeline" },
   { key: "achievements", label: "Achievements", icon: "fa-solid fa-trophy" }
@@ -29,11 +29,16 @@ const DATAPAD_FOLDER_TREE = {
   "Quests": [],
   "Database": ["Lore", "Bestiary", "Characters", "Factions", "Places"],
   "Maps": [],
-  "Journals": ["My Journal", "Shared Journal", "Party Journal"],
+  "Journals": ["Player Journals", "Shared Journals"],
+  "Party Journal": [],
   "Timeline": [],
   "Achievements": []
 };
 const QUEST_TYPE_SECTIONS = { main: "Main Quests", side: "Side Quests", other: "Other" };
+const SHARED_JOURNAL_SCOPES = ["none", "party", "all"];
+const PARTY_JOURNAL_FOLDERS = ["Main Quests", "Side Quests", "Notes", "Other"];
+const DATAPAD_TAB_TEMPLATE = Object.fromEntries(SECTIONS.map(section => [section.key, `systems/veilrunner/templates/datapad/parts/${section.key}.hbs`]));
+export const DATAPAD_TEMPLATE_PARTIALS = Object.values(DATAPAD_TAB_TEMPLATE);
 
 let datapad;
 let datapadFolders = new Map();
@@ -55,7 +60,8 @@ function categoryForJournal(journal) {
   while (folder) {
     const category = normalize(folder.name);
     if (SECTIONS.some(section => section.key === category)) return category;
-    if (category === "player-journal") return "my-journal";
+    if (["player-journal", "my-journal", "player-journals"].includes(category)) return "my-journal";
+    if (["shared-journal", "shared-journals"].includes(category)) return "shared-journal";
     folder = game.folders.get(folderParentId(folder));
   }
   return "";
@@ -64,7 +70,40 @@ function categoryForJournal(journal) {
 export function journalDatapadData(journal) {
   const data = journal.getFlag?.(game.system.id, "datapad") ?? {};
   const status = ["undiscovered", "inProgress", "complete", "failed"].includes(data.status) ? data.status : "inProgress";
-  return { category: categoryForJournal(journal), hidden: Boolean(data.hidden), status, partyId: String(data.partyId ?? "") };
+  const shareScope = SHARED_JOURNAL_SCOPES.includes(data.shareScope) ? data.shareScope : "none";
+  return { category: categoryForJournal(journal), hidden: Boolean(data.hidden), status, partyId: String(data.partyId ?? ""), ownerUserId: String(data.ownerUserId ?? ""), shareScope };
+}
+
+function playerUsers() {
+  return game.users.filter(user => !user.isGM);
+}
+
+function partyUserIds(partyId) {
+  const party = game.actors.get(partyId);
+  const members = party ? getPartyMembers(party, { user: game.user }) : [];
+  const memberIds = new Set(members.map(member => member.id));
+  return game.users.filter(user => memberIds.has(user.character?.id)).map(user => user.id);
+}
+
+function privateJournalOwnership(ownerUserId) {
+  return ownerUserId ? { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE, [ownerUserId]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER } : { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
+}
+
+function sharedJournalOwnership({ ownerUserId, shareScope, partyId }) {
+  const ownership = privateJournalOwnership(ownerUserId);
+  if (shareScope === "all") ownership.default = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
+  if (shareScope === "party") for (const userId of partyUserIds(partyId)) ownership[userId] = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
+  return ownership;
+}
+
+function partyJournalOwnership(partyId) {
+  const ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
+  for (const userId of partyUserIds(partyId)) ownership[userId] = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+  return ownership;
+}
+
+function shareIcon(scope) {
+  return { none: "fa-solid fa-lock", party: "fa-solid fa-users", all: "fa-solid fa-globe" }[scope] ?? "fa-solid fa-lock";
 }
 
 function playerDatapadTheme() {
@@ -80,12 +119,55 @@ function statusLabel(status) {
   return { undiscovered: "Undiscovered", inProgress: "In Progress", complete: "Completed", failed: "Failed" }[status] ?? "In Progress";
 }
 
+const QUEST_DIRECTORY_WIDTH_KEY = "veilrunner.quest-directory-width";
+const QUEST_DIRECTORY_WIDTH_DEFAULT = 270;
+const QUEST_DIRECTORY_WIDTH_MIN = 270;
+
+function savedQuestDirectoryWidth() {
+  const width = Number(globalThis.localStorage?.getItem(`${QUEST_DIRECTORY_WIDTH_KEY}.${game.user?.id ?? "default"}`));
+  return Number.isFinite(width) && width >= QUEST_DIRECTORY_WIDTH_MIN ? width : QUEST_DIRECTORY_WIDTH_DEFAULT;
+}
+
+function questVisibilityState(journal) {
+  if (!journal) return "none";
+  const data = journalDatapadData(journal);
+  if (data.hidden) return "none";
+  return data.status === "undiscovered" ? "gm" : "players";
+}
+
+function questVisibilityIcon(state, icon) {
+  const weight = state === "gm" ? "fa-regular" : "fa-solid";
+  const label = { none: "Not visible", gm: "Visible to you only", players: "Visible to players" }[state] ?? "Not visible";
+  return `<i class="${weight} ${icon} vr-quest-visibility-icon" data-visibility-label="${label}" aria-label="${label}"></i>`;
+}
+
 function folderParentId(folder) {
   return folder?.folder?.id ?? folder?.folder ?? null;
 }
 
+function folderPartyId(folder) {
+  let current = folder;
+  while (current) {
+    const partyId = current.getFlag?.(game.system.id, "datapadPartyId");
+    if (partyId) return String(partyId);
+    current = game.folders.get(folderParentId(current));
+  }
+  return "";
+}
+
+function folderOwnerUserId(folder) {
+  let current = folder;
+  while (current) {
+    const ownerUserId = current.getFlag?.(game.system.id, "datapadOwnerUserId");
+    if (ownerUserId) return String(ownerUserId);
+    current = game.folders.get(folderParentId(current));
+  }
+  return "";
+}
+
 function folderForCategory(category) {
-  return datapadFolders.get(category) ?? game.folders.find(folder => folder.type === "JournalEntry" && normalize(folder.name) === category) ?? null;
+  const folderName = { "my-journal": "player-journals", "shared-journal": "shared-journals" }[category] ?? category;
+  return datapadFolders.get(folderName) ?? game.folders.find(folder => folder.type === "JournalEntry" && normalize(folder.name) === folderName) ?? null;
 }
 
 function questTypeForFolder(folder) {
@@ -96,10 +178,20 @@ function questTypeForFolder(folder) {
 }
 
 async function ensureDatapadFolders() {
-  if (!game.user.isGM || !getVeilrunnerSetting(VEILRUNNER_SETTINGS.createDatapadFolders)) return;
+  if (!game.user.isGM) return;
   const journalFolders = () => game.folders.filter(folder => folder.type === "JournalEntry");
   let root = journalFolders().find(folder => folder.name === "Datapad" && !folderParentId(folder));
   if (!root) root = await Folder.create({ name: "Datapad", type: "JournalEntry" });
+
+  // Foundry permits only four folder levels. Keep Party Journal directly
+  // beneath Datapad so Party Journal > Party > category remains valid.
+  const journalsFolder = journalFolders().find(folder => folder.name === "Journals" && folderParentId(folder) === root.id);
+  const legacyPartyJournal = journalFolders().find(folder => folder.name === "Party Journal" && folderParentId(folder) === journalsFolder?.id);
+  if (legacyPartyJournal) await legacyPartyJournal.update({ folder: root.id });
+  for (const [oldName, newName] of [["My Journal", "Player Journals"], ["Shared Journal", "Shared Journals"]]) {
+    const legacy = journalFolders().find(folder => folder.name === oldName && folderParentId(folder) === journalsFolder?.id);
+    if (legacy) await legacy.update({ name: newName });
+  }
 
   for (const [name, children] of Object.entries(DATAPAD_FOLDER_TREE)) {
     let parent = journalFolders().find(folder => folder.name === name && folderParentId(folder) === root.id);
@@ -112,11 +204,54 @@ async function ensureDatapadFolders() {
     }
   }
 
+  for (const category of ["my-journal", "shared-journal"]) {
+    const parent = folderForCategory(category);
+    for (const user of playerUsers()) {
+      let folder = journalFolders().find(entry => folderParentId(entry) === parent?.id && entry.getFlag?.(game.system.id, "datapadOwnerUserId") === user.id);
+      if (!folder) folder = await Folder.create({ name: user.name, type: "JournalEntry", folder: parent?.id, flags: { [game.system.id]: { datapadOwnerUserId: user.id } } });
+      else if (folder.name !== user.name) await folder.update({ name: user.name });
+    }
+  }
+  const partyJournalRoot = folderForCategory("party-journal");
+  const actorFolders = game.folders.filter(folder => folder.type === "Actor");
+  const partySources = actorFolders
+    .map(folder => ({ folder, party: findPartyActorForFolder(folder, { requirePermission: false }) }))
+    .filter(({ folder, party }) => party || game.actors.some(actor => actor.type === "hero" && folderParentId(actor.folder) !== folder.id && (actor.folder?.id ?? actor.folder) === folder.id));
+  for (const { folder: actorFolder, party } of partySources) {
+    const partyName = party?.name ?? actorFolder.name;
+    if (party && actorFolder.name !== partyName) await actorFolder.update({ name: partyName });
+    let partyFolder = journalFolders().find(folder => folderParentId(folder) === partyJournalRoot?.id
+      && (folder.getFlag?.(game.system.id, "datapadPartyFolderId") === actorFolder.id || (party && folder.getFlag?.(game.system.id, "datapadPartyId") === party.id)));
+    if (!partyFolder) partyFolder = await Folder.create({ name: partyName, type: "JournalEntry", folder: partyJournalRoot?.id, flags: { [game.system.id]: { datapadPartyFolderId: actorFolder.id, datapadPartyId: party?.id ?? "" } } });
+    else if (partyFolder.name !== partyName) await partyFolder.update({ name: partyName });
+    if (party && partyFolder.getFlag?.(game.system.id, "datapadPartyId") !== party.id) await partyFolder.setFlag(game.system.id, "datapadPartyId", party.id);
+    for (const name of PARTY_JOURNAL_FOLDERS) {
+      if (!journalFolders().some(folder => folder.name === name && folderParentId(folder) === partyFolder.id)) {
+        await Folder.create({ name, type: "JournalEntry", folder: partyFolder.id });
+      }
+    }
+  }
+
   for (const journal of game.journal) {
     const configured = normalize(journal.getFlag?.(game.system.id, "datapad")?.category ?? journal.getFlag?.(game.system.id, "datapadCategory"));
     const category = configured === "player-journal" ? "my-journal" : configured;
     const folder = datapadFolders.get(category);
     if (folder && !journal.folder) await journal.update({ folder: folder.id });
+  }
+}
+
+/** Apply each Datapad journal category's declared visibility and edit policy. */
+async function ensureDatapadJournalEditors() {
+  if (!game.user.isGM) return;
+  for (const journal of game.journal) {
+    const data = journalDatapadData(journal);
+    if (!["my-journal", "shared-journal", "party-journal"].includes(data.category)) continue;
+    const ownerUserId = data.ownerUserId || journal.folder?.getFlag?.(game.system.id, "datapadOwnerUserId") || "";
+    const ownership = data.category === "my-journal" ? privateJournalOwnership(ownerUserId)
+      : data.category === "shared-journal" ? sharedJournalOwnership({ ownerUserId, shareScope: data.shareScope, partyId: data.partyId })
+        : partyJournalOwnership(data.partyId);
+    await journal.update({ ownership });
+    if (ownerUserId && ownerUserId !== data.ownerUserId) await journal.setFlag(game.system.id, "datapad", { ...data, ownerUserId });
   }
 }
 
@@ -238,6 +373,7 @@ class PlayerDatapad {
     this.questDirectoryCollapsed = false;
     this.questOutlineCollapsed = false;
     this.questOutlineWidth = 210;
+    this.questDirectoryWidth = savedQuestDirectoryWidth();
     this.selectedQuestFolderId = null;
     this.selectedCategoryFolderIds = new Map();
     this.selectedAchievementChapterId = null;
@@ -282,8 +418,12 @@ class PlayerDatapad {
   #documents() {
     let journals = game.journal.filter(journal => {
       const data = journalDatapadData(journal);
-      return canView(journal) && data.category === this.section && (game.user.isGM || !data.hidden)
-        && (this.section !== "party-journal" || !this.partyId || data.partyId === this.partyId);
+      if (!canView(journal) || data.category !== this.section || (!game.user.isGM && (data.hidden || (this.section === "quests" && data.status === "undiscovered")))) return false;
+      if (game.user.isGM && this.section !== "party-journal") return true;
+      if (this.section === "my-journal") return data.ownerUserId === game.user.id;
+      if (this.section === "shared-journal") return data.ownerUserId === game.user.id || data.shareScope === "all" || (data.shareScope === "party" && partyUserIds(data.partyId).includes(game.user.id));
+      if (this.section === "party-journal") return this.#matchesActiveParty(data.partyId || folderPartyId(journal.folder));
+      return true;
     }).map(journal => ({ document: journal, kind: "Journal", ...journalDatapadData(journal) }));
     if (this.section === "quests") {
       const created = entry => Number(entry.document._stats?.createdTime ?? 0);
@@ -315,6 +455,18 @@ class PlayerDatapad {
     const indicatorFrom = this.navIndicatorFrom ?? activeTopIndex;
     const questEditor = this.section === "quests" && this.editingJournal ? this.#questEditor() : "";
     const directoryWorkspace = !questEditor ? (this.section === "quests" ? this.#questWorkspace(documents) : this.section === "achievements" ? this.#achievementWorkspace(documents) : this.#categoryWorkspace(documents)) : "";
+    const recordsWorkspace = `<div class="vr-datapad-records">
+      ${documents.length ? documents.map(({ document, kind, hidden, status }) => {
+        const locked = !game.user.isGM && status === "undiscovered";
+        return `<article class="vr-datapad-entry ${hidden ? "is-hidden" : ""} ${locked ? "is-locked" : ""}">
+          <button type="button" class="vr-datapad-record" data-action="open-entry" data-uuid="${escape(document.uuid)}" ${locked ? "disabled" : ""}><i class="fa-solid ${locked ? "fa-lock" : kind === "Scene" ? "fa-map" : "fa-book"}"></i><span>${locked ? "Undiscovered" : escape(document.name)}</span><small>${statusLabel(status)}</small></button>
+          ${game.user.isGM && kind === "Journal" ? `<div class="vr-datapad-gm-controls">${this.section === "quests" ? `<button type="button" data-action="edit-quest" data-uuid="${escape(document.uuid)}" title="Edit quest"><i class="fa-solid fa-pen"></i></button>` : ""}<label title="Hidden entries are visible only to GMs"><input type="checkbox" data-action="toggle-hidden" data-uuid="${escape(document.uuid)}" ${hidden ? "checked" : ""}> Hide</label><select data-action="set-status" data-uuid="${escape(document.uuid)}"><option value="undiscovered" ${status === "undiscovered" ? "selected" : ""}>Undiscovered</option><option value="inProgress" ${status === "inProgress" ? "selected" : ""}>In Progress</option><option value="complete" ${status === "complete" ? "selected" : ""}>Complete</option></select></div>` : ""}
+        </article>`;
+      }).join("") : `<div class="vr-datapad-empty"><i class="fa-solid fa-folder-open"></i><p>No ${escape(section.label.toLowerCase())} records yet.</p><small>${game.user.isGM ? "Use New to add the first record in this section." : "The GM has not shared any records in this section yet."}</small></div>`}
+    </div>`;
+    const workspace = questEditor || directoryWorkspace || recordsWorkspace;
+    const tabTemplate = Handlebars.partials[DATAPAD_TAB_TEMPLATE[this.section]];
+    const tabContent = typeof tabTemplate === "function" ? tabTemplate({ workspace }) : workspace;
     this.root.innerHTML = `
       <div class="vr-datapad-shell"${this.size ? ` style="width:${this.size.width};height:${this.size.height}"` : ""} role="dialog" aria-modal="true" aria-label="Player Datapad">
         <header class="vr-datapad-header">
@@ -335,15 +487,7 @@ class PlayerDatapad {
         <div class="vr-datapad-layout">
           <main class="vr-datapad-content">
             <header><i class="${section.icon}"></i><div><h2>${questEditor ? "Quest Editor" : this.section === "quests" ? "Quest Directory" : section.label}</h2><p>${questEditor ? "Organize how this quest appears and what players can discover." : this.section === "quests" ? "Browse, sort, and review campaign quests." : game.user.isGM ? "Manage campaign records and player discovery." : "Player-visible campaign records."}</p></div></header>
-            ${questEditor || directoryWorkspace || `<div class="vr-datapad-records">
-              ${documents.length ? documents.map(({ document, kind, hidden, status }) => {
-                const locked = !game.user.isGM && status === "undiscovered";
-                return `<article class="vr-datapad-entry ${hidden ? "is-hidden" : ""} ${locked ? "is-locked" : ""}">
-                  <button type="button" class="vr-datapad-record" data-action="open-entry" data-uuid="${escape(document.uuid)}" ${locked ? "disabled" : ""}><i class="fa-solid ${locked ? "fa-lock" : kind === "Scene" ? "fa-map" : "fa-book"}"></i><span>${locked ? "Undiscovered" : escape(document.name)}</span><small>${statusLabel(status)}</small></button>
-                  ${game.user.isGM && kind === "Journal" ? `<div class="vr-datapad-gm-controls">${this.section === "quests" ? `<button type="button" data-action="edit-quest" data-uuid="${escape(document.uuid)}" title="Edit quest"><i class="fa-solid fa-pen"></i></button>` : ""}<label title="Hidden entries are visible only to GMs"><input type="checkbox" data-action="toggle-hidden" data-uuid="${escape(document.uuid)}" ${hidden ? "checked" : ""}> Hide</label><select data-action="set-status" data-uuid="${escape(document.uuid)}"><option value="undiscovered" ${status === "undiscovered" ? "selected" : ""}>Undiscovered</option><option value="inProgress" ${status === "inProgress" ? "selected" : ""}>In Progress</option><option value="complete" ${status === "complete" ? "selected" : ""}>Complete</option></select></div>` : ""}
-                </article>`;
-              }).join("") : `<div class="vr-datapad-empty"><i class="fa-solid fa-folder-open"></i><p>No ${escape(section.label.toLowerCase())} records yet.</p><small>${game.user.isGM ? "Use New to add the first record in this section." : "The GM has not shared any records in this section yet."}</small></div>`}
-            </div>`}
+            ${tabContent}
           </main>
         </div>
         <footer><i class="fa-solid fa-keyboard"></i> Press <kbd>J</kbd> to open this Datapad from anywhere.</footer>
@@ -378,7 +522,7 @@ class PlayerDatapad {
     this.root.querySelectorAll('[data-action="new-entry"]').forEach(button => button.addEventListener("click", () => this.#createEntry()));
     this.root.querySelectorAll('[data-action="open-entry"]').forEach(button => button.addEventListener("click", async () => {
       const document = await fromUuid(button.dataset.uuid);
-      if ((this.section === "quests" || button.closest(".vr-datapad-directory-workspace")) && document) {
+      if (document?.documentName === "JournalEntry") {
         this.viewingJournal = document;
         this.#draw();
       } else document?.sheet?.render(true);
@@ -386,6 +530,13 @@ class PlayerDatapad {
     this.root.querySelector('[data-action="open-selected-entry"]')?.addEventListener("click", async button => {
       const document = await fromUuid(button.currentTarget.dataset.uuid);
       document?.sheet?.render(true);
+    });
+    this.root.querySelector('[data-action="close-inline-journal"]')?.addEventListener("click", () => {
+      this.viewingJournal = null;
+      this.#draw();
+    });
+    this.root.querySelector('[data-action="edit-inline-journal"]')?.addEventListener("click", () => {
+      this.viewingJournal?.sheet?.render(true);
     });
     this.root.querySelectorAll('[data-action="toggle-hidden"]').forEach(input => input.addEventListener("change", () => this.#updateEntry(input.dataset.uuid, { hidden: input.checked })));
     this.root.querySelectorAll('[data-action="set-status"]').forEach(select => select.addEventListener("change", () => this.#updateEntry(select.dataset.uuid, { status: select.value })));
@@ -468,22 +619,24 @@ class PlayerDatapad {
     });
     rewardDropTarget?.addEventListener("dragleave", () => rewardDropTarget.classList.remove("drag-over"));
     rewardDropTarget?.addEventListener("drop", event => this.#dropRewardItem(event, rewardDropTarget));
-    this.root.querySelector('[data-action="toggle-quest-directory"]')?.addEventListener("click", () => {
+    this.root.querySelectorAll('[data-action="toggle-quest-directory"]').forEach(toggle => toggle.addEventListener("click", () => {
       this.questDirectoryCollapsed = !this.questDirectoryCollapsed;
       const workspace = this.root.querySelector(".vr-quest-workspace");
-      const toggle = this.root.querySelector('[data-action="toggle-quest-directory"]');
+      const toggles = this.root.querySelectorAll('[data-action="toggle-quest-directory"]');
       workspace?.classList.toggle("directory-collapsed", this.questDirectoryCollapsed);
-      if (this.questDirectoryCollapsed && toggle) {
-        toggle.classList.remove("directory-handle-return");
-        void toggle.offsetWidth;
-        toggle.classList.add("directory-handle-return");
-      } else toggle?.classList.remove("directory-handle-return");
-      toggle?.setAttribute("aria-expanded", String(!this.questDirectoryCollapsed));
-      toggle?.setAttribute("aria-label", this.questDirectoryCollapsed ? "Show quest directory" : "Hide quest directory");
-      toggle?.setAttribute("title", this.questDirectoryCollapsed ? "Show quest directory" : "Hide quest directory");
-      const icon = toggle?.querySelector("i");
-      if (icon) icon.className = `fa-solid fa-angles-${this.questDirectoryCollapsed ? "right" : "left"}`;
-    });
+      const reopen = this.root.querySelector(".vr-quest-directory-reopen");
+      if (this.questDirectoryCollapsed && reopen) {
+        reopen.classList.remove("directory-handle-return");
+        void reopen.offsetWidth;
+        reopen.classList.add("directory-handle-return");
+      } else reopen?.classList.remove("directory-handle-return");
+      toggles.forEach(button => {
+        button.setAttribute("aria-expanded", String(!this.questDirectoryCollapsed));
+        button.setAttribute("aria-label", this.questDirectoryCollapsed ? "Show quest directory" : "Hide quest directory");
+        button.setAttribute("title", this.questDirectoryCollapsed ? "Show quest directory" : "Hide quest directory");
+      });
+      window.setTimeout(() => this.#draw(), 200);
+    }));
     this.root.querySelector('[data-action="toggle-quest-outline"]')?.addEventListener("click", () => {
       this.questOutlineCollapsed = !this.questOutlineCollapsed;
       this.#draw();
@@ -559,6 +712,7 @@ class PlayerDatapad {
         this.#draw();
       });
     });
+    this.#bindQuestDirectoryResize();
     this.#bindQuestOutlineResize();
     this.#bindQuestDirectoryHandleDragging();
     this.root.querySelector('[data-action="back-to-quests"]')?.addEventListener("click", () => {
@@ -581,7 +735,6 @@ class PlayerDatapad {
   }
 
   async #openDatapadContextMenu(event) {
-    if (!game.user.isGM) return;
     const target = event.target.closest("[data-uuid], [data-category-folder], [data-quest-folder], [data-achievement-chapter]");
     if (!target || target.matches("[data-achievement-grant-hero], [data-achievement-grant-all]")) return;
     event.preventDefault();
@@ -600,11 +753,29 @@ class PlayerDatapad {
     menu.style.top = `${event.clientY}px`;
     const statusItems = ["undiscovered", "inProgress", "complete", "failed"]
       .map(status => `<button type="button" data-context-status="${status}">${statusLabel(status)}</button>`).join("");
+    const shareItems = SHARED_JOURNAL_SCOPES
+      .map(scope => `<button type="button" data-context-share="${scope}"><span>${scope === "none" ? "None" : scope === "party" ? "My Party Only" : "All"}</span><i class="${shareIcon(scope)}"></i></button>`).join("");
     const moveItems = SECTIONS.filter(section => folderForCategory(section.key))
       .map(section => `<button type="button" data-context-move="${section.key}">${escape(section.label)}</button>`).join("");
+    if (!game.user.isGM) {
+      if (!record?.isOwner) return;
+      menu.innerHTML = '<button type="button" data-context-action="edit">Edit</button>';
+      this.root.append(menu);
+      menu.querySelector('[data-context-action="edit"]')?.addEventListener("click", () => {
+        record.sheet?.render(true);
+        menu.remove();
+      });
+      setTimeout(() => this.root.addEventListener("pointerdown", outsideEvent => {
+        if (!menu.contains(outsideEvent.target)) menu.remove();
+      }, { once: true }), 0);
+      return;
+    }
+    const recordControls = record ? this.section === "shared-journal"
+      ? `<div class="vr-datapad-context-submenu"><button type="button">Share To <i class="fa-solid fa-chevron-right"></i></button><div>${shareItems}</div></div><div class="vr-datapad-context-submenu"><button type="button">Move To <i class="fa-solid fa-chevron-right"></i></button><div>${moveItems}</div></div>`
+      : `<div class="vr-datapad-context-submenu"><button type="button">Set To <i class="fa-solid fa-chevron-right"></i></button><div>${statusItems}</div></div><div class="vr-datapad-context-submenu"><button type="button">Move To <i class="fa-solid fa-chevron-right"></i></button><div>${moveItems}</div></div>` : "";
     menu.innerHTML = `<div class="vr-datapad-context-submenu"><button type="button">New <i class="fa-solid fa-chevron-right"></i></button><div><button type="button" data-context-new="entry">New Entry</button><button type="button" data-context-new="folder">New Folder</button></div></div>
-      ${record ? `<div class="vr-datapad-context-submenu"><button type="button">Set To <i class="fa-solid fa-chevron-right"></i></button><div>${statusItems}</div></div><div class="vr-datapad-context-submenu"><button type="button">Move To <i class="fa-solid fa-chevron-right"></i></button><div>${moveItems}</div></div>` : ""}
-      <button type="button" data-context-action="rename">Rename</button><button type="button" class="danger" data-context-action="delete">Delete</button>`;
+      ${recordControls}
+      ${record ? '<button type="button" data-context-action="edit">Edit</button>' : ""}<button type="button" data-context-action="rename">Rename</button><button type="button" class="danger" data-context-action="delete">Delete</button>`;
     this.root.append(menu);
     const close = () => menu.remove();
     menu.querySelectorAll("[data-context-new]").forEach(button => button.addEventListener("click", () => {
@@ -628,7 +799,8 @@ class PlayerDatapad {
             if (this.section === "quests") this.selectedQuestFolderId = created.id;
             else this.selectedCategoryFolderIds.set(this.section, created.id);
           } else {
-            await JournalEntry.create({ name, folder: destination.id, flags: { [game.system.id]: { datapad: { category: this.section, hidden: false, status: "undiscovered" } } } });
+            const journalSettings = this.#journalCreateData();
+            await JournalEntry.create({ name, folder: destination.id, ownership: journalSettings.ownership, flags: { [game.system.id]: { datapad: journalSettings.data } } });
           }
           close(); this.#draw();
         } catch (error) {
@@ -642,6 +814,15 @@ class PlayerDatapad {
       await record.setFlag(game.system.id, "datapad", { ...journalDatapadData(record), status: button.dataset.contextStatus });
       close(); this.#draw();
     }));
+    menu.querySelectorAll("[data-context-share]").forEach(button => button.addEventListener("click", async () => {
+      const data = journalDatapadData(record);
+      const shareScope = button.dataset.contextShare;
+      if (!SHARED_JOURNAL_SCOPES.includes(shareScope)) return;
+      const updated = { ...data, shareScope, partyId: data.partyId || this.#activePartyId() };
+      await record.setFlag(game.system.id, "datapad", updated);
+      await record.update({ ownership: sharedJournalOwnership(updated) });
+      close(); this.#draw();
+    }));
     menu.querySelectorAll("[data-context-move]").forEach(button => button.addEventListener("click", async () => {
       const category = button.dataset.contextMove;
       const destination = folderForCategory(category);
@@ -649,6 +830,10 @@ class PlayerDatapad {
       await record.setFlag(game.system.id, "datapad", { ...journalDatapadData(record), category });
       close(); this.#draw();
     }));
+    menu.querySelector('[data-context-action="edit"]')?.addEventListener("click", () => {
+      record?.sheet?.render(true);
+      close();
+    });
     menu.querySelector('[data-context-action="rename"]')?.addEventListener("click", async () => {
       const subject = record ?? folder;
       const form = document.createElement("form");
@@ -690,6 +875,40 @@ class PlayerDatapad {
     this.size = { width: style.width, height: style.height };
   }
 
+  #activePartyId() {
+    return this.partyId || findPartyForHero(game.user.character, { user: game.user })?.id || "";
+  }
+
+  #matchesActiveParty(partyId) {
+    const activeParty = findPartyForHero(game.user.character, { user: game.user });
+    const activeId = this.#activePartyId();
+    const activeFolderId = activeParty?.folder?.id ?? activeParty?.folder ?? (activeParty?.type === "Actor" ? activeParty.id : "");
+    return Boolean(partyId) && [activeId, activeFolderId].includes(String(partyId));
+  }
+
+  #personalJournalFolder(category) {
+    const root = folderForCategory(category);
+    if (category === "party-journal") {
+      const partyFolder = game.folders.find(folder => folder.type === "JournalEntry" && folderParentId(folder) === root?.id
+        && folder.getFlag?.(game.system.id, "datapadPartyId") === this.#activePartyId());
+      return game.folders.find(folder => folderParentId(folder) === partyFolder?.id && folder.name === "Notes") ?? partyFolder ?? root;
+    }
+    return game.folders.find(folder => folder.type === "JournalEntry" && folderParentId(folder) === root?.id
+      && folder.getFlag?.(game.system.id, "datapadOwnerUserId") === game.user.id) ?? root;
+  }
+
+  #journalCreateData(category = this.section) {
+    const ownerUserId = ["my-journal", "shared-journal"].includes(category) ? game.user.id : "";
+    const partyId = ["shared-journal", "party-journal"].includes(category) ? this.#activePartyId() : "";
+    const shareScope = category === "shared-journal" ? "none" : "none";
+    const data = { category, hidden: false, status: "undiscovered", partyId, ownerUserId, shareScope };
+    const ownership = category === "my-journal" ? privateJournalOwnership(ownerUserId)
+      : category === "shared-journal" ? sharedJournalOwnership(data)
+        : category === "party-journal" ? partyJournalOwnership(partyId)
+          : { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER };
+    return { data, ownership };
+  }
+
   #bindDrag() {
     const header = this.root.querySelector(".vr-datapad-header");
     if (!header) return;
@@ -717,14 +936,45 @@ class PlayerDatapad {
       const startX = event.clientX;
       const startWidth = this.questOutlineWidth;
       const maxWidth = Math.max(150, workspace.getBoundingClientRect().width - 520);
+      workspace.classList.add("is-resizing");
       handle.setPointerCapture(event.pointerId);
       const move = pointerEvent => {
         this.questOutlineWidth = Math.max(150, Math.min(maxWidth, startWidth + pointerEvent.clientX - startX));
         workspace.style.setProperty("--quest-outline-width", `${this.questOutlineWidth}px`);
       };
+      const finish = () => {
+        workspace.classList.remove("is-resizing");
+        handle.removeEventListener("pointermove", move);
+      };
       handle.addEventListener("pointermove", move);
-      handle.addEventListener("pointerup", () => handle.removeEventListener("pointermove", move), { once: true });
-      handle.addEventListener("pointercancel", () => handle.removeEventListener("pointermove", move), { once: true });
+      handle.addEventListener("pointerup", finish, { once: true });
+      handle.addEventListener("pointercancel", finish, { once: true });
+    };
+  }
+
+  #bindQuestDirectoryResize() {
+    const handle = this.root.querySelector(".vr-quest-directory-resizer");
+    const workspace = this.root.querySelector(".vr-quest-workspace");
+    if (!handle || !workspace || this.questDirectoryCollapsed) return;
+    handle.onpointerdown = event => {
+      if (event.button !== 0) return;
+      const startX = event.clientX;
+      const startWidth = this.questDirectoryWidth;
+      const maxWidth = Math.max(QUEST_DIRECTORY_WIDTH_MIN, workspace.getBoundingClientRect().width - 360);
+      workspace.classList.add("is-resizing");
+      handle.setPointerCapture(event.pointerId);
+      const move = pointerEvent => {
+        this.questDirectoryWidth = Math.round(Math.max(QUEST_DIRECTORY_WIDTH_MIN, Math.min(maxWidth, startWidth + pointerEvent.clientX - startX)));
+        workspace.style.setProperty("--quest-directory-width", `${this.questDirectoryWidth}px`);
+      };
+      const finish = () => {
+        globalThis.localStorage?.setItem(`${QUEST_DIRECTORY_WIDTH_KEY}.${game.user?.id ?? "default"}`, String(this.questDirectoryWidth));
+        workspace.classList.remove("is-resizing");
+        handle.removeEventListener("pointermove", move);
+      };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", finish, { once: true });
+      handle.addEventListener("pointercancel", finish, { once: true });
     };
   }
 
@@ -783,21 +1033,28 @@ class PlayerDatapad {
       return;
     }
     const selectedFolderId = this.section === "quests" ? this.selectedQuestFolderId : this.selectedCategoryFolderIds.get(this.section);
-    const folder = selectedFolderId ? game.folders.get(selectedFolderId) : folderForCategory(this.section);
+    const folder = selectedFolderId ? game.folders.get(selectedFolderId) : ["my-journal", "shared-journal", "party-journal"].includes(this.section)
+      ? this.#personalJournalFolder(this.section)
+      : folderForCategory(this.section);
     if (!folder) {
       ui.notifications?.warn("The Datapad folders are still being created. Please try again in a moment.");
       return;
     }
+    const journalSettings = this.#journalCreateData();
     const journal = await JournalEntry.create({
       name: `New ${SECTIONS.find(entry => entry.key === this.section)?.label ?? "Datapad"} Entry`,
       folder: folder?.id ?? null,
-      flags: { [game.system.id]: { datapad: { category: this.section, hidden: false, status: "undiscovered", partyId: this.section === "party-journal" ? this.partyId : "" } } }
+      ownership: journalSettings.ownership,
+      flags: { [game.system.id]: { datapad: journalSettings.data } }
     });
     this.#draw();
     if (this.section === "quests") {
       this.editingJournal = journal;
       this.#draw();
-    } else journal?.sheet?.render(true);
+    } else {
+      this.viewingJournal = journal;
+      this.#draw();
+    }
   }
 
   async #updateEntry(uuid, changes) {
@@ -921,7 +1178,9 @@ class PlayerDatapad {
     if (!root) return [];
     const folders = [{ id: root.id, name: root.name, depth: 0, parentId: null, root: true }];
     const addChildren = (parentId, depth) => {
-      const children = game.folders.filter(folder => folder.type === "JournalEntry" && folderParentId(folder) === parentId)
+      const children = game.folders.filter(folder => folder.type === "JournalEntry" && folderParentId(folder) === parentId
+        && (game.user.isGM || !["my-journal", "shared-journal"].includes(this.section) || folderOwnerUserId(folder) === game.user.id)
+        && (this.section !== "party-journal" || folder.root || this.#matchesActiveParty(folderPartyId(folder))))
         .sort((a, b) => a.name.localeCompare(b.name));
       for (const child of children) {
         folders.push({ id: child.id, name: child.name, depth, parentId, root: false });
@@ -968,7 +1227,7 @@ class PlayerDatapad {
     const chapter = await JournalEntry.create({
       name: "New Achievement Chapter",
       folder: folder.id,
-      ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
+      ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
       flags: { [game.system.id]: { datapad: { category: "achievements", hidden: false, status: "inProgress", partyId: "" } } }
     });
     this.selectedAchievementChapterId = chapter.id;
@@ -979,16 +1238,32 @@ class PlayerDatapad {
   #categoryWorkspace(documents) {
     const section = SECTIONS.find(entry => entry.key === this.section) ?? SECTIONS[0];
     const folders = this.#categoryFolders();
-    const activeFolderId = this.selectedCategoryFolderIds.get(this.section) ?? folderForCategory(this.section)?.id;
+    const activeFolderId = this.selectedCategoryFolderIds.get(this.section) ?? this.#personalJournalFolder(this.section)?.id;
     const folderMarkup = folders.map(folder => {
       const entries = documents.filter(entry => (entry.kind === "Journal" && entry.document.folder?.id === folder.id) || (folder.root && entry.kind === "Scene"));
-      return `<div class="vr-datapad-folder-row" style="--datapad-folder-depth:${folder.depth}"><button type="button" class="vr-datapad-folder-select ${folder.id === activeFolderId ? "active" : ""}" data-category-folder="${folder.id}"><i class="fa-solid fa-folder"></i><span>${escape(folder.root ? `${section.label} Directory` : folder.name)}</span></button></div>${entries.map(({ document, kind, hidden, status }) => `<button type="button" class="vr-datapad-folder-entry ${this.viewingJournal?.id === document.id ? "active" : ""} ${hidden ? "is-hidden" : ""}" data-action="open-entry" data-uuid="${escape(document.uuid)}" style="--datapad-folder-depth:${folder.depth}"><i class="fa-solid ${kind === "Scene" ? "fa-map" : "fa-file-lines"}"></i><span>${escape(document.name)}</span><small>${statusLabel(status)}</small></button>`).join("")}`;
+      return `<div class="vr-datapad-folder-row" style="--datapad-folder-depth:${folder.depth}"><button type="button" class="vr-datapad-folder-select ${folder.id === activeFolderId ? "active" : ""}" data-category-folder="${folder.id}"><i class="fa-solid fa-folder"></i><span>${escape(folder.root ? `${section.label} Directory` : folder.name)}</span></button></div>${entries.map(({ document, kind, hidden, status, shareScope }) => `<button type="button" class="vr-datapad-folder-entry ${this.viewingJournal?.id === document.id ? "active" : ""} ${hidden ? "is-hidden" : ""}" data-action="open-entry" data-uuid="${escape(document.uuid)}" style="--datapad-folder-depth:${folder.depth}"><i class="fa-solid ${kind === "Scene" ? "fa-map" : "fa-file-lines"}"></i><span>${escape(document.name)}</span><small>${statusLabel(status)}</small>${this.section === "shared-journal" ? `<i class="vr-datapad-share-icon ${shareIcon(shareScope)}" title="${shareScope === "none" ? "Not shared" : shareScope === "party" ? "Shared with my party" : "Shared with all players"}"></i>` : ""}</button>`).join("")}`;
     }).join("");
     const selected = this.viewingJournal;
+    const preview = selected
+      ? selected.documentName === "Scene"
+        ? `<div><i class="fa-solid fa-map"></i><h3>${escape(selected.name)}</h3><p>${statusLabel(journalDatapadData(selected).status)}</p><button type="button" data-action="open-selected-entry" data-uuid="${escape(selected.uuid)}">Open Scene</button></div>`
+        : this.#journalView(selected)
+      : `<div><i class="${section.icon}"></i><p>Select a ${escape(section.label.toLowerCase().replace(/s$/, ""))} to view its entry.</p></div>`;
     return `<div class="vr-datapad-directory-workspace">
       <aside class="vr-datapad-directory"><header><span>Directory</span>${game.user.isGM ? '<div><button type="button" data-action="new-entry" title="New journal entry"><i class="fa-solid fa-plus"></i><span>New</span></button><button type="button" data-action="create-category-folder" title="New folder"><i class="fa-solid fa-folder-plus"></i></button></div>' : ""}</header><div class="vr-datapad-folder-list">${folderMarkup || '<div class="vr-datapad-directory-empty">No folders yet.</div>'}</div></aside>
-      <section class="vr-datapad-directory-preview">${selected ? `<div><i class="fa-solid ${selected.documentName === "Scene" ? "fa-map" : "fa-book"}"></i><h3>${escape(selected.name)}</h3><p>${statusLabel(journalDatapadData(selected).status)}</p><button type="button" data-action="open-selected-entry" data-uuid="${escape(selected.uuid)}">Open ${selected.documentName === "Scene" ? "Scene" : "Journal Entry"}</button></div>` : `<div><i class="${section.icon}"></i><p>Select a ${escape(section.label.toLowerCase().replace(/s$/, ""))} to view its entry.</p></div>`}</section>
+      <section class="vr-datapad-directory-preview">${preview}</section>
     </div>`;
+  }
+
+  #journalView(journal) {
+    const pages = Array.from(journal.pages?.values?.() ?? []);
+    const content = pages.map(page => {
+      if (page.type === "text") return `<article class="vr-datapad-journal-page"><h3>${escape(page.name)}</h3><div class="vr-datapad-journal-content">${page.text?.content ?? ""}</div></article>`;
+      if (page.type === "image") return `<article class="vr-datapad-journal-page"><h3>${escape(page.name)}</h3><img src="${escape(page.src ?? page.image?.src ?? "")}" alt="${escape(page.name)}"></article>`;
+      return `<article class="vr-datapad-journal-page"><h3>${escape(page.name)}</h3><p>This page type cannot be displayed in the Datapad.</p></article>`;
+    }).join("") || '<p class="vr-datapad-journal-empty">This journal has no pages yet.</p>';
+    const editButton = journal.isOwner ? '<button type="button" data-action="edit-inline-journal" title="Edit journal entry"><i class="fa-solid fa-pen"></i></button>' : "";
+    return `<article class="vr-datapad-journal-view"><header><div><i class="fa-solid fa-book-open"></i><h3>${escape(journal.name)}</h3><p>${statusLabel(journalDatapadData(journal).status)}</p></div><div class="vr-datapad-journal-actions">${editButton}<button type="button" data-action="close-inline-journal" title="Back to directory"><i class="fa-solid fa-xmark"></i></button></div></header><div class="vr-datapad-journal-pages">${content}</div></article>`;
   }
 
   #questWorkspace(documents) {
@@ -1007,6 +1282,17 @@ class PlayerDatapad {
     const folders = this.#questFolders();
     const activeFolderId = this.selectedQuestFolderId;
     const foldersById = new Map(folders.map(folder => [folder.id, folder]));
+    const folderVisibilityState = folder => {
+      const states = documents.filter(entry => {
+        let parentId = entry.document.folder?.id;
+        while (parentId) {
+          if (parentId === folder.id) return true;
+          parentId = foldersById.get(parentId)?.parentId;
+        }
+        return false;
+      }).map(entry => questVisibilityState(entry.document));
+      return states.includes("players") ? "players" : states.includes("gm") ? "gm" : "none";
+    };
     const isVisible = folder => {
       let parentId = folder.parentId;
       while (parentId) {
@@ -1029,7 +1315,8 @@ class PlayerDatapad {
       const entries = this.questCollapsedFolders.has(folder.id) ? [] : folderEntries;
       const hasChildren = folders.some(child => child.parentId === folder.id) || folderEntries.length > 0;
       const collapsed = this.questCollapsedFolders.has(folder.id);
-      return `<div class="vr-quest-folder-row" style="--quest-folder-depth:${folder.depth}"><button type="button" draggable="${game.user.isGM}" class="vr-quest-folder-select ${folder.id === activeFolderId ? "active" : ""}" data-quest-folder="${folder.id}" data-quest-folder-document="${folder.id}" data-drop-quest-folder="${folder.id}"><i class="fa-solid fa-folder"></i><span>${escape(folder.name)}</span></button>${hasChildren ? `<button type="button" class="vr-quest-tree-toggle" data-action="toggle-quest-folder" data-quest-folder="${folder.id}" title="${collapsed ? "Expand" : "Collapse"} folder"><i class="fa-solid fa-chevron-${collapsed ? "right" : "down"}"></i></button>` : '<span class="vr-quest-tree-spacer"></span>'}</div>${entries.map(({ document, status, hidden }) => `<button type="button" draggable="${game.user.isGM}" class="vr-quest-folder-entry ${this.viewingJournal?.id === document.id ? "active" : ""} ${hidden ? "is-hidden" : ""}" data-action="open-entry" data-uuid="${escape(document.uuid)}" data-quest-document="${document.id}" style="--quest-folder-depth:${folder.depth}; padding-left:30px !important"><i class="fa-solid fa-file-lines"></i><span>${escape(document.name)}</span><small>${statusLabel(status)}</small></button>`).join("")}`;
+      const folderVisibility = folderVisibilityState(folder);
+      return `<div class="vr-quest-folder-branch"><div class="vr-quest-folder-row" style="--quest-folder-depth:${folder.depth}"><button type="button" draggable="${game.user.isGM}" class="vr-quest-folder-select vr-quest-visibility-${folderVisibility} ${folder.id === activeFolderId ? "active" : ""}" data-quest-folder="${folder.id}" data-quest-folder-document="${folder.id}" data-drop-quest-folder="${folder.id}">${questVisibilityIcon(folderVisibility, "fa-folder")}<span>${escape(folder.name)}</span></button>${hasChildren ? `<button type="button" class="vr-quest-tree-toggle" data-action="toggle-quest-folder" data-quest-folder="${folder.id}" title="${collapsed ? "Expand" : "Collapse"} folder"><i class="fa-solid fa-chevron-${collapsed ? "right" : "down"}"></i></button>` : '<span class="vr-quest-tree-spacer"></span>'}</div>${entries.map(({ document, status, hidden }) => { const visibility = questVisibilityState(document); return `<button type="button" draggable="${game.user.isGM}" class="vr-quest-folder-entry vr-quest-visibility-${visibility} ${this.viewingJournal?.id === document.id ? "active" : ""} ${hidden ? "is-hidden" : ""}" data-action="open-entry" data-uuid="${escape(document.uuid)}" data-quest-document="${document.id}" style="--quest-folder-depth:${folder.depth}; padding-left:30px !important">${questVisibilityIcon(visibility, "fa-file-lines")}<span>${escape(document.name)}</span><small>${statusLabel(status)}</small></button>`; }).join("")}</div>`;
       }).join("")}${scopedDocuments.length ? "" : '<div class="vr-quest-list-empty">No matching quests.</div>'}</div>`;
     };
     const questTypes = Object.entries(QUEST_TYPE_SECTIONS);
@@ -1042,12 +1329,13 @@ class PlayerDatapad {
     const treeModeMarkup = `<div class="vr-quest-mode-list">${statuses.map(([status, label]) => {
       const collapsed = this.questStatusCollapsed.has(status);
       const entries = documents.filter(entry => entry.status === status);
-      return `<section class="vr-quest-directory-group"><button type="button" class="vr-quest-directory-group-toggle" data-action="toggle-quest-status" data-quest-status="${status}" aria-expanded="${!collapsed}"><i class="fa-solid fa-caret-${collapsed ? "right" : "down"}"></i><span>${label}</span><small>${entries.length}</small></button>${collapsed ? "" : `<div class="vr-quest-status-list">${entries.map(({ document, hidden, status: entryStatus }) => `<button type="button" draggable="${game.user.isGM}" class="vr-quest-folder-entry ${this.viewingJournal?.id === document.id ? "active" : ""} ${hidden ? "is-hidden" : ""}" data-action="open-entry" data-uuid="${escape(document.uuid)}" data-quest-document="${document.id}" style="padding-left:30px !important"><i class="fa-solid fa-file-lines"></i><span>${escape(document.name)}</span><small>${statusLabel(entryStatus)}</small></button>`).join("") || '<div class="vr-quest-list-empty">No quests.</div>'}</div>`}</section>`;
+      return `<section class="vr-quest-directory-group"><button type="button" class="vr-quest-directory-group-toggle" data-action="toggle-quest-status" data-quest-status="${status}" aria-expanded="${!collapsed}"><i class="fa-solid fa-caret-${collapsed ? "right" : "down"}"></i><span>${label}</span><small>${entries.length}</small></button>${collapsed ? "" : `<div class="vr-quest-status-list">${entries.map(({ document, hidden, status: entryStatus }) => { const visibility = questVisibilityState(document); return `<button type="button" draggable="${game.user.isGM}" class="vr-quest-folder-entry vr-quest-visibility-${visibility} ${this.viewingJournal?.id === document.id ? "active" : ""} ${hidden ? "is-hidden" : ""}" data-action="open-entry" data-uuid="${escape(document.uuid)}" data-quest-document="${document.id}" style="padding-left:30px !important">${questVisibilityIcon(visibility, "fa-file-lines")}<span>${escape(document.name)}</span><small>${statusLabel(entryStatus)}</small></button>`; }).join("") || '<div class="vr-quest-list-empty">No quests.</div>'}</div>`}</section>`;
     }).join("")}</div>`;
     const directoryMarkup = this.questDirectoryMode === "quest" ? questModeMarkup : treeModeMarkup;
-    return `<div class="vr-quest-workspace ${this.questDirectoryCollapsed ? "directory-collapsed" : ""} ${this.questOutlineCollapsed ? "outline-collapsed" : ""}" style="--quest-outline-width: ${this.questOutlineWidth}px">
-      <aside class="vr-quest-directory"><header><span>Directory</span><div>${game.user.isGM ? '<button type="button" data-action="new-entry" title="New quest entry"><i class="fa-solid fa-plus"></i><span>New</span></button><button type="button" data-action="create-quest-folder" title="New quest folder"><i class="fa-solid fa-folder-plus"></i></button>' : ""}<button type="button" data-action="toggle-quest-directory-mode" title="Switch to ${this.questDirectoryMode === "quest" ? "Tree View" : "Quest Mode"}"><i class="fa-solid ${this.questDirectoryMode === "quest" ? "fa-list-tree" : "fa-list-check"}"></i></button><button type="button" data-action="toggle-quest-outline" title="${this.questOutlineCollapsed ? "Show" : "Hide"} page outline"><i class="fa-solid fa-list"></i></button></div></header><div class="vr-quest-directory-controls"><div class="vr-quest-sort-picker"><button type="button" class="vr-quest-sort-cycle" data-action="cycle-quest-sort" title="Cycle sort options"><i class="${currentSort[2]}"></i><span>${currentSort[1]}</span></button><button type="button" class="vr-quest-sort-toggle" data-action="toggle-quest-sort-menu" title="Choose a sort option"><i class="fa-solid fa-chevron-down"></i></button><div class="vr-quest-sort-menu ${this.questSortMenuOpen ? "open" : ""}">${controls.map(([key, label, icon]) => `<button type="button" class="${this.questSort === key ? "active" : ""}" data-quest-sort="${key}"><i class="${icon}"></i><span>${label}</span></button>`).join("")}</div></div></div>${directoryMarkup}</aside>
-      <button type="button" class="vr-quest-directory-toggle" data-action="toggle-quest-directory" aria-expanded="${!this.questDirectoryCollapsed}" aria-label="${this.questDirectoryCollapsed ? "Show" : "Hide"} quest directory" title="${this.questDirectoryCollapsed ? "Show" : "Hide"} quest directory"><i class="fa-solid fa-angles-${this.questDirectoryCollapsed ? "right" : "left"}"></i></button>
+    return `<div class="vr-quest-workspace ${this.questDirectoryCollapsed ? "directory-collapsed" : ""} ${this.questOutlineCollapsed ? "outline-collapsed" : ""}" style="--quest-directory-width: ${this.questDirectoryWidth}px; --quest-outline-width: ${this.questOutlineWidth}px">
+      <aside class="vr-quest-directory"><header><span>Directory</span><div>${game.user.isGM ? '<button type="button" data-action="new-entry" title="New quest entry"><i class="fa-solid fa-plus"></i><span>New</span></button><button type="button" data-action="create-quest-folder" title="New quest folder"><i class="fa-solid fa-folder-plus"></i></button>' : ""}<button type="button" data-action="toggle-quest-directory-mode" title="Switch to ${this.questDirectoryMode === "quest" ? "Tree View" : "Quest Mode"}"><i class="fa-solid ${this.questDirectoryMode === "quest" ? "fa-list-tree" : "fa-list-check"}"></i></button><button type="button" data-action="toggle-quest-outline" title="${this.questOutlineCollapsed ? "Show" : "Hide"} page outline"><i class="fa-solid fa-list"></i></button>${!this.questDirectoryCollapsed ? '<button type="button" class="vr-quest-directory-toggle" data-action="toggle-quest-directory" aria-expanded="true" aria-label="Hide quest directory" title="Hide quest directory"><i class="fa-solid fa-angles-left"></i></button>' : ""}</div></header><div class="vr-quest-directory-controls"><div class="vr-quest-sort-picker"><button type="button" class="vr-quest-sort-cycle" data-action="cycle-quest-sort" title="Cycle sort options"><i class="${currentSort[2]}"></i><span>${currentSort[1]}</span></button><button type="button" class="vr-quest-sort-toggle" data-action="toggle-quest-sort-menu" title="Choose a sort option"><i class="fa-solid fa-chevron-down"></i></button><div class="vr-quest-sort-menu ${this.questSortMenuOpen ? "open" : ""}">${controls.map(([key, label, icon]) => `<button type="button" class="${this.questSort === key ? "active" : ""}" data-quest-sort="${key}"><i class="${icon}"></i><span>${label}</span></button>`).join("")}</div></div></div>${directoryMarkup}</aside>
+      <div class="vr-quest-directory-resizer" title="Drag to resize directory"></div>
+      ${this.questDirectoryCollapsed ? '<button type="button" class="vr-quest-directory-toggle vr-quest-directory-reopen" data-action="toggle-quest-directory" aria-expanded="false" aria-label="Show quest directory" title="Show quest directory"><i class="fa-solid fa-angles-right"></i></button>' : ""}
       <section class="vr-quest-outline">${this.#questOutline()}</section>
       <div class="vr-quest-outline-resizer" title="Drag to resize page outline"></div>
       <section class="vr-quest-preview">${this.viewingJournal ? this.#questView() : '<div class="vr-quest-preview-empty"><i class="fa-solid fa-list-check"></i><p>Select a quest to view its briefing.</p></div>'}</section>
@@ -1169,7 +1457,33 @@ export function registerDatapad() {
     (root.querySelector(".directory-header .header-actions") ?? root.querySelector(".directory-header") ?? root).append(button);
   });
 
-  Hooks.once("ready", () => ensureDatapadFolders());
+  Hooks.once("ready", async () => {
+    await ensureDatapadFolders();
+    await ensureDatapadJournalEditors();
+  });
+
+  const syncPartyJournalFolders = () => ensureDatapadFolders().catch(error => {
+    console.error("Veilrunner | Failed to synchronize Party Journal folders", error);
+    ui.notifications?.error("Could not create the Party Journal folders. Check the browser console for details.");
+  });
+  Hooks.on("createActor", actor => {
+    if (game.user.isGM && ["party", "hero"].includes(actor.type)) void syncPartyJournalFolders();
+  });
+  Hooks.on("updateActor", (actor, changes) => {
+    if (game.user.isGM && ["party", "hero"].includes(actor.type) && (Object.hasOwn(changes, "name") || Object.hasOwn(changes, "folder"))) void syncPartyJournalFolders();
+  });
+  Hooks.on("createFolder", folder => {
+    if (game.user.isGM && folder.type === "Actor") void syncPartyJournalFolders();
+  });
+  Hooks.on("updateFolder", (folder, changes) => {
+    if (game.user.isGM && folder.type === "Actor" && Object.hasOwn(changes, "name")) void syncPartyJournalFolders();
+  });
+  Hooks.on("userConnected", (user, connected) => {
+    if (game.user.isGM && connected && !user.isGM) void syncPartyJournalFolders();
+  });
+  Hooks.on("updateUser", (user, changes) => {
+    if (game.user.isGM && !user.isGM && Object.hasOwn(changes, "name")) void syncPartyJournalFolders();
+  });
 
   Hooks.on("renderJournalPageSheet", addAchievementPageConfig);
   Hooks.on("renderJournalTextPageSheet", addAchievementPageConfig);

@@ -6083,12 +6083,15 @@
 
 .veilrunner.sheet.actor .equipment-art-bg {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: auto;
+  max-width: none;
   height: 100%;
   object-fit: contain;
   object-position: 50% 50%;
-  transform: scaleX(var(--portrait-flip-x, 1));
+  transform: translateX(-50%) scaleX(var(--portrait-flip-x, 1));
   z-index: 2;
 }
 
@@ -8466,6 +8469,8 @@
 .vr-datapad-directory-workspace { display: grid; grid-template-columns: 270px minmax(0, 1fr); flex: 1 1 auto; min-height: 460px; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }.vr-datapad-directory, .vr-datapad-directory-preview { min-width: 0; min-height: 0; }.vr-datapad-directory { display: flex; flex-direction: column; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }.vr-datapad-directory > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--vr-dp-border); }.vr-datapad-directory > header > div { display: flex; align-items: center; gap: 3px; }.vr-datapad-directory > header button { display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 7px; color: var(--vr-dp-dim); font: inherit; letter-spacing: normal; text-transform: none; background: transparent; border: 0; border-radius: 4px; }.vr-datapad-directory > header button:hover { color: var(--vr-dp-text); background: rgba(168, 85, 247, .14); }.vr-datapad-folder-list { min-height: 0; padding: 8px; overflow-y: auto; }.vr-datapad-folder-row { display: flex; min-width: 0; padding-left: calc(var(--datapad-folder-depth, 0) * 13px); }.vr-datapad-folder-select, .vr-datapad-folder-entry { display: flex; align-items: center; gap: 7px; width: 100%; padding: 6px 7px; color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-datapad-folder-select:hover, .vr-datapad-folder-select.active, .vr-datapad-folder-entry:hover, .vr-datapad-folder-entry.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .12); border-color: rgba(168, 85, 247, .28); }.vr-datapad-folder-select i { color: #facc15; }.vr-datapad-folder-select span, .vr-datapad-folder-entry span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.vr-datapad-folder-entry { width: calc(100% - (var(--datapad-folder-depth, 0) * 13px)); margin-left: calc(var(--datapad-folder-depth, 0) * 13px); }.vr-datapad-folder-entry i { color: #a6adbd; }.vr-datapad-folder-entry small { margin-left: auto; color: var(--vr-dp-dim); font-size: .65rem; white-space: nowrap; }.vr-datapad-directory-empty { padding: 16px 7px; color: var(--vr-dp-dim); font-size: .78rem; text-align: center; }.vr-datapad-directory-preview { display: grid; place-items: center; padding: 28px; overflow-y: auto; text-align: center; background: rgba(4, 5, 10, .16); }.vr-datapad-directory-preview > div { display: grid; justify-items: center; gap: 9px; color: var(--vr-dp-dim); }.vr-datapad-directory-preview i { color: var(--vr-dp-accent); font-size: 1.6rem; }.vr-datapad-directory-preview h3 { margin: 0; color: var(--vr-dp-text); }.vr-datapad-directory-preview p { margin: 0; }.vr-datapad-directory-preview button { padding: 7px 10px; color: var(--vr-dp-text); background: rgba(168, 85, 247, .14); border: 1px solid rgba(168, 85, 247, .4); border-radius: 5px; }
 .vr-quest-directory > header button[data-action="new-entry"] { display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 0 7px; font-size: .68rem; font-weight: 800; letter-spacing: normal; text-transform: none; }
 .vr-quest-folder-row, .vr-datapad-folder-row { padding-left: 0; }.vr-quest-folder-list button, .vr-quest-folder-entry, .vr-datapad-folder-entry { width: 100%; margin-left: 0; padding-left: 7px !important; }
+.vr-datapad-folder-entry .vr-datapad-share-icon { flex: 0 0 auto; margin-left: 7px; color: var(--vr-datapad-accent, var(--vr-accent)); font-size: .7rem; }
+.vr-datapad-directory-preview:has(.vr-datapad-journal-view) { display: block !important; padding: 0; text-align: left; }.vr-datapad-journal-view { display: flex; width: 100%; min-height: 100%; box-sizing: border-box; flex-direction: column; color: var(--vr-dp-text); }.vr-datapad-journal-view > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--vr-dp-border); }.vr-datapad-journal-view > header > div:first-child { display: block; color: inherit; }.vr-datapad-journal-view h3 { margin: 0; }.vr-datapad-journal-view p { margin: 4px 0 0; color: var(--vr-dp-dim); }.vr-datapad-journal-actions { display: flex; align-items: center; gap: 9px; padding-left: 4px; }.vr-datapad-journal-view > header .vr-datapad-journal-actions button { display: grid; flex: 0 0 auto; place-items: center; width: 25px; height: 25px; padding: 0; }.vr-datapad-journal-actions [data-action="edit-inline-journal"] i { font-size: .68rem; }.vr-datapad-journal-actions [data-action="close-inline-journal"] i { font-size: .88rem; }.vr-datapad-journal-pages { flex: 1 1 auto; padding: 22px; overflow-y: auto; }.vr-datapad-journal-page + .vr-datapad-journal-page { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--vr-dp-border); }.vr-datapad-journal-page > h3 { margin-bottom: 10px; font-size: 1rem; }.vr-datapad-journal-page img { max-width: 100%; height: auto; }.vr-datapad-journal-content { color: var(--vr-dp-text); line-height: 1.55; }.vr-datapad-journal-content :first-child { margin-top: 0; }.vr-datapad-journal-empty { padding: 22px; }
 .vr-quest-folder-row { display: flex; align-items: center; min-width: 0; padding-left: calc(3px + var(--quest-folder-depth, 0) * 13px); text-align: left; }.vr-quest-tree-toggle, .vr-quest-tree-spacer { order: 2; display: inline-grid; flex: 0 0 20px; place-items: center; width: 20px; height: 25px; padding: 0 !important; color: var(--vr-dp-dim); background: transparent; border: 0 !important; }.vr-quest-tree-toggle:hover { color: #67e8f9; }.vr-quest-tree-toggle i { color: inherit !important; font-size: .64rem; }.vr-quest-folder-select { order: 1; display: flex !important; flex: 1; align-items: center; justify-content: flex-start !important; min-width: 0; padding: 5px 6px !important; text-align: left !important; }.vr-quest-folder-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.vr-quest-folder-entry { text-align: left !important; }
 .directory-collapsed .vr-quest-folder-list { display: none; }
 .vr-quest-sort-picker { position: relative; }.vr-quest-sort-picker > button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px; color: var(--vr-dp-dim); font-size: .78rem; text-align: left; background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 6px; }.vr-quest-sort-picker > button span { flex: 1; }.vr-quest-sort-picker > button > i:last-child { font-size: .6rem; }.vr-quest-sort-picker > button:hover { color: var(--vr-dp-text); border-color: rgba(168, 85, 247, .4); }.vr-quest-sort-picker i { width: 16px; color: #67e8f9; text-align: center; }.vr-quest-sort-menu { position: absolute; z-index: 6; top: 100%; left: 0; display: none; width: 100%; padding: 5px; background: #10131c; border: 1px solid rgba(168, 85, 247, .45); border-radius: 0 0 7px 7px; box-shadow: 0 10px 22px rgba(0, 0, 0, .45); }.vr-quest-sort-picker:hover .vr-quest-sort-menu, .vr-quest-sort-picker:focus-within .vr-quest-sort-menu { display: grid; }.vr-quest-sort-menu button { display: flex; align-items: center; gap: 8px; padding: 7px; color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-quest-sort-menu button:hover, .vr-quest-sort-menu button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); border-color: rgba(168, 85, 247, .3); }
@@ -9635,18 +9640,18 @@
 }
 
 /* Directory drawer motion and compact collapsed handle. */
-.vr-quest-workspace { transition-duration: .75s; }
-.vr-quest-directory { transition-duration: .75s; }
+.vr-quest-workspace { transition-duration: 1s; }
+.vr-quest-directory { transition-duration: 1s; }
 .vr-quest-directory-toggle {
   left: 240px;
   width: 20px;
-  transition-duration: .75s;
+  transition-duration: 1s;
 }
 .directory-collapsed .vr-quest-directory-toggle {
   height: 3.25rem;
 }
 .directory-collapsed .vr-quest-directory-toggle i { transform: translateX(2px); }
-.directory-collapsed .vr-quest-directory-toggle.directory-handle-return { animation-duration: .6s; }
+.directory-collapsed .vr-quest-directory-toggle.directory-handle-return { animation-duration: .01s; }
 
 /* Foundry frame buttons need their native hit area even inside the portrait editor. */
 .vr-portrait-editor .window-header button,
@@ -9788,7 +9793,7 @@
 .veilrunner.sheet.actor.basic .vr-party-sheet-v2 { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 14px; color: var(--vr-text); background: var(--vr-bg); }
 .veilrunner.sheet.actor.basic .vr-party-v2-header { display: grid; gap: 9px; min-width: 0; padding: 12px; border: 1px solid var(--vr-border); border-radius: 8px; background: var(--vr-panel); }
 .veilrunner.sheet.actor.basic .vr-party-v2-name { display: block; min-width: 0; overflow: hidden; color: var(--vr-text); font-size: 1.25rem; line-height: 1.2; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.veilrunner.sheet.actor.basic .vr-party-v2-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary > div { display: grid; gap: 3px; min-width: 0; padding: 8px; border: 1px solid var(--vr-border); border-radius: 6px; background: var(--vr-panel-alt); }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary span { color: var(--vr-text-dim); font-size: .63rem; font-weight: 800; line-height: 1.1; text-align: left; text-transform: uppercase; white-space: normal; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary strong { color: var(--vr-accent); font-size: 1rem; text-align: left; }
@@ -9839,6 +9844,8 @@
 
 .veilrunner.sheet.actor.basic .vr-party-v2-header { gap: 12px; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary > div { gap: 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div + div { border-left: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)) !important; padding-left: 10px; }
+.veilrunner.sheet.actor.basic .window-content { container-type: inline-size; }
 .veilrunner.sheet.actor.basic .vr-party-v2-member img { border: 0; border-radius: 0; }
 
 .veilrunner.sheet.actor.basic .vr-party-v2-tabs {
@@ -9993,8 +10000,13 @@
 .veilrunner.sheet.actor.basic .vr-party-v2-currency:nth-child(even), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:nth-child(even) { background: color-mix(in srgb, var(--vr-ui-color) 18%, transparent); }
 .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { display: grid; align-items: center; width: 100%; color: var(--vr-text); text-align: left; background-clip: padding-box; border-inline: 0; border-top: 0; border-radius: 0; }
 .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:hover { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); }
-.veilrunner.sheet.actor.basic .vr-party-v2-stash-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; color: var(--vr-text-dim); font-size: .85rem; }
-.veilrunner.sheet.actor.basic .vr-party-v2-stash-value strong { color: var(--vr-accent); font-size: .95rem; text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-search { display: flex; align-items: center; min-width: 0; height: 30px; padding: 0 8px; color: var(--vr-text-dim); background: var(--vr-panel-alt); border: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); border-radius: 4px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-search:focus-within { color: var(--vr-accent); border-color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-search input { min-width: 0; width: 100%; height: 28px; padding: 0 0 0 7px; color: var(--vr-text); background: transparent; border: 0; border-radius: 0; outline: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-filter { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-height: 30px; color: var(--vr-text-dim); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-filter select { width: min(142px, 58%); min-width: 90px; height: 28px; padding: 0 24px 0 7px; color: var(--vr-text); background: var(--vr-panel-alt); border: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); border-radius: 4px; font: inherit; letter-spacing: normal; text-transform: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-panel-toolbar { min-height: 30px; }
 .veilrunner.sheet.actor.basic .vr-party-v2-journal-head { grid-template-columns: minmax(0, 1fr) 36px; gap: 7px; }
 .veilrunner.sheet.actor.basic .vr-party-v2-journal-head span:last-child { text-align: right; }
 .veilrunner.sheet.actor.basic .vr-party-v2-journal-list { grid-auto-rows: 48px; }
@@ -10030,8 +10042,6 @@
 .veilrunner.sheet.actor.basic .vr-party-v2-layout { height: 100%; min-height: 0; }
 .veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-height: 0; }
 .veilrunner.sheet.actor.basic .vr-party-v2-card { grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-height: 0; }
-.veilrunner.sheet.actor.basic .vr-party-v2-card:has(.vr-party-v2-currency-head),
-.veilrunner.sheet.actor.basic .vr-party-v2-journal-card { grid-template-rows: auto minmax(0, 1fr); }
 
 /* Party sheet's spacious default presentation. */
 .veilrunner.sheet.actor.basic .vr-party-v2-members {
@@ -10048,11 +10058,12 @@
   background: color-mix(in srgb, var(--vr-panel) 78%, transparent) !important;
 }
 
-.veilrunner.sheet.actor.basic .vr-party-v2-name { font-size: 1.45rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-roster-header { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 14px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-name { font-size: 1.65rem; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary span { font-size: .72rem; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary strong { font-size: 1.12rem; }
-.veilrunner.sheet.actor.basic .vr-party-v2-heading { font-size: .9rem; }
-.veilrunner.sheet.actor.basic .vr-party-v2-member-title strong { font-size: .96rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { font-size: 1.08rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title strong { font-size: 1.06rem; }
 .veilrunner.sheet.actor.basic .vr-party-v2-member-title small { font-size: .76rem; }
 .veilrunner.sheet.actor.basic .vr-party-v2-member-resources { font-size: .75rem; gap: 5px 8px; }
 .veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { font-size: .75rem; gap: 5px 9px; }
@@ -10079,7 +10090,7 @@
 
 /* Party identity and member cards scale with the denser four-line roster data. */
 .veilrunner.sheet.actor.basic .vr-party-v2-header,
-.veilrunner.sheet.actor.basic .vr-party-v2-layout { grid-template-columns: minmax(300px, .72fr) minmax(0, 1fr); }
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { grid-template-columns: 360px minmax(0, 1fr); }
 .veilrunner.sheet.actor.basic .vr-party-v2-identity { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; }
 .veilrunner.sheet.actor.basic .vr-party-v2-identity > img,
 .veilrunner.sheet.actor.basic .vr-party-v2-image-button { width: 58px; height: 58px; min-height: 58px; padding: 0; overflow: hidden; background: var(--vr-panel-alt); border: 1px solid var(--vr-border); border-radius: 6px; }
@@ -10091,7 +10102,7 @@
 .veilrunner.sheet.actor.basic .vr-party-v2-member img { width: 52px; height: 52px; }
 .veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
 .veilrunner.sheet.actor.basic .vr-party-v2-member-wealth > span:last-child { text-align: right; }
-.veilrunner.sheet.actor.basic .vr-party-v2-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary span,
 .veilrunner.sheet.actor.basic .vr-party-v2-summary strong,
 .veilrunner.sheet.actor.basic .vr-party-v2-currency-icon { display: grid; place-items: center; width: 28px; height: 30px; color: var(--vr-accent); }
@@ -10111,31 +10122,56 @@
 .veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { align-self: end; }
 
 /* Keep the party sheet's two columns: the tab workspace starts at the top right. */
-.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-columns: minmax(300px, .72fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: start; }
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-columns: 360px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: start; }
 .veilrunner.sheet.actor.basic .vr-party-v2-header { display: contents; }
 .veilrunner.sheet.actor.basic .vr-party-v2-layout { display: contents; }
-.veilrunner.sheet.actor.basic .vr-party-v2-identity { grid-column: 1; grid-row: 1; align-self: start; }
 .veilrunner.sheet.actor.basic .vr-party-v2-header > .vr-party-v2-summary { display: none; }
-.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; min-width: 0; padding: 5px 0 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; min-width: 0; padding: 5px 0 2px; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy > div { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; min-height: 28px; padding: 0 8px; background: color-mix(in srgb, var(--vr-ui-color) 14%, transparent); border: 0; border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 46%, transparent); border-radius: 0; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy span { display: block; width: auto; height: auto; min-width: 0; overflow: visible; font-size: .66rem; text-overflow: clip; white-space: nowrap; }
 .veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy strong { display: inline-flex; flex: 0 0 auto; width: auto; height: auto; font-size: .8rem; }
-.veilrunner.sheet.actor.basic .vr-party-v2-members { grid-column: 1; grid-row: 2; align-self: start; }
-.veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-column: 2; grid-row: 1 / span 2; grid-template-rows: auto auto auto minmax(0, 1fr); align-self: stretch; }
-.veilrunner.sheet.actor.basic .vr-party-v2-heading { margin-top: 34px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-value::after { content: attr(data-short-label); }
+@container (min-width: 760px) {
+  .veilrunner.sheet.actor.basic .vr-party-v2-inventory-value::after { content: attr(data-full-label); }
+}
+.veilrunner.sheet.actor.basic .vr-party-v2-members { grid-column: 1; grid-row: 1; align-self: start; padding-right: 14px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-column: 2; grid-row: 1 / span 2; grid-template-rows: auto auto minmax(0, 1fr); align-self: stretch; }
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2::after { content: ""; z-index: 1; grid-column: 1; grid-row: 1 / span 2; align-self: stretch; justify-self: end; width: 1px; background: color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 18%, transparent); pointer-events: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { margin-top: 0; }
 .veilrunner.sheet.actor.basic .vr-party-v2-roster { margin-top: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity { grid-template-columns: 1.65rem minmax(0, 1fr); gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity > img,
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button { width: 1.65rem; height: 1.65rem; min-height: 1.65rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-name,
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { font-size: .9rem; font-weight: 800; }
+.veilrunner.sheet.actor.basic .vr-party-v2-name { text-transform: uppercase; }
+.veilrunner.sheet.actor.basic input.vr-party-v2-name { width: 100%; min-width: 0; height: auto; padding: 0; color: var(--vr-text); font: inherit; line-height: 1.2; text-transform: uppercase; background: transparent; border: 0; border-bottom: 1px solid transparent; border-radius: 0; }.veilrunner.sheet.actor.basic input.vr-party-v2-name:hover, .veilrunner.sheet.actor.basic input.vr-party-v2-name:focus { border-bottom-color: color-mix(in srgb, var(--vr-accent) 62%, transparent); outline: 0; }
+.veilrunner.sheet.actor.basic .window-header [data-action="togglePartyEditMode"] { order: -1; margin-right: auto; color: var(--vr-text-dim); }
+.veilrunner.sheet.actor.basic .window-header [data-action="togglePartyEditMode"].active,
+.veilrunner.sheet.actor.basic .window-header [data-action="togglePartyEditMode"]:hover { color: var(--vr-accent); }
+.vr-party-member-context-menu { position: fixed; z-index: 1000001; display: grid; min-width: 150px; margin: 0; padding: 4px; list-style: none; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.vr-party-member-context-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 28px; padding: 5px 8px; color: var(--vr-text, #f4f4f5); text-align: left; background: transparent; border: 0; border-radius: 3px; }
+.vr-party-member-context-menu button:hover:not(:disabled) { background: rgba(168,85,247,.2); }
+.vr-party-member-context-menu button:disabled { color: var(--vr-text-dim, #858995); cursor: default; }
+.vr-party-member-context-submenu { position: relative; }
+.vr-party-member-context-submenu > div { position: absolute; top: -4px; left: calc(100% - 1px); display: none; min-width: 150px; padding: 4px; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.vr-party-member-context-submenu:hover > div, .vr-party-member-context-submenu:focus-within > div { display: grid; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { white-space: nowrap; }
 @media (max-width: 540px) {
   .veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-columns: 1fr; }
   .veilrunner.sheet.actor.basic .vr-party-v2-identity,
   .veilrunner.sheet.actor.basic .vr-party-v2-members,
   .veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-column: 1; grid-row: auto; }
+  .veilrunner.sheet.actor.basic .vr-party-v2-members { padding-right: 0; }
+  .veilrunner.sheet.actor.basic .vr-party-sheet-v2::after { display: none; }
   .veilrunner.sheet.actor.basic .vr-party-v2-heading { margin-top: 0; }
 }
 
 /* Foundry's Basic Actor form can shrink its child to min-content. Party sheets must fill the application body. */
 .veilrunner.sheet.actor.basic .window-content { position: relative; overflow: auto; }
+.veilrunner.sheet.actor.basic .window-content:has(.vr-party-sheet-v2) { overflow: hidden; }
 .veilrunner.sheet.actor.basic .window-content [data-application-part="body"] { display: block !important; width: 100% !important; min-width: 0 !important; }
-.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet-v2) { position: absolute !important; inset: 0 !important; display: block !important; width: auto !important; min-width: 0 !important; height: auto !important; margin: 0 !important; box-sizing: border-box; overflow: auto; }
+.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet-v2) { position: absolute !important; inset: 0 !important; display: block !important; width: auto !important; min-width: 0 !important; height: auto !important; margin: 0 !important; box-sizing: border-box; overflow: hidden; }
 .veilrunner.sheet.actor.basic .vr-party-sheet-v2, .veilrunner.sheet.actor.basic .vr-party-v2-header, .veilrunner.sheet.actor.basic .vr-party-v2-layout, .veilrunner.sheet.actor.basic .vr-party-v2-panel, .veilrunner.sheet.actor.basic .vr-party-v2-members { width: 100% !important; max-width: none !important; box-sizing: border-box; }
 
 /* Match the quest outline links to the directory header's tab spacing. */
@@ -10170,6 +10206,224 @@
 .vr-quest-folder-entry {
   /* Folder padding (7px) + one folder-icon column (16px) + its gap (7px). */
   padding-left: 30px !important;
+}
+
+/* The quest directory and its page outline can be sized independently. */
+.vr-quest-workspace {
+  grid-template-columns: var(--quest-directory-width, 270px) 6px minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr) !important;
+}
+
+.vr-quest-workspace.directory-collapsed {
+  grid-template-columns: 0 0 minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr) !important;
+}
+
+.vr-quest-workspace.outline-collapsed {
+  grid-template-columns: var(--quest-directory-width, 270px) 6px 0 0 minmax(0, 1fr) !important;
+}
+
+.vr-quest-workspace.directory-collapsed.outline-collapsed {
+  grid-template-columns: 0 0 0 0 minmax(0, 1fr) !important;
+}
+
+.vr-quest-workspace.is-resizing {
+  transition: none !important;
+}
+
+.vr-quest-directory-resizer,
+.vr-quest-outline-resizer {
+  position: relative;
+  cursor: col-resize;
+  background: rgba(255, 255, 255, .025);
+}
+
+.vr-quest-directory {
+  grid-column: 1;
+}
+
+.vr-quest-directory-resizer {
+  grid-column: 2;
+}
+
+.vr-quest-outline {
+  grid-column: 3;
+}
+
+.vr-quest-outline-resizer {
+  grid-column: 4;
+}
+
+.vr-quest-directory-resizer::after,
+.vr-quest-outline-resizer::after {
+  content: "";
+  position: absolute;
+  top: 40%;
+  bottom: 40%;
+  left: 2px;
+  width: 2px;
+  background: rgba(34, 211, 238, .35);
+  border-radius: 99px;
+}
+
+.vr-quest-directory-resizer:hover,
+.vr-quest-directory-resizer:active,
+.vr-quest-outline-resizer:hover,
+.vr-quest-outline-resizer:active {
+  background: rgba(34, 211, 238, .14);
+}
+
+.directory-collapsed .vr-quest-directory-resizer {
+  display: none;
+}
+
+.outline-collapsed .vr-quest-outline-resizer {
+  display: none;
+}
+
+.vr-quest-preview {
+  grid-column: 5;
+}
+
+.vr-quest-directory-toggle {
+  left: calc(var(--quest-directory-width, 270px) - 34px);
+}
+
+/* When open, the Directory toggle belongs with the other header controls. */
+.vr-quest-directory > header {
+  padding-right: 11px;
+}
+
+.vr-quest-directory > header .vr-quest-directory-toggle {
+  position: static;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  color: var(--vr-dp-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  transform: none;
+  transition: color .2s ease, background .2s ease;
+}
+
+.vr-quest-directory > header .vr-quest-directory-toggle:hover {
+  color: var(--vr-dp-text);
+  background: rgba(168, 85, 247, .14);
+}
+
+/* The existing folder/page icon communicates visibility. */
+.vr-quest-visibility-icon {
+  position: relative;
+  flex: 0 0 16px;
+  width: 16px;
+  color: var(--vr-dp-dim) !important;
+}
+
+.vr-quest-visibility-players > .vr-quest-visibility-icon {
+  color: var(--vr-datapad-accent, var(--vr-accent)) !important;
+}
+
+.vr-quest-visibility-none > .vr-quest-visibility-icon {
+  opacity: .55;
+}
+
+.vr-quest-visibility-icon::after {
+  content: attr(data-visibility-label);
+  position: absolute;
+  z-index: 12;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: 170px;
+  padding: 5px 7px;
+  color: var(--vr-dp-text);
+  font-family: var(--font-primary);
+  font-size: .68rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  background: var(--vr-dp-panel);
+  border: 1px solid var(--vr-dp-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: translate(-50%, 3px);
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+
+.vr-quest-visibility-icon:hover::after {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 3s, 3s, 3s;
+}
+
+/* Keep the directory controls intact at its narrowest allowed size. */
+.vr-quest-workspace:not(.directory-collapsed) .vr-quest-directory {
+  min-width: 270px;
+}
+
+/* Keep quest names to one responsive line. */
+.vr-quest-folder-list {
+  padding-left: 0;
+}
+
+.vr-quest-folder-row {
+  padding-left: 0 !important;
+}
+
+.vr-quest-folder-select,
+.vr-quest-folder-entry {
+  position: relative;
+}
+
+.vr-quest-folder-select span,
+.vr-quest-folder-entry span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vr-quest-folder-entry small {
+  flex: 0 0 auto;
+}
+
+/* Page entries align their visibility/file icon closer to the group gutter. */
+.vr-quest-folder-entry {
+  padding-left: 16px !important;
+}
+
+/* Folder branches use a restrained tree connector without consuming name space. */
+.vr-quest-folder-branch {
+  position: relative;
+}
+
+.vr-quest-folder-branch:has(> .vr-quest-folder-entry)::before {
+  content: "";
+  position: absolute;
+  top: 25px;
+  bottom: 12px;
+  left: 13px;
+  width: 4px;
+  background: var(--vr-datapad-accent, var(--vr-accent));
+  pointer-events: none;
+}
+
+.vr-quest-folder-branch > .vr-quest-folder-entry::before {
+  content: "";
+  position: absolute;
+  top: 35%;
+  left: 13px;
+  width: 14px;
+  height: 3px;
+  background: var(--vr-datapad-accent, var(--vr-accent));
+  pointer-events: none;
 }
 
 /* Quest authoring separates player-facing content from GM-only controls. */
@@ -10344,7 +10598,7 @@
 .vr-datapad-context-menu button:hover { background: rgba(168,85,247,.2); }
 .vr-datapad-context-menu .danger { color: #f87171; }
 .vr-datapad-context-submenu { position: relative; }
-.vr-datapad-context-submenu > div { position: absolute; top: -4px; left: calc(100% + 4px); display: none; min-width: 145px; padding: 4px; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.vr-datapad-context-submenu > div { position: absolute; top: -4px; left: calc(100% - 1px); display: none; min-width: 145px; padding: 4px; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
 .vr-datapad-context-submenu:hover > div, .vr-datapad-context-submenu:focus-within > div { display: grid; }
 .vr-datapad-context-rename { display: grid; gap: 6px; min-width: 190px; padding: 4px; }
 .vr-datapad-context-rename label { display: grid; gap: 4px; color: var(--vr-dp-text, #f4f4f5); font-size: .72rem; }

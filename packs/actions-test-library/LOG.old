@@ -1,3 +1,8 @@
-2026/08/14-01:13:46.394 602c Recovering log #25
-2026/08/14-01:13:46.402 602c Delete type=0 #25
-2026/08/14-01:13:46.402 602c Delete type=3 #24
+2026/08/15-13:15:13.268 7e00 Recovering log #37
+2026/08/15-13:15:13.275 7e00 Delete type=0 #37
+2026/08/15-13:15:13.275 7e00 Delete type=3 #36
+2026/08/15-20:05:41.062 8cf4 Level-0 table #41: started
+2026/08/15-20:05:41.062 8cf4 Level-0 table #41: 0 bytes OK
+2026/08/15-20:05:41.070 8cf4 Delete type=0 #39
+2026/08/15-20:05:41.089 8cf4 Manual compaction at level-0 from '!items!VrTestAbl001' @ 72057594037927935 : 1 .. '!items!VrTestTech02' @ 0 : 0; will stop at (end)
+2026/08/15-20:05:41.089 8cf4 Manual compaction at level-1 from '!items!VrTestAbl001' @ 72057594037927935 : 1 .. '!items!VrTestTech02' @ 0 : 0; will stop at (end)

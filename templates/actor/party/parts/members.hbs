@@ -1,0 +1,20 @@
+<aside class="vr-party-v2-members">
+  <div class="vr-party-v2-roster-header">
+    <div class="vr-party-v2-identity">
+      {{#if isGM}}{{> "systems/veilrunner/templates/actor/party/parts/party-image-button.hbs"}}{{else}}<img src="{{partyOverview.img}}" alt="" />{{/if}}
+      {{#if partyEditMode}}
+        <input class="vr-party-v2-name" type="text" name="name" value="{{actor.name}}" aria-label="{{localize 'VEILRUNNER.Name'}}" />
+      {{else}}
+        <strong class="vr-party-v2-name">{{actor.name}}</strong>
+      {{/if}}
+    </div>
+    <div class="vr-party-v2-heading"><span><i class="fa-solid fa-users"></i> {{localize 'VEILRUNNER.PartyMembers'}}</span></div>
+  </div>
+  <div class="vr-party-v2-roster">
+    {{#each partyOverview.members as |member|}}
+      {{> "systems/veilrunner/templates/actor/party/parts/member-button.hbs" member}}
+    {{else}}
+      <p class="empty-row">{{localize 'VEILRUNNER.NoPartyMembers'}}</p>
+    {{/each}}
+  </div>
+</aside>

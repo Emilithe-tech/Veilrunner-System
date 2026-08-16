@@ -1,0 +1,8 @@
+<button type="button" class="vr-party-v2-member" data-action="openPartyMember" data-actor-id="{{id}}">
+  <img src="{{img}}" alt="" />
+  <span class="vr-party-v2-member-data">
+    <span class="vr-party-v2-member-title"><span><strong>{{name}}</strong>{{#if discipline}}<em>{{discipline}}</em>{{/if}}</span><small>{{localize 'VEILRUNNER.Level'}} {{level}}</small></span>
+    <span class="vr-party-v2-member-resources">{{#if showHealth}}<span><i class="fa-solid fa-heart-pulse"></i> {{health}}</span>{{/if}}{{#if showArmor}}<span><i class="fa-solid fa-shield-halved"></i> {{armor}}</span>{{/if}}{{#if showShields}}<span><i class="fa-solid fa-shield"></i> {{shields}}</span>{{/if}}{{#if showBarriers}}<span><i class="fa-solid fa-hexagon"></i> {{barriers}}</span>{{/if}}</span>
+    <span class="vr-party-v2-member-wealth"><span>{{localize 'VEILRUNNER.Wealth'}} <i class="fa-solid fa-sim-card"></i> {{wealth}}</span><span>{{localize 'VEILRUNNER.TotalWealth'}} <i class="fa-solid fa-sim-card"></i> {{totalWealth}}</span></span>
+  </span>
+</button>
