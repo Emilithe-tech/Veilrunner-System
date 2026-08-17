@@ -1,10 +1,14 @@
-<section class="vr-item-sheet">
+<section class="vr-item-sheet"{{#if isPhysical}} data-rarity="{{itemRarity.slug}}" data-rarity-tier="{{itemRarity.tier}}" style="--vr-item-rarity: {{itemRarity.color}};"{{/if}}>
   <header class="vr-basic-header">
     <img class="vr-basic-img" src="{{item.img}}" data-edit="img" alt="" />
     <div class="vr-basic-identity">
       <input type="text" name="name" value="{{item.name}}" placeholder="{{localize 'VEILRUNNER.Name'}}" />
     </div>
   </header>
+
+  {{#if isPhysical}}
+    {{> "systems/veilrunner/templates/item/parts/physical.hbs"}}
+  {{/if}}
 
   {{#if isAction}}
     <label>Kind
@@ -60,6 +64,18 @@
     </label>
     <label>{{localize 'VEILRUNNER.Action.FIELDS.cost.label'}}
       <input type="text" name="system.cost" value="{{system.cost}}" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.rollFormula.label'}}
+      <input type="text" name="system.rollFormula" value="{{system.rollFormula}}" placeholder="1d10 + @attributes.physical.dexterity" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.selector.label'}}
+      <input type="text" name="system.selector" value="{{system.selector}}" placeholder="attack" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.requiredItemTypes.label'}}
+      <input type="text" name="system.requiredItemTypesText" value="{{actionRequiredItemTypesText}}" placeholder="weapon, shield" />
+    </label>
+    <label>{{localize 'VEILRUNNER.Action.FIELDS.requiredItemTraits.label'}}
+      <input type="text" name="system.requiredItemTraitsText" value="{{actionRequiredItemTraitsText}}" placeholder="firearm" />
     </label>
     <label>{{localize 'VEILRUNNER.Action.FIELDS.description.label'}}</label>
     {{editor system.description target="system.description" engine="prosemirror" button=true editable=editable}}
@@ -185,7 +201,7 @@
         <div class="vr-item-field-grid">
           <label class="vr-item-field">{{localize 'VEILRUNNER.ArmorItem.FIELDS.armorType.label'}}
             <select name="system.armorType">
-              {{#each (array "light" "medium" "heavy") as |type|}}
+              {{#each (array "light" "medium" "heavy" "shields" "greatShields") as |type|}}
                 <option value="{{type}}" {{#if (eq ../system.armorType type)}}selected{{/if}}>{{localize (concat "VEILRUNNER.ArmorType." type)}}</option>
               {{/each}}
             </select>
@@ -353,6 +369,16 @@
         {{/each}}
       </select>
     </label>
+    {{#if (eq system.category "weapon")}}
+      <label>{{localize 'VEILRUNNER.Treasure.FIELDS.weaponType.label'}}
+        <select name="system.weaponType">
+          <option value="">{{localize 'VEILRUNNER.WeaponFilter.allWeapons'}}</option>
+          {{#each (array "shortBlades" "longBlades" "heavyBlades" "melee" "staves" "blunt" "pistols" "smgs" "shotguns" "assaultRifles" "heavyRifles" "sniperRifles" "launchers" "heavyCannons" "lmgs" "wands" "scepters" "greatStaves" "flexible" "thrown" "bows") as |weaponType|}}
+            <option value="{{weaponType}}" {{#if (eq ../system.weaponType weaponType)}}selected{{/if}}>{{localize (concat "VEILRUNNER.WeaponFilter." weaponType)}}</option>
+          {{/each}}
+        </select>
+      </label>
+    {{/if}}
     <label>{{localize 'VEILRUNNER.Treasure.FIELDS.quantity.label'}}
       <input type="number" name="system.quantity" value="{{system.quantity}}" />
     </label>

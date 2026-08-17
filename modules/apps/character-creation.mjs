@@ -2887,7 +2887,8 @@ class CharacterCreationOverlay {
   }
 
   async #grantTreeItems() {
-    const existingItems = new Map(this.actor.items.filter(item => item.flags?.veilrunner?.treeNodeId).map(item => [item.flags.veilrunner.treeNodeId, item]));
+    const treeNodeId = item => item.flags?.[game.system.id]?.treeNodeId ?? item.flags?.veilrunner?.treeNodeId;
+    const existingItems = new Map(this.actor.items.filter(item => treeNodeId(item)).map(item => [treeNodeId(item), item]));
     const existing = new Set(existingItems.keys());
     const rankUpdates = (this.state.talentTree?.leaves ?? []).map(purchase => ({ purchase, item: existingItems.get(purchase.id) })).filter(entry => entry.item && number(entry.item.system?.currentLevel, 1) !== number(entry.purchase.rank, 1)).map(({ purchase, item }) => ({ _id: item.id, "system.currentLevel": Math.max(1, number(purchase.rank, 1)) }));
     const documents = (this.state.talentTree?.leaves ?? [])
@@ -2900,7 +2901,7 @@ class CharacterCreationOverlay {
           resourceCosts: leaf.resourceCosts ?? { mana: 0, stamina: 0, health: 0 }, effects: leaf.effects ?? [],
           tree: { enabled: true, page, school: school.name, practice: practice.name, x: number(leaf.x, 0), y: number(leaf.y, 0), requires: (leaf.requires ?? []).map(value => { const requirement = treeRequirement(value); return `${requirement.id}:${requirement.level}`; }), talentCost: Math.max(1, number(leaf.talentCost, 1)), rankCost: Math.max(0, number(leaf.rankCost, 1)), requiredLevel: Math.max(1, number(leaf.requiredLevel, 1)) },
           description: leaf.description ?? ""
-        }, flags: { veilrunner: { treeNodeId: leaf.id } }
+        }, flags: { [game.system.id]: { treeNodeId: leaf.id } }
       }));
     if (documents.length) await this.actor.createEmbeddedDocuments("Item", documents);
     if (rankUpdates.length) await this.actor.updateEmbeddedDocuments("Item", rankUpdates);

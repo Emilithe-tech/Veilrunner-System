@@ -1,3 +1,5 @@
+import { migratePhysicalItemData, physicalItemFields } from "./physical.mjs";
+
 const { StringField, NumberField, HTMLField, SchemaField, ArrayField } = foundry.data.fields;
 
 /** Accessory item data. */
@@ -8,6 +10,7 @@ export default class AccessoryData extends foundry.abstract.TypeDataModel {
     const textField = () => new StringField({ required: true, blank: true, initial: "" });
 
     return {
+      ...physicalItemFields(),
       equipmentSlot: new StringField({
         required: true,
         blank: true,
@@ -34,5 +37,9 @@ export default class AccessoryData extends foundry.abstract.TypeDataModel {
         gm: new HTMLField({ required: false, blank: true, initial: "" })
       })
     };
+  }
+
+  static migrateData(source) {
+    return migratePhysicalItemData(super.migrateData(source));
   }
 }

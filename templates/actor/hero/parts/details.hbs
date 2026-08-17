@@ -39,7 +39,14 @@
 
   <div class="details-body {{detailsTabAnimationClass}}">
     {{#if (eq category "party")}}
-      <div class="section-heading">{{localize 'VEILRUNNER.Party'}}</div>
+      <div class="party-drawer-heading">
+        <div class="section-heading">{{localize 'VEILRUNNER.Party'}}</div>
+        {{#if partyOverview.available}}
+          <button type="button" class="party-drawer-open-btn" data-action="openPartyActor" data-actor-id="{{partyOverview.id}}" data-folder-id="{{partyOverview.folderId}}" title="{{localize 'VEILRUNNER.OpenPartySheet'}}" aria-label="{{localize 'VEILRUNNER.OpenPartySheet'}}">
+            <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+          </button>
+        {{/if}}
+      </div>
       {{#if partyOverview.available}}
         <div class="party-drawer-section">
           <div class="section-heading compact">{{localize 'VEILRUNNER.SharedCurrencies'}}</div>

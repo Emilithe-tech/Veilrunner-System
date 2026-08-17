@@ -4,9 +4,18 @@ export class VeilrunnerItem extends Item {
   async _preCreate(data, options, user) {
     const allowed = await super._preCreate(data, options, user);
     if (allowed === false) return false;
-    if (this.type !== "armor") return;
     if (this.img && this.img !== "icons/svg/item-bag.svg") return;
-    this.updateSource({ img: "icons/svg/shield.svg" });
+    const defaultImages = {
+      armor: "icons/svg/shield.svg",
+      shield: "icons/svg/shield.svg",
+      weapon: "icons/svg/sword.svg",
+      ammunition: "icons/svg/coins.svg",
+      magazine: "icons/svg/item-bag.svg",
+      consumable: "icons/svg/potion.svg",
+      container: "icons/svg/chest.svg",
+      equipment: "icons/svg/item-bag.svg"
+    };
+    if (defaultImages[this.type]) this.updateSource({ img: defaultImages[this.type] });
   }
 
   /** Delegate roll. */

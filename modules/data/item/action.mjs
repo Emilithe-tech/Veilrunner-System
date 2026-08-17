@@ -1,6 +1,7 @@
 import { actionTreeSchema } from "./action-tree.mjs";
+import { isItemEquipped } from "../../rules/item-rules.mjs";
 
-const { StringField, NumberField, BooleanField, HTMLField } = foundry.data.fields;
+const { StringField, NumberField, BooleanField, HTMLField, ArrayField } = foundry.data.fields;
 
 /** Action data. */
 export default class ActionData extends foundry.abstract.TypeDataModel {
@@ -40,6 +41,10 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
       damageDie: new NumberField({ required: true, integer: true, min: 2, initial: 6, nullable: false }),
       damageLevelInterval: new NumberField({ required: true, integer: true, min: 1, initial: 3, nullable: false }),
       cost: new StringField({ required: true, blank: true, initial: "" }),
+      rollFormula: new StringField({ required: true, blank: true, initial: "" }),
+      selector: new StringField({ required: true, blank: true, initial: "action" }),
+      requiredItemTypes: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      requiredItemTraits: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
       description: new HTMLField({ required: false, blank: true, initial: "" }),
       ...actionTreeSchema()
     };
@@ -49,6 +54,15 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
   async roll(actor) {
     const item = this.parent;
     const name = foundry.utils.escapeHTML(item.name);
+    const equippedItems = actor.items.filter(document => isItemEquipped(actor, document));
+    const requiredTypes = item.system?.requiredItemTypes ?? [];
+    const requiredTraits = item.system?.requiredItemTraits ?? [];
+    if (requiredTypes.length && !requiredTypes.some(type => equippedItems.some(document => document.type === type))) {
+      return ui.notifications.warn(`${item.name} requires an equipped ${requiredTypes.join(" or ")}.`);
+    }
+    if (requiredTraits.length && !requiredTraits.every(trait => equippedItems.some(document => document.system?.traits?.includes(trait)))) {
+      return ui.notifications.warn(`${item.name} requires equipped item traits: ${requiredTraits.join(", ")}.`);
+    }
     const costs = item.system?.resourceCosts ?? {};
     const updates = {};
     for (const key of ["mana", "stamina", "health"]) {
@@ -73,11 +87,26 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
         await target.createEmbeddedDocuments("ActiveEffect", [{
           name: item.name, img: item.img, origin: item.uuid,
           changes: [{ key, mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: String(effect.value), priority: 20 }],
-          flags: { veilrunner: { duration: String(effect.duration ?? ""), scope: effect.scope, notes: String(effect.notes ?? "") } }
+          flags: { [game.system.id]: { duration: String(effect.duration ?? ""), scope: effect.scope, notes: String(effect.notes ?? "") } }
         }]);
         applied.push(target.name);
       }
     }
+    const selector = String(item.system?.selector || "action");
+    const formula = String(item.system?.rollFormula || "").trim();
+    let roll = null;
+    if (formula) {
+      const context = actor.getItemRuleContext?.({
+        selectors: [selector, "action", `action:${item.id}`],
+        options: ["action:roll", `action:${item.id}`, `action:category:${item.system?.category ?? "actions"}`, ...(item.system?.traits ?? []).map(trait => `trait:${trait}`)]
+      });
+      const modifier = context?.modifiers?.total ?? 0;
+      roll = await new Roll(`${formula}${modifier ? ` + ${modifier}` : ""}`, context?.rollData ?? actor.getRollData()).evaluate();
+    }
+    if (roll) return roll.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      flavor: `${name}${applied.length ? ` — Effects applied to ${foundry.utils.escapeHTML([...new Set(applied)].join(", "))}` : ""}`
+    });
     return ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
       content: `<div class="veilrunner action-use"><strong>${name}</strong>${applied.length ? `<p>Effects applied to ${foundry.utils.escapeHTML([...new Set(applied)].join(", "))}.</p>` : ""}</div>`

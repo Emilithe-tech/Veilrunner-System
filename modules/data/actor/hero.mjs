@@ -104,6 +104,10 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
       networkLinked: booleanFlag(false),
       resources: resourcesSchema(),
       equipment: equipmentSchema(),
+      equipmentAssignments: new ArrayField(new SchemaField({
+        itemId: new StringField({ required: true, blank: false, initial: "" }),
+        slots: new ArrayField(new StringField({ required: true, blank: false, initial: "" }), { initial: [] })
+      }), { initial: [] }),
       credits: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
       quickEquip: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
       skillCategories: new ArrayField(skillCategorySchema(), { initial: [] }),
@@ -159,6 +163,19 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
     if (source.equipment) {
       for (const slot of ["helmet", "back", "shoulders", "offHand", "waist", "hands"]) {
         delete source.equipment[slot];
+      }
+      const stableSlots = ["head", "chest", "arms", "legs", "feet", "mainHand", "ears", "neck", "wrists", "leftRing", "rightRing", "offhand"];
+      const hasCompleteRoster = stableSlots.every(slot => Object.hasOwn(source.equipment, slot));
+      if (source.equipmentAssignments === undefined && hasCompleteRoster) {
+        const assignments = new Map();
+        for (const slot of stableSlots) {
+          const itemId = source.equipment[slot];
+          if (!itemId) continue;
+          const slots = assignments.get(itemId) ?? [];
+          slots.push(slot);
+          assignments.set(itemId, slots);
+        }
+        source.equipmentAssignments = [...assignments].map(([itemId, slots]) => ({ itemId, slots }));
       }
     }
     // Data-model migrations also receive partial update payloads. Do not add

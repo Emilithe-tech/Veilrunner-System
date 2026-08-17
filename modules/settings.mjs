@@ -25,7 +25,8 @@ export const VEILRUNNER_SETTINGS = {
   combatCarouselLocked: "combatCarouselLocked",
   combatCarouselPosition: "combatCarouselPosition",
   talentTreeCatalog: "talentTreeCatalog",
-  actionTraits: "actionTraits"
+  actionTraits: "actionTraits",
+  physicalItemTraits: "physicalItemTraits"
 };
 
 const QUEST_OBJECTIVE_VISIBILITY = {
@@ -124,6 +125,10 @@ export function registerSettings() {
     name: "Action Traits", hint: "GM-managed Action and Ability trait registry.",
     scope: "world", config: false, type: Array,
     default: ACTION_TRAIT_SEED.map(id => ({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), retired: false })), restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.physicalItemTraits, {
+    name: "Physical Item Traits", hint: "Shared trait catalog built while physical items are authored.",
+    scope: "world", config: false, type: Array, default: [], restricted: true
   });
   Hooks.once("ready", async () => {
     if (!game.user?.isGM) return;

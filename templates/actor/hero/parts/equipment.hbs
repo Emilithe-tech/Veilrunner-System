@@ -44,7 +44,7 @@
       </div>
       <div class="quick-slots">
         {{#each quickEquip as |item|}}
-          <div class="quick-slot filled" data-item-id="{{item.id}}">
+          <div class="quick-slot filled" data-item-id="{{item.id}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
             <img src="{{item.img}}" alt="{{item.name}}" />
           </div>
         {{/each}}

@@ -1,3 +1,5 @@
+import { migratePhysicalItemData, physicalItemFields } from "./physical.mjs";
+
 const { StringField, NumberField, HTMLField, SchemaField, ArrayField } = foundry.data.fields;
 
 /** Armor item data. */
@@ -15,6 +17,7 @@ export default class ArmorData extends foundry.abstract.TypeDataModel {
     });
 
     return {
+      ...physicalItemFields(),
       armorType: new StringField({
         required: true,
         blank: false,
@@ -22,7 +25,9 @@ export default class ArmorData extends foundry.abstract.TypeDataModel {
         choices: {
           light: "VEILRUNNER.ArmorType.light",
           medium: "VEILRUNNER.ArmorType.medium",
-          heavy: "VEILRUNNER.ArmorType.heavy"
+          heavy: "VEILRUNNER.ArmorType.heavy",
+          shields: "VEILRUNNER.ArmorType.shields",
+          greatShields: "VEILRUNNER.ArmorType.greatShields"
         }
       }),
       itemRating: wholeNumber(),
@@ -30,10 +35,6 @@ export default class ArmorData extends foundry.abstract.TypeDataModel {
       weight: new NumberField({ required: true, min: 0, initial: 0, nullable: false }),
       cost: wholeNumber(),
       currency: textField(),
-      durability: new SchemaField({
-        value: wholeNumber(),
-        max: wholeNumber()
-      }),
       movementPenalty: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
       equipmentSlot: new StringField({
         required: true,
@@ -98,5 +99,9 @@ export default class ArmorData extends foundry.abstract.TypeDataModel {
         gm: new HTMLField({ required: false, blank: true, initial: "" })
       })
     };
+  }
+
+  static migrateData(source) {
+    return migratePhysicalItemData(super.migrateData(source));
   }
 }

@@ -8,11 +8,11 @@ import { openCharacterCreation } from "../apps/character-creation.mjs";
 import { openPlayerDatapad } from "../apps/datapad.mjs";
 import { buildPartyOverview, findPartyActorForFolder, findPartyForHero, getPartyMembers } from "../helpers/party.mjs";
 import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
-
-const EQUIPMENT_SLOT_COLUMNS = {
-  left: ["head", "chest", "arms", "legs", "feet", "mainHand"],
-  right: ["ears", "neck", "wrists", "leftRing", "rightRing", "offhand"]
-};
+import { equipPhysicalItem, itemAcceptsEquipmentSlot, unequipPhysicalItem } from "../items/equipment.mjs";
+import { executeFirearmAction, firearmActionsForActor } from "../items/firearms.mjs";
+import { applyItemWear } from "../items/durability.mjs";
+import { equipmentBySlot, itemRequiredSlots } from "../rules/item-rules.mjs";
+import { EQUIPMENT_SLOT_COLUMNS, PHYSICAL_ITEM_TYPES, itemRarityData } from "../data/item/physical.mjs";
 
 const DETAILS_CATEGORIES = [
   { key: "party", icon: "fa-solid fa-users", label: "VEILRUNNER.Party" },
@@ -58,28 +58,62 @@ const INVENTORY_CATEGORIES = [
   { key: "weapon", icon: "fa-solid fa-gun", label: "VEILRUNNER.InventoryCategory.weapon" },
   { key: "ammo", icon: "fa-solid fa-box-open", label: "VEILRUNNER.InventoryCategory.ammo" },
   { key: "armor", icon: "fa-solid fa-shield-halved", label: "VEILRUNNER.InventoryCategory.armor" },
+  { key: "equipment", icon: "fa-solid fa-toolbox", label: "VEILRUNNER.InventoryCategory.equipment" },
   { key: "consumable", icon: "fa-solid fa-flask", label: "VEILRUNNER.InventoryCategory.consumable" },
   { key: "tech", icon: "fa-solid fa-microchip", label: "VEILRUNNER.InventoryCategory.tech" },
   { key: "keyItem", icon: "fa-solid fa-key", label: "VEILRUNNER.InventoryCategory.keyItem" },
   { key: "junk", icon: "fa-solid fa-recycle", label: "VEILRUNNER.InventoryCategory.junk" }
 ];
 const INVENTORY_SUBTABS = INVENTORY_CATEGORIES.map(category => category.key);
+const WEAPON_FILTER_GROUPS = [
+  { key: "blades", icon: "fa-solid fa-sword", label: "VEILRUNNER.WeaponFilter.blades", filters: [
+    { key: "shortBlades", label: "VEILRUNNER.WeaponFilter.shortBlades" },
+    { key: "longBlades", label: "VEILRUNNER.WeaponFilter.longBlades" },
+    { key: "heavyBlades", label: "VEILRUNNER.WeaponFilter.heavyBlades" }
+  ] },
+  { key: "impactWeapons", icon: "fa-solid fa-hammer", label: "VEILRUNNER.WeaponFilter.impactWeapons", filters: [
+    { key: "melee", label: "VEILRUNNER.WeaponFilter.melee" },
+    { key: "staves", label: "VEILRUNNER.WeaponFilter.staves" },
+    { key: "blunt", label: "VEILRUNNER.WeaponFilter.blunt" }
+  ] },
+  { key: "lightFirearms", icon: "fa-solid fa-gun", label: "VEILRUNNER.WeaponFilter.lightFirearms", filters: [
+    { key: "pistols", label: "VEILRUNNER.WeaponFilter.pistols" },
+    { key: "smgs", label: "VEILRUNNER.WeaponFilter.smgs" },
+    { key: "shotguns", label: "VEILRUNNER.WeaponFilter.shotguns" }
+  ] },
+  { key: "rifles", icon: "fa-solid fa-person-rifle", label: "VEILRUNNER.WeaponFilter.rifles", filters: [
+    { key: "assaultRifles", label: "VEILRUNNER.WeaponFilter.assaultRifles" },
+    { key: "heavyRifles", label: "VEILRUNNER.WeaponFilter.heavyRifles" },
+    { key: "sniperRifles", label: "VEILRUNNER.WeaponFilter.sniperRifles" }
+  ] },
+  { key: "heavyFirearms", icon: "fa-solid fa-rocket", label: "VEILRUNNER.WeaponFilter.heavyFirearms", filters: [
+    { key: "launchers", label: "VEILRUNNER.WeaponFilter.launchers" },
+    { key: "heavyCannons", label: "VEILRUNNER.WeaponFilter.heavyCannons" },
+    { key: "lmgs", label: "VEILRUNNER.WeaponFilter.lmgs" }
+  ] },
+  { key: "arcane", icon: "fa-solid fa-book-open", label: "VEILRUNNER.WeaponFilter.arcane", filters: [
+    { key: "wands", label: "VEILRUNNER.WeaponFilter.wands" },
+    { key: "scepters", label: "VEILRUNNER.WeaponFilter.scepters" },
+    { key: "greatStaves", label: "VEILRUNNER.WeaponFilter.greatStaves" }
+  ] },
+  { key: "exoticWeapons", icon: "fa-solid fa-bow-arrow", label: "VEILRUNNER.WeaponFilter.exoticWeapons", filters: [
+    { key: "flexible", label: "VEILRUNNER.WeaponFilter.flexible" },
+    { key: "thrown", label: "VEILRUNNER.WeaponFilter.thrown" },
+    { key: "bows", label: "VEILRUNNER.WeaponFilter.bows" }
+  ] }
+];
 const INVENTORY_FILTERS = {
   all: [
     { key: "all", icon: "fa-solid fa-layer-group", label: "VEILRUNNER.InventoryFilter.all" }
   ],
   weapon: [
-    { key: "allWeapons", icon: "fa-solid fa-crosshairs", label: "VEILRUNNER.WeaponFilter.allWeapons" },
-    { key: "melee", icon: "fa-solid fa-hand-fist", label: "VEILRUNNER.WeaponFilter.melee" },
-    { key: "shortBlades", icon: "fa-solid fa-scissors", label: "VEILRUNNER.WeaponFilter.shortBlades" },
-    { key: "longBlades", icon: "fa-solid fa-slash", label: "VEILRUNNER.WeaponFilter.longBlades" },
-    { key: "pistols", icon: "fa-solid fa-gun", label: "VEILRUNNER.WeaponFilter.pistols" },
-    { key: "smgs", icon: "fa-solid fa-bolt", label: "VEILRUNNER.WeaponFilter.smgs" },
-    { key: "assaultRifles", icon: "fa-solid fa-person-rifle", label: "VEILRUNNER.WeaponFilter.assaultRifles" },
-    { key: "heavyRifles", icon: "fa-solid fa-weight-hanging", label: "VEILRUNNER.WeaponFilter.heavyRifles" }
+    { key: "allWeapons", icon: "fa-solid fa-layer-group", label: "VEILRUNNER.WeaponFilter.allWeapons" },
+    ...WEAPON_FILTER_GROUPS.map(group => ({ key: group.key, icon: group.icon, label: group.label, group: true })),
+    ...WEAPON_FILTER_GROUPS.flatMap(group => group.filters)
   ],
   ammo: [
     { key: "ammoAll", icon: "fa-solid fa-box-open", label: "VEILRUNNER.WeaponFilter.ammoAll" },
+    { key: "ammoArrows", icon: "fa-solid fa-bow-arrow", label: "VEILRUNNER.WeaponFilter.ammoArrows" },
     { key: "ammoBallistic", icon: "fa-solid fa-circle-dot", label: "VEILRUNNER.WeaponFilter.ammoBallistic" },
     { key: "ammoEnergy", icon: "fa-solid fa-atom", label: "VEILRUNNER.WeaponFilter.ammoEnergy" },
     { key: "ammoLaser", icon: "fa-solid fa-sun", label: "VEILRUNNER.WeaponFilter.ammoLaser" }
@@ -88,7 +122,9 @@ const INVENTORY_FILTERS = {
     { key: "armorAll", icon: "fa-solid fa-shield-halved", label: "VEILRUNNER.ArmorFilter.allArmor" },
     { key: "armorLight", icon: "fa-solid fa-shield", label: "VEILRUNNER.ArmorFilter.lightArmor" },
     { key: "armorMedium", icon: "fa-solid fa-shield-halved", label: "VEILRUNNER.ArmorFilter.mediumArmor" },
-    { key: "armorHeavy", icon: "fa-solid fa-user-shield", label: "VEILRUNNER.ArmorFilter.heavyArmor" }
+    { key: "armorHeavy", icon: "fa-solid fa-user-shield", label: "VEILRUNNER.ArmorFilter.heavyArmor" },
+    { key: "armorShields", icon: "fa-solid fa-shield", label: "VEILRUNNER.ArmorFilter.shields" },
+    { key: "armorGreatShields", icon: "fa-solid fa-shield-halved", label: "VEILRUNNER.ArmorFilter.greatShields" }
   ]
 };
 const ABOUT_SUBTABS = ["party", "skills", "biography", "reputation", "relationships", "conditions", "customEffects"];
@@ -455,12 +491,17 @@ function detectInventoryFilterKey(item, category) {
   );
   const haystack = normalizeInventoryToken(`${item.name} ${item.type} ${category} ${explicit}`);
 
-  if (haystack.includes("laserammo") || haystack.includes("laserround") || haystack.includes("lasercell")) return "ammoLaser";
-  if (haystack.includes("energyammo") || haystack.includes("energycell") || haystack.includes("battery")) return "ammoEnergy";
-  if (haystack.includes("ballisticammo") || haystack.includes("ballisticround") || haystack.includes("bullet") || haystack.includes("slug")) return "ammoBallistic";
-  if (haystack.includes("ammo") || haystack.includes("ammunition") || haystack.includes("round") || haystack.includes("magazine")) return "ammoAll";
+  if (category === "ammo") {
+    if (haystack.includes("laserammo") || haystack.includes("laserround") || haystack.includes("lasercell")) return "ammoLaser";
+    if (haystack.includes("energyammo") || haystack.includes("energycell") || haystack.includes("battery")) return "ammoEnergy";
+    if (haystack.includes("arrow") || haystack.includes("bolt")) return "ammoArrows";
+    if (haystack.includes("ballisticammo") || haystack.includes("ballisticround") || haystack.includes("bullet") || haystack.includes("slug")) return "ammoBallistic";
+    return "ammoAll";
+  }
   if (category === "armor") {
     const armorType = normalizeInventoryToken(system.armorType ?? explicit);
+    if (armorType === "greatshields" || haystack.includes("greatshield")) return "armorGreatShields";
+    if (armorType === "shields" || haystack.includes("shield")) return "armorShields";
     if (armorType === "heavy" || haystack.includes("heavyarmor")) return "armorHeavy";
     if (armorType === "medium" || haystack.includes("mediumarmor")) return "armorMedium";
     if (armorType === "light" || haystack.includes("lightarmor")) return "armorLight";
@@ -468,12 +509,26 @@ function detectInventoryFilterKey(item, category) {
   }
 
   if (haystack.includes("heavyrifle") || haystack.includes("heavyrifles")) return "heavyRifles";
+  if (haystack.includes("sniperrifle") || haystack.includes("sniper")) return "sniperRifles";
   if (haystack.includes("assaultrifle")) return "assaultRifles";
+  if (haystack.includes("shotgun")) return "shotguns";
+  if (haystack.includes("launcher") || haystack.includes("bazooka") || haystack.includes("rpg")) return "launchers";
+  if (haystack.includes("heavycannon") || haystack.includes("cannon")) return "heavyCannons";
+  if (haystack.includes("lmg") || haystack.includes("lightmachinegun")) return "lmgs";
+  if (haystack.includes("greatstaff") || haystack.includes("greatstave")) return "greatStaves";
+  if (haystack.includes("wand")) return "wands";
+  if (haystack.includes("scepter") || haystack.includes("sceptre")) return "scepters";
+  if (haystack.includes("staff") || haystack.includes("stave")) return "staves";
+  if (haystack.includes("heavyblade") || haystack.includes("greatsword") || haystack.includes("claymore")) return "heavyBlades";
+  if (haystack.includes("flexible") || haystack.includes("whip") || haystack.includes("flail")) return "flexible";
+  if (haystack.includes("thrown") || haystack.includes("javelin") || haystack.includes("shuriken")) return "thrown";
+  if (haystack.includes("bow") || haystack.includes("crossbow")) return "bows";
   if (haystack.includes("smg") || haystack.includes("submachine")) return "smgs";
   if (haystack.includes("pistol") || haystack.includes("sidearm")) return "pistols";
   if (haystack.includes("longblade") || haystack.includes("sword") || haystack.includes("katana")) return "longBlades";
   if (haystack.includes("shortblade") || haystack.includes("knife") || haystack.includes("dagger")) return "shortBlades";
-  if (haystack.includes("melee") || haystack.includes("club") || haystack.includes("baton")) return "melee";
+  if (haystack.includes("club") || haystack.includes("baton") || haystack.includes("mace") || haystack.includes("hammer") || haystack.includes("maul")) return "blunt";
+  if (haystack.includes("melee")) return "melee";
   return category === "weapon" ? "allWeapons" : "";
 }
 
@@ -482,6 +537,8 @@ function inventoryItemMatchesFilter(item, filter) {
   const inventoryFilterKey = item.inventoryFilterKey;
   if (!inventoryFilterKey) return false;
   if (filter === "allWeapons") return true;
+  const weaponGroup = WEAPON_FILTER_GROUPS.find(group => group.key === filter);
+  if (weaponGroup) return weaponGroup.filters.some(entry => entry.key === inventoryFilterKey);
   if (filter === "ammoAll") return inventoryFilterKey.startsWith("ammo");
   if (filter === "armorAll") return inventoryFilterKey.startsWith("armor");
   return inventoryFilterKey === filter;
@@ -509,6 +566,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       setSection: VeilrunnerHeroSheet.#onSetSection,
       setSubTab: VeilrunnerHeroSheet.#onSetSubTab,
       toggleInventoryFilters: VeilrunnerHeroSheet.#onToggleInventoryFilters,
+      setInventoryLayout: VeilrunnerHeroSheet.#onSetInventoryLayout,
+      equipInventoryItem: VeilrunnerHeroSheet.#onEquipInventoryItem,
+      throwInventoryItem: VeilrunnerHeroSheet.#onThrowInventoryItem,
+      useInventoryItem: VeilrunnerHeroSheet.#onUseInventoryItem,
+      showInventoryItemDetails: VeilrunnerHeroSheet.#onShowInventoryItemDetails,
+      closeInventoryItemDetails: VeilrunnerHeroSheet.#onCloseInventoryItemDetails,
       toggleSheetOption: VeilrunnerHeroSheet.#onToggleSheetOption,
       togglePan: VeilrunnerHeroSheet.#onTogglePan,
       setInventoryWeaponFilter: VeilrunnerHeroSheet.#onSetInventoryWeaponFilter,
@@ -518,6 +581,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       showActionDetails: VeilrunnerHeroSheet.#onShowActionDetails,
       sendActionToChat: VeilrunnerHeroSheet.#onSendActionToChat,
       rollAction: VeilrunnerHeroSheet.#onRollAction,
+      executeFirearmAction: VeilrunnerHeroSheet.#onExecuteFirearmAction,
       rollInitiative: VeilrunnerHeroSheet.#onRollInitiative,
       sendQualityFlawToChat: VeilrunnerHeroSheet.#onSendQualityFlawToChat,
       setEquipTab: VeilrunnerHeroSheet.#onSetEquipTab,
@@ -567,6 +631,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   };
   inventoryWeaponFilter = "all";
   inventoryFiltersOpen = false;
+  inventoryLayout = "list";
+  inventorySearch = "";
+  inventoryDetailsItemId = null;
   equipTab = "equipped";
   actionCardSort = "name-asc";
   actionListSort = { key: "name", direction: "asc" };
@@ -588,6 +655,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   #editMode = false;
   #debouncedRender = foundry.utils.debounce(() => this.render(), 50);
   #hookIds = [];
+  #inventoryItemContextMenu = null;
+  #inventoryItemContextDismiss = null;
   #pendingNavAnimation = null;
   #pendingMainTabAnimation = "";
   #pendingDetailsTabAnimation = "";
@@ -620,9 +689,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       this.element.addEventListener("pointerdown", () => bringVeilrunnerApplicationToFront(this.element, this), { passive: true });
     }
     this.#syncFrameEditToggle();
-    this.#applyCarryWeightState(context);
     this.#bindPersonaAxisControls();
-    this.#bindInventoryFilterScroll();
+    this.#bindInventoryItemContextMenu();
+    this.#bindInventorySearch();
     this.#bindStatusTrackControls();
     this.#bindProfessionFilters();
     this.#bindIdentitySelect();
@@ -645,29 +714,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     return super._onUpdate(changed, options, userId);
   }
 
-  /** Keep the CSS-only carry-weight footer synchronized with the inventory state. */
-  #applyCarryWeightState(context) {
-    const content = this.element?.querySelector(".window-content");
-    if (!content) return;
-
-    const isInventory = context.section === "inventory";
-    const weight = Number(context.inventoryCarryWeightKg) || 0;
-    const capacity = Number(context.inventoryCarryCapacityKg) || 0;
-    const percent = Math.max(0, Math.min(100, Number(context.inventoryCarryWeightPercent) || 0));
-
-    content.classList.toggle("inventory-carry-visible", isInventory);
-    content.style.setProperty("--inventory-carry-percent", `${percent}%`);
-    content.dataset.carryWeight = `${weight} kg / ${capacity} kg`;
-    content.setAttribute("aria-label", isInventory ? `Carry Weight: ${weight} kg / ${capacity} kg` : "");
-
-    // The carry footer is rendered by the main application part so it cannot
-    // collide with the right drawer's window-content pseudo-elements.
-    const mainPart = content.querySelector('[data-application-part="main"]');
-    if (mainPart) mainPart.dataset.carryWeight = content.dataset.carryWeight;
-  }
-
   /** @override */
   async _onClose(options) {
+    this.#closeInventoryItemContextMenu();
     this.#unbindPartyHooks();
     await super._onClose(options);
   }
@@ -721,17 +770,79 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     });
   }
 
-  /** Horizontal filter bar wheel support. */
-  #bindInventoryFilterScroll() {
-    const filterBar = this.element?.querySelector(".inventory-weapon-filters");
-    if (!filterBar) return;
-    filterBar.addEventListener("wheel", event => {
-      if (filterBar.scrollWidth <= filterBar.clientWidth) return;
-      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-      if (!delta) return;
-      event.preventDefault();
-      filterBar.scrollLeft += delta;
-    }, { passive: false });
+  /** Right-click an owned inventory item to access destructive item actions. */
+  #bindInventoryItemContextMenu() {
+    const root = this.element;
+    if (!root || root.dataset.veilrunnerInventoryContextBinding) return;
+    root.dataset.veilrunnerInventoryContextBinding = "true";
+    root.addEventListener("contextmenu", event => this.#onInventoryItemContextMenu(event));
+  }
+
+  /** Filter rendered inventory rows without recreating the sheet on every keystroke. */
+  #bindInventorySearch() {
+    const input = this.element?.querySelector("[data-inventory-search]");
+    if (!input || input.dataset.veilrunnerSearchBinding) return;
+    input.dataset.veilrunnerSearchBinding = "true";
+    input.addEventListener("input", () => {
+      this.inventorySearch = input.value;
+      const query = normalizeInventoryToken(input.value);
+      for (const row of this.element.querySelectorAll(".inventory-item-row")) {
+        row.hidden = Boolean(query) && !normalizeInventoryToken(row.textContent).includes(query);
+      }
+    });
+  }
+
+  #onInventoryItemContextMenu(event) {
+    if (this.section !== "inventory" || !this.actor.isOwner) return;
+    const row = event.target.closest?.(".inventory-item-row[data-item-id]");
+    const item = this.actor.items.get(row?.dataset.itemId);
+    if (!item?.isOwner) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.#openInventoryItemContextMenu(event, item);
+  }
+
+  #openInventoryItemContextMenu(event, item) {
+    this.#closeInventoryItemContextMenu();
+    const menu = document.createElement("menu");
+    menu.className = "vr-inventory-item-context-menu";
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i><span>Remove</span>';
+    remove.addEventListener("click", async () => {
+      this.#closeInventoryItemContextMenu();
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Remove Item" },
+        content: `<p>Remove <strong>${foundry.utils.escapeHTML(item.name)}</strong> from this character?</p>`,
+        modal: true
+      });
+      if (!confirmed || !this.actor.isOwner || !item.isOwner) return;
+      try {
+        await item.delete();
+      } catch (error) {
+        console.error("Veilrunner | Failed to remove inventory item", error);
+        ui.notifications.error(`Could not remove ${item.name}.`);
+      }
+    });
+    menu.append(remove);
+    menu.addEventListener("contextmenu", innerEvent => innerEvent.preventDefault());
+    document.body.append(menu);
+    this.#inventoryItemContextMenu = menu;
+    this.#inventoryItemContextDismiss = dismissEvent => {
+      if (!menu.contains(dismissEvent.target)) this.#closeInventoryItemContextMenu();
+    };
+    document.addEventListener("pointerdown", this.#inventoryItemContextDismiss, true);
+  }
+
+  #closeInventoryItemContextMenu() {
+    this.#inventoryItemContextMenu?.remove();
+    this.#inventoryItemContextMenu = null;
+    if (this.#inventoryItemContextDismiss) document.removeEventListener("pointerdown", this.#inventoryItemContextDismiss, true);
+    this.#inventoryItemContextDismiss = null;
   }
 
   /** Select elements do not use the application's button action listener. */
@@ -1673,7 +1784,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         ? item.cost : key === "type" ? item.typeLabel : item.name;
       return String(value(left)).localeCompare(String(value(right)), undefined, { numeric: true, sensitivity: "base" }) * multiplier;
     };
-    const actionWorkspaceItems = actionItems.map(actionMetadata);
+    const generatedFirearmActions = ["favorites", "actions"].includes(this.subTabs.actions) ? firearmActionsForActor(actor) : [];
+    const actionWorkspaceItems = [...actionItems.map(actionMetadata), ...generatedFirearmActions];
     if (sheetOptions.actionsView === "card") {
       const sort = this.actionCardSort;
       if (sort === "type") actionWorkspaceItems.sort((a, b) => compareActionItems(a, b, "type"));
@@ -1705,23 +1817,46 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.inventoryCategory = this.subTabs.inventory;
     const activeInventoryFilter = getValidInventoryFilter(this.subTabs.inventory, this.inventoryWeaponFilter);
     const inventoryFilters = getInventoryFilters(this.subTabs.inventory);
-    context.inventoryWeaponFilters = inventoryFilters.map(filter => ({
+    context.inventoryWeaponFilters = inventoryFilters.filter(filter => !filter.group).map(filter => ({
       ...filter,
       active: filter.key === activeInventoryFilter
     }));
     context.inventoryWeaponFilter = activeInventoryFilter;
-    context.hasInventoryFilters = inventoryFilters.length > 1;
-    context.inventoryFiltersOpen = this.inventoryFiltersOpen && context.hasInventoryFilters;
+    context.inventoryMainFilters = (this.subTabs.inventory === "weapon"
+      ? inventoryFilters.filter(filter => filter.key === "allWeapons" || filter.group)
+      : inventoryFilters
+    ).map(filter => ({
+      ...filter,
+      icon: filter.icon ?? (filter.key === "allWeapons" ? "fa-solid fa-crosshairs" : ""),
+      active: filter.key === activeInventoryFilter
+    }));
+    context.hasInventoryFilters = context.inventoryMainFilters.length > 1;
+    context.inventoryFiltersOpen = this.inventoryFiltersOpen;
+    context.inventoryLayout = this.inventoryLayout;
+    context.inventorySearch = this.inventorySearch;
+    const inventorySearchQuery = normalizeInventoryToken(this.inventorySearch);
     context.inventoryItems = sortedItems
       .map(item => {
-        const category = item.type === "treasure" ? item.system?.category || "junk" : item.type;
+        const category = item.type === "treasure" ? item.system?.category || "junk"
+          : ["ammunition", "magazine"].includes(item.type) ? "ammo"
+          : item.type === "shield" ? "armor"
+          : ["accessory", "container", "equipment"].includes(item.type) ? "equipment"
+          : item.type;
         const inventoryFilterKey = detectInventoryFilterKey(item, category);
+        const rarity = itemRarityData(item);
         return {
           id: item.id,
           name: item.name,
           img: item.img,
           category,
           inventoryFilterKey,
+          quantity: Math.max(0, Number(item.system?.quantity) || 1),
+          weight: Math.max(0, Number(item.system?.weight) || 0),
+          equipmentSlot: item.system?.equipmentSlot ?? "",
+          requiredSlots: itemRequiredSlots(item),
+          canEquip: itemRequiredSlots(item).length > 0,
+          rarity,
+          description: item.system?.description?.value ?? item.system?.description ?? "",
           typeLabel: item.type === "treasure"
             ? game.i18n.localize(`VEILRUNNER.InventoryCategory.${category}`)
             : game.i18n.localize(`TYPES.Item.${item.type}`)
@@ -1730,28 +1865,54 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       .filter(item => this.subTabs.inventory === "all"
         || item.category === this.subTabs.inventory
         || (this.subTabs.inventory === "ammo" && item.inventoryFilterKey.startsWith("ammo")))
-      .filter(item => inventoryItemMatchesFilter(item, activeInventoryFilter));
+      .filter(item => inventoryItemMatchesFilter(item, activeInventoryFilter))
+      .filter(item => !inventorySearchQuery || normalizeInventoryToken(`${item.name} ${item.typeLabel}`).includes(inventorySearchQuery));
+    const visibleWeaponFilters = activeInventoryFilter === "allWeapons"
+      ? context.inventoryWeaponFilters.filter(filter => filter.key !== "allWeapons")
+      : context.inventoryWeaponFilters.filter(filter => inventoryItemMatchesFilter({ inventoryFilterKey: filter.key }, activeInventoryFilter));
+    context.inventoryWeaponSections = this.subTabs.inventory === "weapon"
+      ? visibleWeaponFilters.map(filter => ({
+        ...filter,
+        items: context.inventoryItems.filter(item => item.inventoryFilterKey === filter.key)
+      }))
+      : [];
+    context.hasInventoryWeaponSections = context.inventoryWeaponSections.length > 0;
+    const inventoryDetailsItem = this.inventoryDetailsItemId ? actor.items.get(this.inventoryDetailsItemId) : null;
+    context.inventoryDetailsOpen = this.section === "inventory" && Boolean(inventoryDetailsItem);
+    context.inventoryDetails = context.inventoryDetailsOpen ? {
+      id: inventoryDetailsItem.id,
+      name: inventoryDetailsItem.name,
+      img: inventoryDetailsItem.img,
+      quantity: Math.max(0, Number(inventoryDetailsItem.system?.quantity) || 1),
+      weight: Math.max(0, Number(inventoryDetailsItem.system?.weight) || 0),
+      rarity: itemRarityData(inventoryDetailsItem),
+      typeLabel: inventoryDetailsItem.type === "treasure"
+        ? game.i18n.localize(`VEILRUNNER.InventoryCategory.${inventoryDetailsItem.system?.category || "junk"}`)
+        : game.i18n.localize(`TYPES.Item.${inventoryDetailsItem.type}`),
+      description: inventoryDetailsItem.system?.description?.value ?? inventoryDetailsItem.system?.description ?? ""
+    } : null;
     context.inventoryCarryWeightKg = Math.round(sortedItems
-      .filter(item => ["treasure", "armor", "accessory"].includes(item.type))
+      .filter(item => PHYSICAL_ITEM_TYPES.includes(item.type))
       .reduce((total, item) => {
         const weight = Math.max(0, Number(item.system?.weight) || 0);
-        const quantity = item.type === "treasure" ? Math.max(0, Number(item.system?.quantity) || 0) : 1;
+        const quantity = Math.max(0, Number(item.system?.quantity) || 1);
         return total + (weight * quantity);
       }, 0) * 100) / 100;
     context.inventoryCarryCapacityKg = 5 + (Math.max(1, Number(system.attributes?.physical?.strength) || 1) * 2);
     context.inventoryCarryWeightPercent = Math.min(100, (context.inventoryCarryWeightKg / context.inventoryCarryCapacityKg) * 100);
 
-    const equipmentData = system.equipment ?? {};
+    const equipmentData = equipmentBySlot(actor);
     context.equipmentSlotColumns = Object.fromEntries(Object.entries(EQUIPMENT_SLOT_COLUMNS).map(([column, slots]) => [column, slots.map(slot => {
       const itemId = equipmentData[slot];
       const item = itemId ? actor.items.get(itemId) : null;
-      return { slot, label: game.i18n.localize(`VEILRUNNER.Slot.${slot}`), item };
+      return { slot, label: game.i18n.localize(`VEILRUNNER.Slot.${slot}`), item, rarity: item ? itemRarityData(item) : null };
     })]));
     const quickEquipSource = Array.isArray(system.quickEquip) ? system.quickEquip : [];
     context.quickEquip = quickEquipSource
       .slice(0, 4)
       .map(id => actor.items.get(id))
-      .filter(Boolean);
+      .filter(Boolean)
+      .map(item => ({ id: item.id, name: item.name, img: item.img, rarity: itemRarityData(item) }));
     context.panActive = Boolean(system.networkLinked);
     context.panStatus = game.i18n.localize(`VEILRUNNER.PAN.${context.panActive ? "On" : "Off"}`);
 
@@ -1968,7 +2129,6 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       this.#clearActionDetailsAfterClose = true;
     } else if (section === "actions") this.actionDetailsItemId = null;
     if (section === "inventory") this.inventoryWeaponFilter = getValidInventoryFilter(tab, this.inventoryWeaponFilter);
-    if (section === "inventory" && getInventoryFilters(tab).length <= 1) this.inventoryFiltersOpen = false;
     if (!fromDetailsPanel) this.#pendingNavAnimation = { selector: ".sub-nav-row", from, to, total: list.length };
     if (section === "about") this.#pendingDetailsTabAnimation = tabAnimationClass(from, to);
     else this.#pendingMainTabAnimation = tabAnimationClass(from, to);
@@ -1979,13 +2139,101 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   static #onToggleInventoryFilters(event, target) {
-    if (getInventoryFilters(this.subTabs.inventory).length <= 1) return;
     this.inventoryFiltersOpen = !this.inventoryFiltersOpen;
     target.classList.toggle("active", this.inventoryFiltersOpen);
     target.setAttribute("aria-expanded", this.inventoryFiltersOpen ? "true" : "false");
     const row = target.closest(".inventory-filter-row");
     row?.classList.toggle("open", this.inventoryFiltersOpen);
     row?.querySelector(".inventory-filter-drawer")?.classList.toggle("open", this.inventoryFiltersOpen);
+  }
+
+  static #onSetInventoryLayout(event, target) {
+    const layout = target.dataset.layout === "grid" ? "grid" : "list";
+    if (this.inventoryLayout === layout) return;
+    this.inventoryLayout = layout;
+    this.render({ parts: ["main"] });
+  }
+
+  static #inventoryItemFromTarget(actor, target) {
+    const itemId = target.closest("[data-item-id]")?.dataset.itemId;
+    return itemId ? actor?.items.get(itemId) : null;
+  }
+
+  static async #onEquipInventoryItem(event, target) {
+    event.preventDefault();
+    const item = VeilrunnerHeroSheet.#inventoryItemFromTarget(this.actor, target);
+    if (!item) return;
+    await equipPhysicalItem(this.actor, item);
+  }
+
+  /** Equip owned or newly-embedded physical Items when they are dropped on a drawer slot. */
+  async _onDropItem(event, item) {
+    const slot = event.target.closest?.(".equip-slot[data-slot]")?.dataset.slot;
+    if (!slot) return super._onDropItem(event, item);
+    if (!PHYSICAL_ITEM_TYPES.includes(item.type)) {
+      ui.notifications.warn(`${item.name} is not physical equipment.`);
+      return null;
+    }
+    if (!itemAcceptsEquipmentSlot(item, slot)) {
+      const label = game.i18n.localize(`VEILRUNNER.Slot.${slot}`);
+      ui.notifications.warn(`${item.name} cannot be equipped in ${label}. Check its slot restrictions.`);
+      return null;
+    }
+
+    let ownedItem = item;
+    if (this.actor.uuid !== item.parent?.uuid) ownedItem = await super._onDropItem(event, item);
+    if (!ownedItem) return null;
+    return await equipPhysicalItem(this.actor, ownedItem) ? ownedItem : null;
+  }
+
+  _onDragOver(event) {
+    super._onDragOver(event);
+    for (const element of this.element.querySelectorAll(".equip-slot.drag-over")) element.classList.remove("drag-over");
+    event.target.closest?.(".equip-slot[data-slot]")?.classList.add("drag-over");
+  }
+
+  async _onDrop(event) {
+    try {
+      return await super._onDrop(event);
+    } finally {
+      for (const element of this.element.querySelectorAll(".equip-slot.drag-over")) element.classList.remove("drag-over");
+    }
+  }
+
+  static async #onThrowInventoryItem(event, target) {
+    event.preventDefault();
+    const item = VeilrunnerHeroSheet.#inventoryItemFromTarget(this.actor, target);
+    if (!item) return;
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="veilrunner inventory-item-use"><strong>${foundry.utils.escapeHTML(this.actor.name)} throws ${foundry.utils.escapeHTML(item.name)}</strong></div>`
+    });
+  }
+
+  static async #onUseInventoryItem(event, target) {
+    event.preventDefault();
+    const item = VeilrunnerHeroSheet.#inventoryItemFromTarget(this.actor, target);
+    if (!item) return;
+    const description = item.system?.description?.value ?? item.system?.description ?? "";
+    await ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `<div class="veilrunner inventory-item-use"><strong>${foundry.utils.escapeHTML(this.actor.name)} uses ${foundry.utils.escapeHTML(item.name)}</strong>${description}</div>`
+    });
+    if (PHYSICAL_ITEM_TYPES.includes(item.type)) await applyItemWear(item, 1);
+  }
+
+  static #onShowInventoryItemDetails(event, target) {
+    event.preventDefault();
+    const item = VeilrunnerHeroSheet.#inventoryItemFromTarget(this.actor, target);
+    if (!item) return;
+    this.inventoryDetailsItemId = item.id;
+    this.render({ parts: ["main"] });
+  }
+
+  static #onCloseInventoryItemDetails(event) {
+    event.preventDefault();
+    this.inventoryDetailsItemId = null;
+    this.render({ parts: ["main"] });
   }
 
   static async #onToggleSheetOption(event, target) {
@@ -2086,6 +2334,16 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     else ui.notifications.info(`${item.name} used.`);
   }
 
+  static async #onExecuteFirearmAction(event, target) {
+    event.preventDefault();
+    if (target.disabled) return ui.notifications.warn(target.title || "That firearm action is not currently available.");
+    const row = target.closest("[data-weapon-id]");
+    const weaponId = row?.dataset.weaponId;
+    const operation = row?.dataset.weaponAction;
+    if (!weaponId || !operation) return;
+    await executeFirearmAction(this.actor, weaponId, operation);
+  }
+
   static async #onRollInitiative(event) {
     event.preventDefault();
     const reaction = Math.max(0, Number(this.actor.system.attributes?.physical?.reaction) || 0);
@@ -2128,7 +2386,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
           img: "icons/svg/group.svg",
           folder: folder.id,
           ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
-          flags: { veilrunner: { partyFolder: folder.id } }
+          flags: { [game.system.id]: { partyFolder: folder.id } }
         });
     }
     actor?.sheet?.render(true);
@@ -2174,7 +2432,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   static async #onUnequip(event, target) {
     const slot = target.closest("[data-slot]")?.dataset.slot;
     if (!slot) return;
-    await this.actor.update({ [`system.equipment.${slot}`]: "" });
+    await unequipPhysicalItem(this.actor, slot);
   }
 
   static async #onToggleEditMode(event, target) {

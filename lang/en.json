@@ -20,7 +20,14 @@
       "treasure": "Treasure",
       "species": "Species",
       "origin": "Origin",
-      "background": "Background"
+      "background": "Background",
+      "weapon": "Weapon",
+      "ammunition": "Ammunition",
+      "magazine": "Magazine",
+      "shield": "Shield",
+      "consumable": "Consumable",
+      "container": "Container",
+      "equipment": "Equipment"
     }
   },
   "VEILRUNNER": {
@@ -28,6 +35,11 @@
       "hero": "Veilrunner Hero Sheet",
       "actor": "Veilrunner Actor Sheet",
       "item": "Veilrunner Item Sheet"
+    },
+    "ItemTypeGroups": {
+      "physical": "Physical Items",
+      "characterBuilding": "Character Building",
+      "other": "Other"
     },
     "Keybindings": {
       "openPlayerDatapad": {
@@ -284,6 +296,10 @@
         "damageDie": { "label": "Damage Die Faces" },
         "damageLevelInterval": { "label": "Levels Per Damage Step" },
         "cost": { "label": "Cost" },
+        "rollFormula": { "label": "Roll Formula" },
+        "selector": { "label": "Rule Selector" },
+        "requiredItemTypes": { "label": "Required Equipped Item Types" },
+        "requiredItemTraits": { "label": "Required Equipped Item Traits" },
         "description": { "label": "Description" }
       }
     },
@@ -301,6 +317,88 @@
         "description": { "label": "Description" }
       }
     },
+    "PhysicalItem": {
+      "Tabs": { "label": "Item sections", "summary": "Summary", "details": "Details", "slots": "Slots", "rules": "Rules" },
+      "quantity": "Quantity",
+      "bulk": "Bulk",
+      "weight": "Weight (kg)",
+      "price": "Price",
+      "currency": "Currency",
+      "rarity": "Rarity",
+      "identified": "Identified",
+      "containerId": "Stored In",
+      "durability": "Current Durability",
+      "durabilityMax": "Maximum Durability",
+      "wearRate": "Wear Rate (Uses)",
+      "wearAmount": "Wear Amount",
+      "wearProgress": "Uses Toward Next Wear",
+      "traits": "Traits",
+      "traitPlaceholder": "Create a trait",
+      "noTraits": "No traits created.",
+      "traitCatalog": "Trait Catalog",
+      "traitCatalogHint": "Click to add or remove. Drag traits into the selected list.",
+      "traitReferences": "Items using this trait",
+      "emptyTraitCatalog": "Create your first trait to begin the shared catalog.",
+      "description": "Description",
+      "slotRestrictions": "Slot Restrictions",
+      "slotHint": "Select every slot this item must occupy. Equipping fails if any selected slot is occupied.",
+      "weaponSlotsControlled": "Weapon slots are controlled by the one-handed or two-handed setting.",
+      "rules": "Rule Elements",
+      "noRules": "No rule elements configured."
+    },
+    "WeaponItem": {
+      "heading": "Weapon",
+      "weaponKind": "Weapon Kind",
+      "weaponType": "Weapon Type",
+      "handedness": "Hands Required",
+      "actions": "Actions",
+      "attackFormula": "Attack Formula",
+      "attackSelector": "Attack Selector",
+      "range": "Range",
+      "baseDamage": "Base Damage",
+      "damageMax": "Damage Maximum",
+      "damageModifier": "Damage Modifier",
+      "damageType": "Damage Type"
+    },
+    "WeaponKind": { "melee": "Melee", "ranged": "Ranged", "firearm": "Firearm" },
+    "Handedness": { "one": "One-Handed", "two": "Two-Handed" },
+    "DamageCategory": { "physical": "Physical", "elemental": "Elemental", "cosmic": "Cosmic" },
+    "Firearm": {
+      "heading": "Firearm & Ammunition",
+      "magazineMode": "Magazine Mode",
+      "capacity": "Internal Capacity",
+      "caliber": "Caliber",
+      "flexible": "Flexible Ammunition",
+      "ammoTypes": "Allowed Ammo Types",
+      "allow": "Explicit Allow List",
+      "block": "Explicit Block List"
+    },
+    "MagazineMode": { "none": "No Ammunition", "detachable": "Detachable Magazine", "internal": "Internal Magazine" },
+    "AmmunitionItem": { "heading": "Ammunition", "ammoType": "Ammunition Type", "caliber": "Caliber", "damageModifier": "Damage Modifier", "damageType": "Damage Type" },
+    "MagazineItem": { "heading": "Magazine", "capacity": "Capacity", "rounds": "Loaded Rounds" },
+    "ShieldItem": { "heading": "Shield", "armorClass": "Armor Class", "block": "Block", "capacity": "Shield Capacity" },
+    "ConsumableItem": { "heading": "Consumable", "type": "Consumable Type", "uses": "Uses", "maxUses": "Maximum Uses", "consumeQuantity": "Quantity Per Use", "actionUuid": "Linked Action UUID" },
+    "ContainerItem": { "heading": "Container", "capacity": "Capacity", "weightReduction": "Weight Reduction", "extradimensional": "Extradimensional" },
+    "EquipmentItem": { "heading": "Equipment", "type": "Equipment Type" },
+    "RuleElement": {
+      "ActiveEffectLike": "Active Effect-Like",
+      "FlatModifier": "Flat Modifier",
+      "RollOption": "Roll Option",
+      "DamageDice": "Damage Dice",
+      "Resistance": "Resistance",
+      "Weakness": "Weakness",
+      "ChoiceSet": "Choice Set",
+      "GrantItem": "Grant Item",
+      "ItemAlteration": "Item Alteration",
+      "DegreeOfSuccess": "Degree of Success"
+    },
+    "RuleFields": {
+      "label": "Label", "enabled": "Enabled", "requiresEquipped": "Requires Equipped", "priority": "Priority",
+      "predicate": "Predicates", "selector": "Selector", "path": "Property Path", "mode": "Mode", "value": "Value",
+      "type": "Modifier Type", "slug": "Slug", "option": "Roll Option", "diceNumber": "Dice", "dieSize": "Die Size",
+      "damageType": "Damage Type", "amount": "Amount", "uuid": "Item UUID", "choices": "Choices", "selection": "Selection",
+      "target": "Target", "adjustment": "Degree Adjustment", "duration": "Duration", "notes": "Notes"
+    },
     "AccessoryItem": {
       "FIELDS": {
         "equipmentSlot": { "label": "Equipment Slot" },
@@ -311,6 +409,7 @@
       }
     },
     "ArmorItem": {
+      "heading": "Armor",
       "FIELDS": {
         "armorType": { "label": "Armor Type" },
         "itemRating": { "label": "Item Rating" },
@@ -351,6 +450,7 @@
     "Treasure": {
       "FIELDS": {
         "category": { "label": "Category" },
+        "weaponType": { "label": "Weapon Type" },
         "quantity": { "label": "Quantity" },
         "price": { "label": "Price" },
         "rarity": { "label": "Rarity" },
@@ -401,23 +501,55 @@
       "weapon": "Weapons",
       "ammo": "Ammo",
       "armor": "Armor",
+      "equipment": "Equipment",
       "consumable": "Consumables",
       "tech": "Tech",
       "keyItem": "Key Items",
       "junk": "Junk",
       "other": "Other"
     },
+    "InventoryMainCategory": {
+      "all": "All",
+      "weapon": "Weapons & Shields",
+      "armor": "Armor",
+      "equipment": "Equipment",
+      "consumable": "Consumables",
+      "ammo": "Ammunition",
+      "treasure": "Treasure"
+    },
     "WeaponFilter": {
       "label": "Weapon filters",
       "allWeapons": "All Weapons",
+      "blades": "Blades",
+      "heavyBlades": "Heavy Blades",
+      "impactWeapons": "Impact Weapons",
       "melee": "Melee",
+      "staves": "Staves",
+      "blunt": "Blunt",
+      "lightFirearms": "Light Firearms",
       "shortBlades": "Short Blades",
       "longBlades": "Long Blades",
       "pistols": "Pistols",
       "smgs": "SMGs",
+      "shotguns": "Shotguns",
+      "rifles": "Medium Firearms",
       "assaultRifles": "Assault Rifles",
       "heavyRifles": "Heavy Rifles",
+      "sniperRifles": "Sniper Rifles",
+      "heavyFirearms": "Heavy Firearms",
+      "launchers": "Launchers",
+      "heavyCannons": "Heavy Cannons",
+      "lmgs": "LMGs",
+      "arcane": "Arcane",
+      "wands": "Wands",
+      "scepters": "Scepters",
+      "greatStaves": "Great Staves",
+      "exoticWeapons": "Exotic Weapons",
+      "flexible": "Flexible",
+      "thrown": "Thrown",
+      "bows": "Bows",
       "ammoAll": "All Ammo",
+      "ammoArrows": "Arrows",
       "ammoBallistic": "Ballistic Ammo",
       "ammoEnergy": "Energy Clips",
       "ammoLaser": "Laser Cells"
@@ -426,7 +558,9 @@
       "allArmor": "All Armor",
       "lightArmor": "Light Armor",
       "mediumArmor": "Medium Armor",
-      "heavyArmor": "Heavy Armor"
+      "heavyArmor": "Heavy Armor",
+      "shields": "Shields",
+      "greatShields": "Great Shields"
     },
     "ItemSection": {
       "core": "Core",
@@ -438,7 +572,9 @@
     "ArmorType": {
       "light": "Light",
       "medium": "Medium",
-      "heavy": "Heavy"
+      "heavy": "Heavy",
+      "shields": "Shields",
+      "greatShields": "Great Shields"
     },
     "CapacityMode": {
       "armor": "Armor",
@@ -526,6 +662,7 @@
       "offhand": "Offhand"
     },
     "Name": "Name",
+    "Confirm": "Confirm",
     "None": "None",
     "Add": "Add",
     "Remove": "Remove",
@@ -702,6 +839,7 @@
     "NoPartyAssigned": "No party assigned.",
     "NoPartyMembers": "No party members in this folder.",
     "OpenPartyFolder": "Open Party",
+    "OpenPartySheet": "Open Party Sheet",
     "PartyFolderGMOnly": "Only the GM can create a party for this folder.",
     "SharedCurrencies": "Shared Currencies",
     "Shared": "Shared",
@@ -758,6 +896,25 @@
     "Rules": "Rules",
     "SkillsAndProficiencies": "Skills and Proficiencies",
     "NoItems": "No items.",
+    "CarryWeight": "Carry Weight",
+    "InventorySearch": "Search inventory",
+    "InventoryList": {
+      "Item": "Item",
+      "Quantity": "Qty",
+      "Weight": "Weight"
+    },
+    "InventoryLayout": {
+      "label": "Inventory layout",
+      "grid": "Grid Layout",
+      "list": "List Layout"
+    },
+    "InventoryCard": {
+      "Equip": "Equip",
+      "Throw": "Throw",
+      "Use": "Use",
+      "Details": "Details",
+      "Close": "Close details"
+    },
     "NoFavorites": "No favorites.",
     "NoActions": "No actions.",
     "NoAbilities": "No abilities.",

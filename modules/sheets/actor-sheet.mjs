@@ -7,7 +7,7 @@ import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.
 
 const BASE_CURRENCY_NAME = "Galactic Federation Credits";
 const BASE_CURRENCY_ICON = "fa-solid fa-sim-card";
-const PARTY_INVENTORY_CATEGORIES = ["all", "weapon", "ammo", "armor", "consumable", "tech", "keyItem", "junk", "other"];
+const PARTY_INVENTORY_CATEGORIES = ["all", "weapon", "ammo", "armor", "equipment", "consumable", "tech", "keyItem", "junk", "other"];
 
 function validIconClass(icon) {
   const value = String(icon ?? "").trim();

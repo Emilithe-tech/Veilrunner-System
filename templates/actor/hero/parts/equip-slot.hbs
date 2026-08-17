@@ -1,6 +1,6 @@
-<div class="equip-slot {{#if slot.item}}filled{{else}}empty{{/if}}" data-slot="{{slot.slot}}">
+<div class="equip-slot {{#if slot.item}}filled{{else}}empty{{/if}}" data-slot="{{slot.slot}}"{{#if slot.item}} data-rarity="{{slot.rarity.slug}}" data-rarity-tier="{{slot.rarity.tier}}" style="--vr-item-rarity: {{slot.rarity.color}};"{{/if}}>
   <span class="slot-label">{{slot.label}}</span>
-  <div class="slot-box" {{#if slot.item}}data-item-id="{{slot.item.id}}"{{/if}}>
+  <div class="slot-box{{#if slot.item}} draggable{{/if}}" {{#if slot.item}}data-item-id="{{slot.item.id}}" title="{{slot.item.name}}"{{else}}title="{{localize 'VEILRUNNER.InventoryCard.Equip'}}"{{/if}}>
     {{#if slot.item}}
       <img src="{{slot.item.img}}" alt="{{slot.item.name}}" />
       <button type="button" class="unequip-btn" data-action="unequip" data-slot="{{slot.slot}}" title="{{localize 'VEILRUNNER.Unequip'}}">

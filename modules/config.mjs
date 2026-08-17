@@ -16,6 +16,13 @@ import TreasureData from "./data/item/treasure.mjs";
 import SpeciesData from "./data/item/species.mjs";
 import OriginData from "./data/item/origin.mjs";
 import BackgroundData from "./data/item/background.mjs";
+import WeaponData from "./data/item/weapon.mjs";
+import AmmunitionData from "./data/item/ammunition.mjs";
+import MagazineData from "./data/item/magazine.mjs";
+import ShieldData from "./data/item/shield.mjs";
+import ConsumableData from "./data/item/consumable.mjs";
+import ContainerData from "./data/item/container.mjs";
+import EquipmentData from "./data/item/equipment.mjs";
 import { VeilrunnerActor } from "./documents/actor.mjs";
 import { VeilrunnerItem } from "./documents/item.mjs";
 
@@ -49,7 +56,14 @@ export function registerConfig() {
     treasure: TreasureData,
     species: SpeciesData,
     origin: OriginData,
-    background: BackgroundData
+    background: BackgroundData,
+    weapon: WeaponData,
+    ammunition: AmmunitionData,
+    magazine: MagazineData,
+    shield: ShieldData,
+    consumable: ConsumableData,
+    container: ContainerData,
+    equipment: EquipmentData
   });
 
   CONFIG.Actor.trackableAttributes = {

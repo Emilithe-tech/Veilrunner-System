@@ -9,6 +9,7 @@ import { DATAPAD_TEMPLATE_PARTIALS, registerDatapad } from "./modules/apps/datap
 import { registerReferenceJournals } from "./modules/apps/reference-journals.mjs";
 import { registerInitiativeBandDecider } from "./modules/apps/initiative-band-decider.mjs";
 import { registerCombatCarousel } from "./modules/apps/combat-carousel.mjs";
+import { registerItemCreateDialogGroups } from "./modules/apps/item-create-dialog.mjs";
 import { registerSettings } from "./modules/settings.mjs";
 
 const PARTY_SHEET_PARTIALS = [
@@ -43,8 +44,12 @@ const HERO_SHEET_PARTIALS = [
   "systems/veilrunner/templates/actor/hero/parts/top-nav.hbs"
 ];
 
+const ITEM_SHEET_PARTIALS = [
+  "systems/veilrunner/templates/item/parts/physical.hbs"
+];
+
 Hooks.once("init", async () => {
-  await foundry.applications.handlebars.loadTemplates([...PARTY_SHEET_PARTIALS, ...HERO_SHEET_PARTIALS, ...DATAPAD_TEMPLATE_PARTIALS]);
+  await foundry.applications.handlebars.loadTemplates([...PARTY_SHEET_PARTIALS, ...HERO_SHEET_PARTIALS, ...ITEM_SHEET_PARTIALS, ...DATAPAD_TEMPLATE_PARTIALS]);
 
   registerConfig();
   registerSettings();
@@ -55,6 +60,7 @@ Hooks.once("init", async () => {
   registerReferenceJournals();
   registerInitiativeBandDecider();
   registerCombatCarousel();
+  registerItemCreateDialogGroups();
 
   const { DocumentSheetConfig } = foundry.applications.apps;
   const sid = game.system.id;
@@ -72,7 +78,10 @@ Hooks.once("init", async () => {
   });
 
   DocumentSheetConfig.registerSheet(foundry.documents.Item, sid, VeilrunnerItemSheet, {
-    types: ["action", "accessory", "ability", "armor", "profession", "treasure", "species", "origin", "background"],
+    types: [
+      "action", "accessory", "ability", "armor", "profession", "treasure", "species", "origin", "background",
+      "weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"
+    ],
     makeDefault: true,
     label: "VEILRUNNER.SheetLabel.item"
   });

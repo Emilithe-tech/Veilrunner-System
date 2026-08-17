@@ -1,6 +1,5 @@
 import { findPartyActorForFolder } from "../helpers/party.mjs";
 
-const SYSTEM_FLAG_SCOPE = "veilrunner";
 const PARTY_FOLDER_FLAG = "partyFolder";
 
 function asElement(html) {
@@ -69,7 +68,7 @@ async function ensurePartyActor(folder) {
     folder: folder.id,
     ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
     flags: {
-      [SYSTEM_FLAG_SCOPE]: {
+      [game.system.id]: {
         [PARTY_FOLDER_FLAG]: folder.id
       }
     }

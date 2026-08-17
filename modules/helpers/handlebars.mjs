@@ -15,6 +15,8 @@ export function registerHandlebarsHelpers() {
 
   Handlebars.registerHelper("eq", (a, b) => a === b);
 
+  Handlebars.registerHelper("includes", (values, value) => Array.isArray(values) && values.includes(value));
+
   Handlebars.registerHelper("or", (...args) => {
     const values = args.slice(0, -1);
     return values.some(Boolean);
