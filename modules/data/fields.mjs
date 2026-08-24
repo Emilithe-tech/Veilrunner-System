@@ -5,6 +5,7 @@ const {
   FilePathField,
   ArrayField,
   BooleanField,
+  ObjectField,
   HTMLField
 } = foundry.data.fields;
 
@@ -147,11 +148,16 @@ export function contactSchema() {
 /** Taken quality or flaw during character creation. */
 export function qualityFlawSchema() {
   return new SchemaField({
+    definitionId: new StringField({ required: true, blank: true, initial: "" }),
+    sourceUuid: new StringField({ required: true, blank: true, initial: "" }),
     name: new StringField({ required: true, blank: true, initial: "" }),
     pillar: new StringField({ required: true, blank: true, initial: "General" }),
     tier: new StringField({ required: true, blank: true, initial: "Minor" }),
     points: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false }),
-    description: new StringField({ required: true, blank: true, initial: "" })
+    description: new StringField({ required: true, blank: true, initial: "" }),
+    mechanics: new StringField({ required: true, blank: true, initial: "" }),
+    requirements: new StringField({ required: true, blank: true, initial: "" }),
+    tags: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] })
   });
 }
 
@@ -168,6 +174,9 @@ export function characterGenerationSchema() {
     spellPointsSpent: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
     bonusProficiency: new StringField({ required: true, blank: true, initial: "" }),
     creditsSpent: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
+    // Completed storefront receipt: canonical IDs and transaction terms only.
+    storefront: new ObjectField({ required: true, initial: {} }),
+    references: new ObjectField({ required: true, initial: {} }),
     notes: new StringField({ required: true, blank: true, initial: "" })
   });
 }

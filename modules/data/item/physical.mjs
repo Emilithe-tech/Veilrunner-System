@@ -6,6 +6,7 @@ const {
   SchemaField,
   StringField
 } = foundry.data.fields;
+import { itemIdentityFields, migrateItemIdentityData } from "./identity.mjs";
 
 export const PHYSICAL_ITEM_TYPES = Object.freeze([
   "weapon", "ammunition", "magazine", "armor", "accessory", "shield",
@@ -23,15 +24,47 @@ export const EQUIPMENT_SLOT_COLUMNS = Object.freeze({
 });
 
 export const WEAPON_TYPE_GROUPS = Object.freeze([
-  Object.freeze({ key: "blades", types: Object.freeze(["shortBlades", "longBlades", "heavyBlades"]) }),
-  Object.freeze({ key: "impactWeapons", types: Object.freeze(["melee", "staves", "blunt"]) }),
-  Object.freeze({ key: "lightFirearms", types: Object.freeze(["pistols", "smgs", "shotguns"]) }),
-  Object.freeze({ key: "rifles", types: Object.freeze(["assaultRifles", "heavyRifles", "sniperRifles"]) }),
-  Object.freeze({ key: "heavyFirearms", types: Object.freeze(["launchers", "heavyCannons", "lmgs"]) }),
-  Object.freeze({ key: "arcane", types: Object.freeze(["wands", "scepters", "greatStaves"]) }),
-  Object.freeze({ key: "exoticWeapons", types: Object.freeze(["flexible", "thrown", "bows"]) })
+  Object.freeze({ key: "arcane", icon: "fa-solid fa-book-open", types: Object.freeze(["grimoire", "scepter", "wand"]) }),
+  Object.freeze({ key: "blades", icon: "fa-solid fa-sword", types: Object.freeze(["shortBlade", "longBlade", "heavyBlade"]) }),
+  Object.freeze({ key: "finesse", icon: "fa-solid fa-bow-arrow", types: Object.freeze(["bow", "coil", "thrown"]) }),
+  Object.freeze({ key: "martial", icon: "fa-solid fa-hammer", types: Object.freeze(["blunt", "polearm", "staff", "unarmed"]) }),
+  Object.freeze({ key: "lightFirearms", icon: "fa-solid fa-gun", types: Object.freeze(["pistol", "smg", "taser"]) }),
+  Object.freeze({ key: "mediumFirearms", icon: "fa-solid fa-person-rifle", types: Object.freeze(["assaultRifle", "marksmanRifle", "shotgun", "sniperRifle"]) }),
+  Object.freeze({ key: "heavyFirearms", icon: "fa-solid fa-rocket", types: Object.freeze(["launcher", "machineGun", "projector"]) })
 ]);
 export const WEAPON_TYPES = Object.freeze(WEAPON_TYPE_GROUPS.flatMap(group => group.types));
+
+const WEAPON_TYPE_ALIASES = new Map([
+  ["grimoire", "grimoire"], ["greatstaff", "grimoire"], ["greatstave", "grimoire"], ["greatstaves", "grimoire"],
+  ["scepter", "scepter"], ["scepters", "scepter"], ["sceptre", "scepter"], ["sceptres", "scepter"],
+  ["wand", "wand"], ["wands", "wand"],
+  ["shortblade", "shortBlade"], ["shortblades", "shortBlade"],
+  ["longblade", "longBlade"], ["longblades", "longBlade"],
+  ["heavyblade", "heavyBlade"], ["heavyblades", "heavyBlade"],
+  ["bow", "bow"], ["bows", "bow"],
+  ["coil", "coil"], ["flexible", "coil"],
+  ["thrown", "thrown"],
+  ["blunt", "blunt"],
+  ["polearm", "polearm"], ["polearms", "polearm"],
+  ["staff", "staff"], ["staves", "staff"],
+  ["unarmed", "unarmed"], ["melee", "unarmed"],
+  ["pistol", "pistol"], ["pistols", "pistol"],
+  ["smg", "smg"], ["smgs", "smg"],
+  ["taser", "taser"], ["tasers", "taser"],
+  ["assaultrifle", "assaultRifle"], ["assaultrifles", "assaultRifle"],
+  ["marksmanrifle", "marksmanRifle"], ["marksmanrifles", "marksmanRifle"], ["heavyrifle", "marksmanRifle"], ["heavyrifles", "marksmanRifle"],
+  ["shotgun", "shotgun"], ["shotguns", "shotgun"],
+  ["sniperrifle", "sniperRifle"], ["sniperrifles", "sniperRifle"],
+  ["launcher", "launcher"], ["launchers", "launcher"],
+  ["machinegun", "machineGun"], ["machineguns", "machineGun"], ["lmg", "machineGun"], ["lmgs", "machineGun"],
+  ["projector", "projector"], ["projectors", "projector"], ["heavycannon", "projector"], ["heavycannons", "projector"]
+]);
+
+export function normalizeWeaponType(value) {
+  const original = String(value ?? "").trim();
+  const token = original.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return WEAPON_TYPE_ALIASES.get(token) ?? original;
+}
 
 export const DAMAGE_TYPE_GROUPS = Object.freeze([
   Object.freeze({ key: "physical", types: Object.freeze(["slashing", "bludgeoning", "piercing"]) }),
@@ -125,11 +158,13 @@ export function ruleElementSchema() {
 /** Shared fields used by all actor-owned physical documents. */
 export function physicalItemFields() {
   return {
+    ...itemIdentityFields(),
     quantity: whole(1),
     bulk: new NumberField({ required: true, min: 0, initial: 0, nullable: false }),
     weight: new NumberField({ required: true, min: 0, initial: 0, nullable: false }),
     price: new NumberField({ required: true, min: 0, initial: 0, nullable: false }),
     currency: text("credits"),
+    grade: whole(1, 1),
     rarity: new StringField({
       required: true,
       blank: false,
@@ -137,6 +172,7 @@ export function physicalItemFields() {
       choices: Object.fromEntries(ITEM_RARITIES.map(rarity => [rarity.slug, rarity.name]))
     }),
     traits: new ArrayField(text(), { initial: [] }),
+    favorite: new BooleanField({ required: true, initial: false }),
     identified: new BooleanField({ required: true, initial: true }),
     requiredSlots: new ArrayField(new StringField({
       required: true,
@@ -152,6 +188,17 @@ export function physicalItemFields() {
       wearProgress: whole()
     }),
     rules: new ArrayField(ruleElementSchema(), { initial: [] }),
+    hudActions: new ArrayField(new SchemaField({
+      id: text(),
+      name: text(),
+      img: text(),
+      category: text("item-actions"),
+      actionType: text("standard"),
+      actions: whole(1),
+      traits: new ArrayField(text(), { initial: [] }),
+      requiresTarget: new BooleanField({ required: true, initial: false }),
+      resourceCosts: new SchemaField({ mana: whole(), stamina: whole(), health: whole() })
+    }), { initial: [] }),
     description: new SchemaField({
       value: new HTMLField({ required: false, blank: true, initial: "" }),
       gm: new HTMLField({ required: false, blank: true, initial: "" })
@@ -164,6 +211,8 @@ export function compatibilitySchema() {
     flexible: new BooleanField({ required: true, initial: false }),
     caliber: text(),
     ammoTypes: new ArrayField(text(), { initial: [] }),
+    allowDefinitionIds: new ArrayField(text(), { initial: [] }),
+    blockDefinitionIds: new ArrayField(text(), { initial: [] }),
     allow: new ArrayField(text(), { initial: [] }),
     block: new ArrayField(text(), { initial: [] })
   });
@@ -172,13 +221,17 @@ export function compatibilitySchema() {
 /** Presence-aware migration for legacy physical documents and partial updates. */
 export function migratePhysicalItemData(source) {
   if (!source || typeof source !== "object") return source;
+  source = migrateItemIdentityData(source);
   if (source.requiredSlots === undefined && source.equipmentSlot) source.requiredSlots = [source.equipmentSlot];
   if (source.price === undefined && source.cost !== undefined) source.price = Math.max(0, Number(source.cost) || 0);
+  if (source.grade !== undefined) source.grade = Math.max(1, Math.floor(Number(source.grade) || 1));
   if (source.traits !== undefined && !Array.isArray(source.traits)) {
     source.traits = String(source.traits).split(/[,\n]/).map(value => value.trim()).filter(Boolean);
   }
   if (source.rarity !== undefined) source.rarity = normalizeItemRarity(source.rarity);
+  if (source.weaponType !== undefined) source.weaponType = normalizeWeaponType(source.weaponType);
   if (source.rules !== undefined && !Array.isArray(source.rules)) source.rules = [];
+  if (source.hudActions !== undefined && !Array.isArray(source.hudActions)) source.hudActions = [];
   return source;
 }
 

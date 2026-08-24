@@ -11,11 +11,14 @@ import ActionData from "./data/item/action.mjs";
 import AccessoryData from "./data/item/accessory.mjs";
 import AbilityData from "./data/item/ability.mjs";
 import ArmorData from "./data/item/armor.mjs";
+import ArchetypeData from "./data/item/archetype.mjs";
 import ProfessionData from "./data/item/profession.mjs";
+import DisciplineData from "./data/item/discipline.mjs";
 import TreasureData from "./data/item/treasure.mjs";
 import SpeciesData from "./data/item/species.mjs";
 import OriginData from "./data/item/origin.mjs";
 import BackgroundData from "./data/item/background.mjs";
+import QualityData, { FlawData, PerkData } from "./data/item/quality.mjs";
 import WeaponData from "./data/item/weapon.mjs";
 import AmmunitionData from "./data/item/ammunition.mjs";
 import MagazineData from "./data/item/magazine.mjs";
@@ -52,11 +55,16 @@ export function registerConfig() {
     accessory: AccessoryData,
     ability: AbilityData,
     armor: ArmorData,
+    archetype: ArchetypeData,
     profession: ProfessionData,
+    discipline: DisciplineData,
     treasure: TreasureData,
     species: SpeciesData,
     origin: OriginData,
     background: BackgroundData,
+    quality: QualityData,
+    perk: PerkData,
+    flaw: FlawData,
     weapon: WeaponData,
     ammunition: AmmunitionData,
     magazine: MagazineData,

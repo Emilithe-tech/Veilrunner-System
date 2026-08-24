@@ -16,11 +16,16 @@
       "accessory": "Accessory",
       "ability": "Ability",
       "armor": "Armor",
+      "archetype": "Archetype",
       "profession": "Profession",
+      "discipline": "Discipline",
       "treasure": "Treasure",
       "species": "Species",
       "origin": "Origin",
       "background": "Background",
+      "quality": "Perk / Flaw",
+      "perk": "Perk",
+      "flaw": "Flaw",
       "weapon": "Weapon",
       "ammunition": "Ammunition",
       "magazine": "Magazine",
@@ -300,7 +305,8 @@
         "selector": { "label": "Rule Selector" },
         "requiredItemTypes": { "label": "Required Equipped Item Types" },
         "requiredItemTraits": { "label": "Required Equipped Item Traits" },
-        "description": { "label": "Description" }
+        "summary": { "label": "Overview Summary" },
+        "description": { "label": "Full Description and Rules" }
       }
     },
     "Ability": {
@@ -314,7 +320,8 @@
         "damageDie": { "label": "Damage Die Faces" },
         "damageLevelInterval": { "label": "Levels Per Damage Step" },
         "recharge": { "label": "Recharge" },
-        "description": { "label": "Description" }
+        "summary": { "label": "Overview Summary" },
+        "description": { "label": "Full Description and Rules" }
       }
     },
     "PhysicalItem": {
@@ -324,6 +331,7 @@
       "weight": "Weight (kg)",
       "price": "Price",
       "currency": "Currency",
+      "grade": "Grade",
       "rarity": "Rarity",
       "identified": "Identified",
       "containerId": "Stored In",
@@ -431,18 +439,36 @@
         "description": { "label": "Description" }
       }
     },
+    "ArchetypeItem": {
+      "FIELDS": {
+        "summary": { "label": "Archetype Summary" },
+        "description": { "label": "Archetype Description" }
+      }
+    },
     "ProfessionItem": {
       "FIELDS": {
+        "archetypeId": { "label": "Archetype Definition ID" },
         "archetype": { "label": "Archetype" },
+        "summary": { "label": "Profession Summary" },
+        "pageImage": { "label": "Profession Artwork" },
+        "description": { "label": "Profession Description" }
+      }
+    },
+    "DisciplineItem": {
+      "FIELDS": {
+        "professionId": { "label": "Profession Definition ID" },
         "profession": { "label": "Profession" },
-        "discipline": { "label": "Discipline" },
+        "summary": { "label": "Discipline Summary" },
         "quote": { "label": "Quote" },
         "primaryWeapon": { "label": "Primary Weapon Type" },
         "primaryAttributes": { "label": "Primary Attributes" },
         "bonusAttributes": { "label": "Bonus Attributes" },
         "bonusSkill": { "label": "Bonus Skill" },
         "persona": { "label": "Persona Index" },
+        "tags": { "label": "Tags" },
+        "abilities": { "label": "Discipline Abilities" },
         "pageImage": { "label": "PDF Page Image" },
+        "source": { "label": "Source" },
         "sourcePage": { "label": "Source Page" },
         "description": { "label": "PDF Reference" }
       }
@@ -493,7 +519,16 @@
       "actions": "Actions",
       "reactions": "Reactions",
       "magic": "Magic",
-      "tech": "Tech"
+      "tech": "Tech",
+      "weapon": "Weapon",
+      "digital": "Digital",
+      "normal": "Normal",
+      "consumables": "Consumables",
+      "gadgets": "Gadgets",
+      "item-actions": "Item Actions",
+      "vehicles": "Vehicles",
+      "pets": "Pets",
+      "spirits": "Spirits"
     },
     "InventoryCategory": {
       "all": "All",
@@ -520,34 +555,36 @@
     "WeaponFilter": {
       "label": "Weapon filters",
       "allWeapons": "All Weapons",
-      "blades": "Blades",
-      "heavyBlades": "Heavy Blades",
-      "impactWeapons": "Impact Weapons",
-      "melee": "Melee",
-      "staves": "Staves",
-      "blunt": "Blunt",
-      "lightFirearms": "Light Firearms",
-      "shortBlades": "Short Blades",
-      "longBlades": "Long Blades",
-      "pistols": "Pistols",
-      "smgs": "SMGs",
-      "shotguns": "Shotguns",
-      "rifles": "Medium Firearms",
-      "assaultRifles": "Assault Rifles",
-      "heavyRifles": "Heavy Rifles",
-      "sniperRifles": "Sniper Rifles",
-      "heavyFirearms": "Heavy Firearms",
-      "launchers": "Launchers",
-      "heavyCannons": "Heavy Cannons",
-      "lmgs": "LMGs",
       "arcane": "Arcane",
-      "wands": "Wands",
-      "scepters": "Scepters",
-      "greatStaves": "Great Staves",
-      "exoticWeapons": "Exotic Weapons",
-      "flexible": "Flexible",
+      "grimoire": "Grimoire",
+      "scepter": "Scepter",
+      "wand": "Wand",
+      "blades": "Blades",
+      "shortBlade": "Short Blade",
+      "longBlade": "Long Blade",
+      "heavyBlade": "Heavy Blade",
+      "finesse": "Finesse",
+      "bow": "Bow",
+      "coil": "Coil",
       "thrown": "Thrown",
-      "bows": "Bows",
+      "martial": "Martial",
+      "blunt": "Blunt",
+      "polearm": "Polearm",
+      "staff": "Staff",
+      "unarmed": "Unarmed",
+      "lightFirearms": "Light Firearms",
+      "pistol": "Pistol",
+      "smg": "SMG",
+      "taser": "Taser",
+      "mediumFirearms": "Medium Firearms",
+      "assaultRifle": "Assault Rifle",
+      "marksmanRifle": "Marksman Rifle",
+      "shotgun": "Shotgun",
+      "sniperRifle": "Sniper Rifle",
+      "heavyFirearms": "Heavy Firearms",
+      "launcher": "Launcher",
+      "machineGun": "Machine Gun",
+      "projector": "Projector",
       "ammoAll": "All Ammo",
       "ammoArrows": "Arrows",
       "ammoBallistic": "Ballistic Ammo",

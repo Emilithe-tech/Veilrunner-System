@@ -3,7 +3,7 @@
   "type": "system",
   "title": "Veilrunner First Edition",
   "description": "The Official FoundryVTT System for Veilrunner",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "license": "Open RPG Community License (ORC)",
   "manifest": "https://github.com/Emilithe-tech/Veilrunner-System/raw/main/system.json",
   "download": "https://github.com/Emilithe-tech/Veilrunner-System",
@@ -13,7 +13,7 @@
   "socket": true,
   "compatibility": {
     "minimum": "14",
-    "verified": "14.365"
+    "verified": "14.367"
   },
   "authors": [
     {
@@ -35,10 +35,28 @@
   ],
   "packs": [
     {
+      "name": "archetypes",
+      "label": "Archetype Library",
+      "system": "Veilrunner",
+      "path": "packs/archetypes",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
       "name": "professions",
       "label": "Profession Library",
       "system": "Veilrunner",
-      "path": "packs/professions.db",
+      "path": "packs/path-professions",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "disciplines",
+      "label": "Discipline Library",
+      "system": "Veilrunner",
+      "path": "packs/disciplines",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -48,6 +66,42 @@
       "label": "Actions Test Library",
       "system": "Veilrunner",
       "path": "packs/actions-test-library.db",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "unique-abilities",
+      "label": "Unique Abilities",
+      "system": "Veilrunner",
+      "path": "packs/unique-abilities.db",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "unique-actions",
+      "label": "Unique Actions",
+      "system": "Veilrunner",
+      "path": "packs/unique-actions.db",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "unique-reactions",
+      "label": "Unique Reactions",
+      "system": "Veilrunner",
+      "path": "packs/unique-reactions.db",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "unique-traits",
+      "label": "Unique Traits",
+      "system": "Veilrunner",
+      "path": "packs/unique-traits.db",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -75,6 +129,15 @@
       "label": "Background Library",
       "system": "Veilrunner",
       "path": "packs/backgrounds",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "qualities-perks",
+      "label": "Perks & Flaws Library",
+      "system": "Veilrunner",
+      "path": "packs/qualities-perks",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -179,6 +242,19 @@
           "pageImage": ["IMAGE"]
         }
       },
+      "archetype": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "discipline": {
+        "htmlFields": [
+          "description"
+        ],
+        "filePathFields": {
+          "pageImage": ["IMAGE"]
+        }
+      },
       "treasure": {
         "htmlFields": [
           "description.value",
@@ -201,6 +277,24 @@
       "background": {
         "htmlFields": [
           "description"
+        ]
+      },
+      "quality": {
+        "htmlFields": [
+          "description",
+          "mechanics"
+        ]
+      },
+      "perk": {
+        "htmlFields": [
+          "description",
+          "mechanics"
+        ]
+      },
+      "flaw": {
+        "htmlFields": [
+          "description",
+          "mechanics"
         ]
       },
       "weapon": {

@@ -9,10 +9,10 @@ import { openPlayerDatapad } from "../apps/datapad.mjs";
 import { buildPartyOverview, findPartyActorForFolder, findPartyForHero, getPartyMembers } from "../helpers/party.mjs";
 import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
 import { equipPhysicalItem, itemAcceptsEquipmentSlot, unequipPhysicalItem } from "../items/equipment.mjs";
-import { executeFirearmAction, firearmActionsForActor } from "../items/firearms.mjs";
+import { resolveActorActions } from "../data/item/identity.mjs";
 import { applyItemWear } from "../items/durability.mjs";
 import { equipmentBySlot, itemRequiredSlots } from "../rules/item-rules.mjs";
-import { EQUIPMENT_SLOT_COLUMNS, PHYSICAL_ITEM_TYPES, itemRarityData } from "../data/item/physical.mjs";
+import { EQUIPMENT_SLOT_COLUMNS, PHYSICAL_ITEM_TYPES, WEAPON_TYPE_GROUPS, itemRarityData, normalizeWeaponType } from "../data/item/physical.mjs";
 
 const DETAILS_CATEGORIES = [
   { key: "party", icon: "fa-solid fa-users", label: "VEILRUNNER.Party" },
@@ -65,43 +65,12 @@ const INVENTORY_CATEGORIES = [
   { key: "junk", icon: "fa-solid fa-recycle", label: "VEILRUNNER.InventoryCategory.junk" }
 ];
 const INVENTORY_SUBTABS = INVENTORY_CATEGORIES.map(category => category.key);
-const WEAPON_FILTER_GROUPS = [
-  { key: "blades", icon: "fa-solid fa-sword", label: "VEILRUNNER.WeaponFilter.blades", filters: [
-    { key: "shortBlades", label: "VEILRUNNER.WeaponFilter.shortBlades" },
-    { key: "longBlades", label: "VEILRUNNER.WeaponFilter.longBlades" },
-    { key: "heavyBlades", label: "VEILRUNNER.WeaponFilter.heavyBlades" }
-  ] },
-  { key: "impactWeapons", icon: "fa-solid fa-hammer", label: "VEILRUNNER.WeaponFilter.impactWeapons", filters: [
-    { key: "melee", label: "VEILRUNNER.WeaponFilter.melee" },
-    { key: "staves", label: "VEILRUNNER.WeaponFilter.staves" },
-    { key: "blunt", label: "VEILRUNNER.WeaponFilter.blunt" }
-  ] },
-  { key: "lightFirearms", icon: "fa-solid fa-gun", label: "VEILRUNNER.WeaponFilter.lightFirearms", filters: [
-    { key: "pistols", label: "VEILRUNNER.WeaponFilter.pistols" },
-    { key: "smgs", label: "VEILRUNNER.WeaponFilter.smgs" },
-    { key: "shotguns", label: "VEILRUNNER.WeaponFilter.shotguns" }
-  ] },
-  { key: "rifles", icon: "fa-solid fa-person-rifle", label: "VEILRUNNER.WeaponFilter.rifles", filters: [
-    { key: "assaultRifles", label: "VEILRUNNER.WeaponFilter.assaultRifles" },
-    { key: "heavyRifles", label: "VEILRUNNER.WeaponFilter.heavyRifles" },
-    { key: "sniperRifles", label: "VEILRUNNER.WeaponFilter.sniperRifles" }
-  ] },
-  { key: "heavyFirearms", icon: "fa-solid fa-rocket", label: "VEILRUNNER.WeaponFilter.heavyFirearms", filters: [
-    { key: "launchers", label: "VEILRUNNER.WeaponFilter.launchers" },
-    { key: "heavyCannons", label: "VEILRUNNER.WeaponFilter.heavyCannons" },
-    { key: "lmgs", label: "VEILRUNNER.WeaponFilter.lmgs" }
-  ] },
-  { key: "arcane", icon: "fa-solid fa-book-open", label: "VEILRUNNER.WeaponFilter.arcane", filters: [
-    { key: "wands", label: "VEILRUNNER.WeaponFilter.wands" },
-    { key: "scepters", label: "VEILRUNNER.WeaponFilter.scepters" },
-    { key: "greatStaves", label: "VEILRUNNER.WeaponFilter.greatStaves" }
-  ] },
-  { key: "exoticWeapons", icon: "fa-solid fa-bow-arrow", label: "VEILRUNNER.WeaponFilter.exoticWeapons", filters: [
-    { key: "flexible", label: "VEILRUNNER.WeaponFilter.flexible" },
-    { key: "thrown", label: "VEILRUNNER.WeaponFilter.thrown" },
-    { key: "bows", label: "VEILRUNNER.WeaponFilter.bows" }
-  ] }
-];
+const WEAPON_FILTER_GROUPS = WEAPON_TYPE_GROUPS.map(group => ({
+  key: group.key,
+  icon: group.icon,
+  label: `VEILRUNNER.WeaponFilter.${group.key}`,
+  filters: group.types.map(key => ({ key, label: `VEILRUNNER.WeaponFilter.${key}` }))
+}));
 const INVENTORY_FILTERS = {
   all: [
     { key: "all", icon: "fa-solid fa-layer-group", label: "VEILRUNNER.InventoryFilter.all" }
@@ -132,7 +101,7 @@ const PARTY_NAME_MAX_LENGTH = 18;
 const RESOURCE_POOLS = ["health", "mana", "stamina", "armor", "shields", "barriers"];
 const VALUE_RESOURCES = ["tempHealth", "inspiration", "resolve", "dying", "wounded"];
 const QUALITY_FLAW_TIERS = ["Minor", "Moderate", "Significant", "Major", "Extreme"];
-const ARCHETYPE_OPTIONS = ["Physique", "Armament", "Magic", "Tech", "Social"];
+const ARCHETYPE_OPTIONS = ["Physique", "Armament", "Magic", "Technical", "Social"];
 const PROFESSION_ARCHETYPES = {
   "Berserker": "Physique",
   "Gymnast": "Physique",
@@ -149,11 +118,11 @@ const PROFESSION_ARCHETYPES = {
   "Magus": "Magic"
 };
 const EXTRA_PROFESSION_TREE = [
-  { archetype: "Tech", profession: "Hardware", disciplines: ["Siliconsmith", "Gridtech", "Fabricator", "Signal Engineer"] },
-  { archetype: "Tech", profession: "Software", disciplines: ["Cyber Tech", "Programmer", "Comforcer", "Netrunner"] },
-  { archetype: "Tech", profession: "Mechanic", disciplines: ["Auto-Mechanic", "Cyber-mechanic"] },
-  { archetype: "Tech", profession: "Vehicle Pilot", disciplines: ["Ground Operator", "Walker Operator", "Marine Operator", "Aerial Operator", "Astromech Operator", "Space Operator"] },
-  { archetype: "Tech", profession: "Drone Operator", disciplines: ["Humanoid", "Multipedal", "Aquatic", "Aerial", "Astromech", "Stationary"] },
+  { archetype: "Technical", profession: "Hardware", disciplines: ["Siliconsmith", "Gridtech", "Fabricator", "Signal Engineer"] },
+  { archetype: "Technical", profession: "Software", disciplines: ["Cyber Tech", "Programmer", "Comforcer", "Netrunner"] },
+  { archetype: "Technical", profession: "Mechanic", disciplines: ["Auto-Mechanic", "Cyber-mechanic"] },
+  { archetype: "Technical", profession: "Vehicle Pilot", disciplines: ["Ground Operator", "Walker Operator", "Marine Operator", "Aerial Operator", "Astromech Operator", "Space Operator"] },
+  { archetype: "Technical", profession: "Drone Operator", disciplines: ["Humanoid", "Multipedal", "Aquatic", "Aerial", "Astromech", "Stationary"] },
   { archetype: "Social", profession: "Investigator", disciplines: ["Forensic Analyst", "Occult Analyst"] },
   { archetype: "Social", profession: "Negotiator", disciplines: ["Con Artist", "Diplomat"] },
   { archetype: "Social", profession: "Infiltrator", disciplines: ["Chameleon", "Scout", "Locksmith", "Tracker"] },
@@ -211,7 +180,7 @@ function tabAnimationClass(from, to) {
 
 function normalizeArchetype(value) {
   const archetype = String(value ?? "").trim();
-  return archetype === "Technical" ? "Tech" : archetype;
+  return archetype === "Tech" ? "Technical" : archetype;
 }
 
 function normalizeUiColor(value, fallback) {
@@ -508,27 +477,33 @@ function detectInventoryFilterKey(item, category) {
     return "armorAll";
   }
 
-  if (haystack.includes("heavyrifle") || haystack.includes("heavyrifles")) return "heavyRifles";
-  if (haystack.includes("sniperrifle") || haystack.includes("sniper")) return "sniperRifles";
-  if (haystack.includes("assaultrifle")) return "assaultRifles";
-  if (haystack.includes("shotgun")) return "shotguns";
-  if (haystack.includes("launcher") || haystack.includes("bazooka") || haystack.includes("rpg")) return "launchers";
-  if (haystack.includes("heavycannon") || haystack.includes("cannon")) return "heavyCannons";
-  if (haystack.includes("lmg") || haystack.includes("lightmachinegun")) return "lmgs";
-  if (haystack.includes("greatstaff") || haystack.includes("greatstave")) return "greatStaves";
-  if (haystack.includes("wand")) return "wands";
-  if (haystack.includes("scepter") || haystack.includes("sceptre")) return "scepters";
-  if (haystack.includes("staff") || haystack.includes("stave")) return "staves";
-  if (haystack.includes("heavyblade") || haystack.includes("greatsword") || haystack.includes("claymore")) return "heavyBlades";
-  if (haystack.includes("flexible") || haystack.includes("whip") || haystack.includes("flail")) return "flexible";
+  const canonicalWeaponType = normalizeWeaponType(system.weaponType ?? system.weaponCategory);
+  if (WEAPON_TYPE_GROUPS.some(group => group.types.includes(canonicalWeaponType))) return canonicalWeaponType;
+
+  if (haystack.includes("marksmanrifle") || haystack.includes("heavyrifle")) return "marksmanRifle";
+  if (haystack.includes("sniperrifle") || haystack.includes("sniper")) return "sniperRifle";
+  if (haystack.includes("assaultrifle")) return "assaultRifle";
+  if (haystack.includes("shotgun")) return "shotgun";
+  if (haystack.includes("projector") || haystack.includes("heavycannon") || haystack.includes("cannon")) return "projector";
+  if (haystack.includes("machinegun") || haystack.includes("lightmachinegun") || haystack.includes("lmg")) return "machineGun";
+  if (haystack.includes("launcher") || haystack.includes("bazooka") || haystack.includes("rpg")) return "launcher";
+  if (haystack.includes("grimoire") || haystack.includes("greatstaff") || haystack.includes("greatstave")) return "grimoire";
+  if (haystack.includes("wand")) return "wand";
+  if (haystack.includes("scepter") || haystack.includes("sceptre")) return "scepter";
+  if (haystack.includes("polearm") || haystack.includes("spear") || haystack.includes("halberd")) return "polearm";
+  if (haystack.includes("staff") || haystack.includes("stave")) return "staff";
+  if (haystack.includes("unarmed") || haystack.includes("fist") || haystack.includes("knuckle")) return "unarmed";
+  if (haystack.includes("heavyblade") || haystack.includes("greatsword") || haystack.includes("claymore")) return "heavyBlade";
+  if (haystack.includes("coil") || haystack.includes("flexible") || haystack.includes("whip") || haystack.includes("flail")) return "coil";
   if (haystack.includes("thrown") || haystack.includes("javelin") || haystack.includes("shuriken")) return "thrown";
-  if (haystack.includes("bow") || haystack.includes("crossbow")) return "bows";
-  if (haystack.includes("smg") || haystack.includes("submachine")) return "smgs";
-  if (haystack.includes("pistol") || haystack.includes("sidearm")) return "pistols";
-  if (haystack.includes("longblade") || haystack.includes("sword") || haystack.includes("katana")) return "longBlades";
-  if (haystack.includes("shortblade") || haystack.includes("knife") || haystack.includes("dagger")) return "shortBlades";
+  if (haystack.includes("bow") || haystack.includes("crossbow")) return "bow";
+  if (haystack.includes("taser") || haystack.includes("stungun")) return "taser";
+  if (haystack.includes("smg") || haystack.includes("submachine")) return "smg";
+  if (haystack.includes("pistol") || haystack.includes("sidearm")) return "pistol";
+  if (haystack.includes("longblade") || haystack.includes("sword") || haystack.includes("katana")) return "longBlade";
+  if (haystack.includes("shortblade") || haystack.includes("knife") || haystack.includes("dagger")) return "shortBlade";
   if (haystack.includes("club") || haystack.includes("baton") || haystack.includes("mace") || haystack.includes("hammer") || haystack.includes("maul")) return "blunt";
-  if (haystack.includes("melee")) return "melee";
+  if (haystack.includes("melee")) return "unarmed";
   return category === "weapon" ? "allWeapons" : "";
 }
 
@@ -1138,18 +1113,31 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       const input = field.querySelector(".persona-axis-value-input");
       if (!range || !input) continue;
 
+      const updatePips = rawValue => {
+        const value = clampPersonaValue(rawValue);
+        const left = Math.floor(Math.max(0, -value) / 10);
+        const right = Math.floor(Math.max(0, value) / 10);
+        const pips = field.querySelector(".persona-axis-pips");
+        pips?.style.setProperty("--persona-position", `${(value + 100) / 2}%`);
+        pips?.querySelectorAll(".left i").forEach((pip, index) => pip.classList.toggle("active", index >= 10 - left));
+        pips?.querySelectorAll(".right i").forEach((pip, index) => pip.classList.toggle("active", index < right));
+      };
+
       range.addEventListener("input", () => {
         input.value = range.value;
+        updatePips(range.value);
       });
 
       input.addEventListener("input", () => {
         range.value = input.value;
+        updatePips(input.value);
       });
 
       input.addEventListener("change", () => {
         const value = clampPersonaValue(input.value);
         input.value = value;
         range.value = value;
+        updatePips(value);
         range.dispatchEvent(new Event("change", { bubbles: true }));
       });
     }
@@ -1564,13 +1552,19 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     }));
     context.pronounsLabel = game.i18n.localize(PRONOUN_OPTIONS.find(option => option.value === system.pronouns)?.label ?? "VEILRUNNER.Pronouns.unspecified");
     context.selectedProfessionReference = selectedProfession;
-    context.personaAxes = PERSONA_AXES.map(axis => {
+    context.personaAxes = PERSONA_AXES.map((axis, index) => {
       const value = clampPersonaValue(system.personaIndex?.[axis.key]);
+      const left = Math.floor(Math.max(0, -value) / 10);
+      const right = Math.floor(Math.max(0, value) / 10);
       return {
         ...axis,
+        index,
         path: `system.personaIndex.${axis.key}`,
         value,
-        percent: (value + 100) / 2
+        signedValue: value > 0 ? `+${value}` : String(value),
+        percent: (value + 100) / 2,
+        leftPips: Array.from({ length: 10 }, (_, pip) => ({ active: pip >= 10 - left })),
+        rightPips: Array.from({ length: 10 }, (_, pip) => ({ active: pip < right }))
       };
     });
     context.healthColor = healthColor;
@@ -1784,7 +1778,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         ? item.cost : key === "type" ? item.typeLabel : item.name;
       return String(value(left)).localeCompare(String(value(right)), undefined, { numeric: true, sensitivity: "base" }) * multiplier;
     };
-    const generatedFirearmActions = ["favorites", "actions"].includes(this.subTabs.actions) ? firearmActionsForActor(actor) : [];
+    const generatedFirearmActions = ["favorites", "actions"].includes(this.subTabs.actions) ? resolveActorActions(actor) : [];
     const actionWorkspaceItems = [...actionItems.map(actionMetadata), ...generatedFirearmActions];
     if (sheetOptions.actionsView === "card") {
       const sort = this.actionCardSort;
@@ -1915,6 +1909,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       .map(item => ({ id: item.id, name: item.name, img: item.img, rarity: itemRarityData(item) }));
     context.panActive = Boolean(system.networkLinked);
     context.panStatus = game.i18n.localize(`VEILRUNNER.PAN.${context.panActive ? "On" : "Off"}`);
+    context.assetLinksJson = JSON.stringify(system.assetLinks ?? [], null, 2);
 
     const party = findPartyForHero(actor);
     context.partyOverview = buildPartyOverview(party, { currentHero: actor });
@@ -1971,6 +1966,16 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   /** @override */
   _prepareSubmitData(event, form, formData) {
     const object = formData.object ?? {};
+    if (foundry.utils.hasProperty(object, "system.assetLinksJson")) {
+      try {
+        const parsed = JSON.parse(String(foundry.utils.getProperty(object, "system.assetLinksJson") || "[]"));
+        foundry.utils.setProperty(object, "system.assetLinks", Array.isArray(parsed) ? parsed : []);
+      } catch (error) {
+        ui.notifications.error("Controlled Assets must be a valid JSON array.");
+        foundry.utils.setProperty(object, "system.assetLinks", foundry.utils.deepClone(this.actor.system?.assetLinks ?? []));
+      }
+      foundry.utils.deleteProperty(object, "system.assetLinksJson");
+    }
     const normalizeNumber = (path) => {
       const current = Number(foundry.utils.getProperty(this.actor, path) ?? 0);
       const fallback = Number.isFinite(current) ? current : 0;
@@ -2341,7 +2346,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const weaponId = row?.dataset.weaponId;
     const operation = row?.dataset.weaponAction;
     if (!weaponId || !operation) return;
-    await executeFirearmAction(this.actor, weaponId, operation);
+    const action = resolveActorActions(this.actor).find(entry => entry.weaponId === weaponId && entry.operation === operation);
+    if (action) await game.veilrunner.executeAction(this.actor, action);
   }
 
   static async #onRollInitiative(event) {
@@ -2561,17 +2567,26 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     }
   }
 
-  async #promptPortraitCrop(path, { useExistingCrop = true } = {}) {
+  async editPortraitCrop(path, options = {}) {
+    return this.#promptPortraitCrop(path, options);
+  }
+
+  async #promptPortraitCrop(path, { useExistingCrop = true, existingCrop = null } = {}) {
+    const bringPortraitEditorToFront = dialog => {
+      dialog?.bringToFront?.();
+      const roots = [dialog?.element, dialog?.element?.closest?.(".application, .app, .window-app, [data-appid]")].filter(Boolean);
+      for (const root of roots) root.style?.setProperty?.("z-index", "100100", "important");
+      dialog?.element?.focus?.();
+    };
     const userId = game.user?.id ?? "local";
     const activeEditor = VeilrunnerHeroSheet.#portraitEditorsByUser.get(userId);
     if (activeEditor) {
-      activeEditor.dialog?.bringToFront?.();
-      activeEditor.dialog?.element?.focus?.();
+      bringPortraitEditorToFront(activeEditor.dialog);
       return null;
     }
 
-    const existingCrop = this.actor.system.portraitCrop ?? {};
-    const crop = normalizePortraitCrop(useExistingCrop ? existingCrop : undefined);
+    const storedCrop = existingCrop ?? this.actor.system.portraitCrop ?? {};
+    const crop = normalizePortraitCrop(useExistingCrop ? storedCrop : undefined);
     const safePath = foundry.utils.escapeHTML(path);
     const sheetOptions = this.actor.system.sheetOptions ?? {};
     const editorColorVision = ["default", "protanopia", "deuteranopia", "tritanopia"].includes(sheetOptions.colorVision)
@@ -2620,6 +2635,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         rejectClose: false,
         render: (event, dialog) => {
           editorState.dialog = dialog;
+          bringPortraitEditorToFront(dialog);
+          requestAnimationFrame(() => bringPortraitEditorToFront(dialog));
           for (const element of [dialog.element, dialog.element?.closest(".application"), dialog.element?.querySelector(".vr-portrait-crop-dialog")].filter(Boolean)) {
             for (const [property, value] of Object.entries(editorTheme)) element.style.setProperty(property, value);
           }
@@ -2703,7 +2720,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   static #onOpenCharacterCreation() {
-    openCharacterCreation(this.actor);
+    openCharacterCreation(this.actor, { portraitEditor: this });
   }
 
   static #onOpenPlayerDatapad() {

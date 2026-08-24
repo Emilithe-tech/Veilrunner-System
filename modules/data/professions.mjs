@@ -68,6 +68,10 @@ export const VEILRUNNER_PROFESSIONS = [
     "disciplines": [
       {
         "name": "Runner",
+        "tags": [
+          "Mobility",
+          "Utility"
+        ],
         "summary": "An agile courier and escape specialist who excels at covering distance and staying ahead of pursuit.",
         "primaryWeapon": "Unarmed",
         "primaryAttributes": [

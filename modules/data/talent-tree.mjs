@@ -4,7 +4,7 @@ const spell = (id, name, order, options = {}) => ({
   shape: ["circle", "hex", "pentagon", "square", "diamond"].includes(options.shape) ? options.shape : (options.type === "ability" ? "hex" : options.type === "trait" ? "circle" : "diamond"),
   type: options.type === "ability" ? "ability" : "action",
   category: options.category ?? "magic", actions: options.type === "ability" ? 0 : (options.actions ?? 1),
-  talentCost: options.talentCost ?? 1, rankCost: options.rankCost ?? 1, maxRank: options.maxRank ?? 20,
+  talentCost: options.talentCost ?? 1, rankCost: options.rankCost ?? 1, maxRank: options.maxRank ?? Number.MAX_SAFE_INTEGER,
   requiredLevel: options.requiredLevel ?? 1, requires: options.requires ?? [], traits: options.traits ?? [],
   resourceCosts: options.resourceCosts ?? { mana: 0, stamina: 0, health: 0 }, effects: options.effects ?? [],
   img: options.img ?? "", description: options.description ?? ""
@@ -142,7 +142,7 @@ function migratePageLayout(savedPage, baselinePage) {
       for (const baselineSpell of baselinePractice.spells ?? []) {
         const spell = practice.spells.find(entry => entry.id === baselineSpell.id);
         if (!spell) practice.spells.push(foundry.utils.deepClone(baselineSpell));
-        else Object.assign(spell, { x: baselineSpell.x, y: baselineSpell.y, shape: baselineSpell.shape, maxRank: Math.min(20, Math.max(1, Number(spell.maxRank) || baselineSpell.maxRank)) });
+        else Object.assign(spell, { x: baselineSpell.x, y: baselineSpell.y, shape: baselineSpell.shape, maxRank: Math.max(1, Number(spell.maxRank) || baselineSpell.maxRank) });
       }
     }
   }
@@ -150,5 +150,7 @@ function migratePageLayout(savedPage, baselinePage) {
 }
 
 export async function saveTalentTreeCatalog(catalog) {
-  return game.settings.set(game.system.id, "talentTreeCatalog", { ...catalog, layoutVersion: TALENT_TREE_LAYOUT_VERSION });
+  const saved = await game.settings.set(game.system.id, "talentTreeCatalog", { ...catalog, layoutVersion: TALENT_TREE_LAYOUT_VERSION });
+  Hooks.callAll("veilrunnerTalentTreeCatalogChanged", saved);
+  return saved;
 }

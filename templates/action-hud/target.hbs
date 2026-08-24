@@ -1,0 +1,18 @@
+<aside class="vr-hud-target vr-hud-panel" aria-label="Current target">
+  {{#if target.selected}}
+    <div class="vr-hud-portrait-frame"><img class="vr-hud-portrait" src="{{target.img}}" alt="" /></div>
+    <div class="vr-hud-target-body">
+      <header><strong>{{target.name}}</strong><span>{{#if target.networked}}Networked{{else}}Observable{{/if}}</span></header>
+      <div class="vr-hud-target-resources">
+        {{#each target.resources as |resource|}}
+          {{#if resource.visible}}<span><b>{{resource.label}}</b>{{#if resource.exact}}<em>{{resource.value}} / {{resource.max}}</em>{{else}}<em>{{resource.state}}</em>{{/if}}</span>{{/if}}
+        {{/each}}
+        {{#if target.defense}}<span><b>Defense</b><em>{{target.defense}}</em></span>{{/if}}
+      </div>
+      {{#if target.conditions.length}}<div class="vr-hud-condition-list">{{#each target.conditions as |condition|}}<span><img src="{{condition.img}}" alt="" />{{condition.name}}{{#if (gt condition.stacks 1)}} ×{{condition.stacks}}{{/if}}</span>{{/each}}</div>{{/if}}
+      <footer><span>INTEL {{target.intel.known}} / {{target.intel.total}}</span>{{#if @root.isGM}}<button type="button" data-action="grantIntel" data-intel-module="biomonitor">+ HP Intel</button>{{/if}}</footer>
+    </div>
+  {{else}}
+    <div class="vr-hud-no-target"><i class="fa-solid fa-crosshairs"></i><strong>Nothing Selected</strong><span>Target a token to inspect it.</span></div>
+  {{/if}}
+</aside>

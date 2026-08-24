@@ -53,7 +53,7 @@ export default class WeaponData extends foundry.abstract.TypeDataModel {
       weaponType: new StringField({
         required: true,
         blank: false,
-        initial: "pistols",
+        initial: "pistol",
         choices: Object.fromEntries(WEAPON_TYPES.map(type => [type, `VEILRUNNER.WeaponFilter.${type}`]))
       }),
       weaponKind: new StringField({ required: true, blank: false, initial: "melee", choices: {
@@ -88,8 +88,23 @@ export default class WeaponData extends foundry.abstract.TypeDataModel {
         capacity: whole(),
         loadedMagazineId: text(),
         internal: new SchemaField({
-          ammoId: text(), sourceAmmoId: text(), quantity: whole(), name: text(), img: text(), caliber: text(), ammoType: text()
+          ammoId: text(), sourceAmmoId: text(), quantity: whole(), name: text(), img: text(), caliber: text(), ammoType: text(), ammoDefinitionId: text()
         }),
+        fireModes: new ArrayField(new SchemaField({
+          id: text("single"), label: text("Single Shot"), actions: whole(1), ammoCost: whole(1),
+          attackModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+          damageModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+          damageFormula: text(), rangeModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+          traits: new ArrayField(text(), { initial: [] })
+        }), { initial: [] }),
+        options: new ArrayField(new SchemaField({
+          id: text("option"), label: text(), description: text(),
+          actionAdjustment: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+          ammoAdjustment: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+          attackModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+          damageModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+          traits: new ArrayField(text(), { initial: [] })
+        }), { initial: [] }),
         compatibility: compatibilitySchema()
       })
     };

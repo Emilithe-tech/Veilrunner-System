@@ -18,6 +18,7 @@ export default class MagazineData extends foundry.abstract.TypeDataModel {
       ammoImg: text(),
       ammoCaliber: text(),
       ammoType: text(),
+      ammoDefinitionId: text(),
       compatibility: compatibilitySchema()
     };
   }

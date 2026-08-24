@@ -8,6 +8,8 @@ import {
 } from "../data/item/physical.mjs";
 import { itemRequiredSlots, normalizeRuleElement, validateRuleElement } from "../rules/item-rules.mjs";
 import { VEILRUNNER_SETTINGS } from "../settings.mjs";
+import { ITEM_INTENTS, isDefinitionId, normalizeDefinitionId, normalizeItemIntents } from "../data/item/identity.mjs";
+import { QUALITY_PILLARS, QUALITY_TIERS, tierCost } from "../apps/chargen/quality-rules.mjs";
 
 const ARMOR_TRAITS = ["pyro", "hydro", "cryo", "floral", "geo", "aero", "electric", "sonic", "light", "void", "slashing", "bludgeoning", "piercing"];
 const ARMOR_EFFECT_TARGETS = ["action", "trait", "attribute"];
@@ -44,6 +46,14 @@ function normalizeActionEffects(entries = []) {
     target: String(entry?.target ?? "").trim(), value: String(entry?.value ?? "").trim(),
     duration: String(entry?.duration ?? "").trim(), notes: String(entry?.notes ?? "").trim()
   })).filter(entry => entry.target);
+}
+
+function normalizeComposerFields(value = "") {
+  return String(value ?? "").split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+    const [labelPart, choicesPart = ""] = line.split(":", 2);
+    const key = String(labelPart ?? "option").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "option";
+    return { key, label: String(labelPart ?? key).trim(), choices: choicesPart.split(",").map(choice => choice.trim()).filter(Boolean), required: true };
+  });
 }
 
 function normalizeTextList(value) {
@@ -98,8 +108,24 @@ function normalizePhysicalRules(entries = []) {
   }, index));
 }
 
+function getFilePickerClass() {
+  return foundry.applications?.apps?.FilePicker?.implementation
+    ?? foundry.applications?.apps?.FilePicker
+    ?? null;
+}
+
+async function renderFilePicker(picker) {
+  if (typeof picker.browse === "function") return picker.browse();
+  try {
+    return picker.render(true);
+  } catch (error) {
+    return picker.render({ force: true });
+  }
+}
+
 /** Basic item sheet. */
 export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
+  itemTab = "details";
   physicalTab = "summary";
 
   static DEFAULT_OPTIONS = {
@@ -118,11 +144,14 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     const context = await super._prepareContext(options);
     context.item = this.item;
     context.system = this.item.system ?? {};
+    context.itemTabDetails = this.itemTab === "details";
+    context.itemTabDescription = this.itemTab === "description";
     context.isPhysical = PHYSICAL_ITEM_TYPES.includes(this.item.type);
     context.physicalType = this.item.type;
     context.isPhysicalWeapon = this.item.type === "weapon";
     context.isPhysicalAmmunition = this.item.type === "ammunition";
     context.isPhysicalMagazine = this.item.type === "magazine";
+    context.isCompatibilityHost = context.isPhysicalWeapon || context.isPhysicalMagazine;
     context.isPhysicalArmor = this.item.type === "armor";
     context.isPhysicalAccessory = this.item.type === "accessory";
     context.isPhysicalShield = this.item.type === "shield";
@@ -153,6 +182,8 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     context.compatibilityAmmoTypesText = (context.system.firearm?.compatibility?.ammoTypes ?? context.system.compatibility?.ammoTypes ?? []).join(", ");
     context.compatibilityAllowText = (context.system.firearm?.compatibility?.allow ?? context.system.compatibility?.allow ?? []).join(", ");
     context.compatibilityBlockText = (context.system.firearm?.compatibility?.block ?? context.system.compatibility?.block ?? []).join(", ");
+    context.compatibilityAllowDefinitionIdsText = (context.system.firearm?.compatibility?.allowDefinitionIds ?? context.system.compatibility?.allowDefinitionIds ?? []).join(", ");
+    context.compatibilityBlockDefinitionIdsText = (context.system.firearm?.compatibility?.blockDefinitionIds ?? context.system.compatibility?.blockDefinitionIds ?? []).join(", ");
     context.physicalRules = normalizePhysicalRules(context.system.rules).map(rule => ({
       ...rule,
       predicateText: rule.predicate.join(", "),
@@ -174,9 +205,28 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     context.isAbility = this.item.type === "ability";
     context.isActionOrAbility = context.isAction || context.isAbility;
     context.isArmor = this.item.type === "armor" && !context.isPhysical;
+    context.isArchetype = this.item.type === "archetype";
     context.isProfession = this.item.type === "profession";
+    context.isDiscipline = this.item.type === "discipline";
     context.isTreasure = this.item.type === "treasure" && !context.isPhysical;
-    context.isCharacterOption = ["species", "origin", "background"].includes(this.item.type);
+    context.isQuality = ["quality", "perk", "flaw"].includes(this.item.type);
+    context.qualityKind = this.item.type === "perk" || this.item.type === "flaw" ? this.item.type : context.system.kind;
+    context.qualityKindLocked = this.item.type === "perk" || this.item.type === "flaw";
+    context.qualityKindLabel = context.qualityKind === "flaw" ? "Flaw" : "Perk";
+    context.qualityTiers = QUALITY_TIERS;
+    context.qualityPillars = QUALITY_PILLARS;
+    context.qualityCost = tierCost(context.system.tier);
+    context.qualityTagsText = normalizeTextList(context.system.tags).join(", ");
+    context.qualityRecommendationTagsText = normalizeTextList(context.system.recommendationTags).join(", ");
+    context.qualityRequiredDefinitionIdsText = normalizeTextList(context.system.requirements?.requiredDefinitionIds).join(", ");
+    context.qualityRequiredTagsText = normalizeTextList(context.system.requirements?.requiredTags).join(", ");
+    context.isCharacterOption = ["species", "origin", "background", "archetype", "profession", "discipline"].includes(this.item.type);
+    context.isPersonaCharacterOption = ["species", "origin", "background", "discipline"].includes(this.item.type);
+    context.personaText = normalizeTextList(context.system.persona).join(", ");
+    context.primaryAttributesText = normalizeTextList(context.system.primaryAttributes).join(", ");
+    context.bonusAttributesText = normalizeTextList(context.system.bonusAttributes).join(", ");
+    context.disciplineTagsText = normalizeTextList(context.system.tags).join(", ");
+    context.disciplineAbilitiesJson = JSON.stringify(context.system.abilities ?? [], null, 2);
     context.characterOptionDescriptionLabel = {
       species: "VEILRUNNER.SpeciesItem.FIELDS.description.label",
       origin: "VEILRUNNER.OriginItem.FIELDS.description.label",
@@ -189,6 +239,22 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     context.actionEffects = normalizeActionEffects(context.system.effects);
     context.actionRequiredItemTypesText = (context.system.requiredItemTypes ?? []).join(", ");
     context.actionRequiredItemTraitsText = (context.system.requiredItemTraits ?? []).join(", ");
+    context.actionRequiredDefinitionIdsText = (context.system.requiredDefinitionIds ?? []).join(", ");
+    context.actionRequiredItemIntentsText = (context.system.requiredItemIntents ?? []).join(", ");
+    context.actionRequiredEffectsText = (context.system.requiredEffects ?? []).join(", ");
+    context.actionRequiredTargetEffectsText = (context.system.requiredTargetEffects ?? []).join(", ");
+    context.actionComposerText = (context.system.composer ?? []).map(field => `${field.label || field.key}: ${(field.choices ?? []).join(", ")}`).join("\n");
+    context.actionRequirementsJson = JSON.stringify(context.system.requirements ?? [], null, 2);
+    context.actionConsumesJson = JSON.stringify(context.system.consumes ?? [], null, 2);
+    context.actionEnhancementsJson = JSON.stringify(context.system.enhancements ?? [], null, 2);
+    context.actionAugmentsJson = JSON.stringify(context.system.augments ?? [], null, 2);
+    context.physicalHudActionsJson = JSON.stringify(context.system.hudActions ?? [], null, 2);
+    context.firearmModesJson = JSON.stringify(context.system.firearm?.fireModes ?? [], null, 2);
+    context.firearmOptionsJson = JSON.stringify(context.system.firearm?.options ?? [], null, 2);
+    context.itemIntentsText = (context.system.intents ?? []).join(", ");
+    context.providedActionIdsText = (context.system.providedActionIds ?? []).join(", ");
+    context.itemIntents = ITEM_INTENTS;
+    context.itemDefinitionIdInvalid = Boolean(context.system.definitionId && !isDefinitionId(context.system.definitionId));
     const actionMaxLevel = Math.max(1, Number(context.system.maxLevel) || 1);
     context.actionLevelOptions = Array.from({ length: actionMaxLevel }, (_, index) => index + 1);
     context.armorEffectTargets = ARMOR_EFFECT_TARGETS;
@@ -196,6 +262,23 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     context.armorWeaknesses = this.#withEmptyArmorTraitRow(context.system.weaknesses);
     context.armorEffects = this.#withEmptyArmorEffectRow(context.system.effects?.length ? context.system.effects : context.system.bonuses);
     context.isGM = game.user.isGM;
+    const description = context.isPhysical ? context.system.description?.value : context.system.description;
+    const gmDescription = context.isPhysical ? context.system.description?.gm : "";
+    context.descriptionPath = context.isPhysical ? "system.description.value" : "system.description";
+    context.descriptionValue = String(description ?? "");
+    context.descriptionHTML = await foundry.applications.ux.TextEditor.enrichHTML(context.descriptionValue, {
+      secrets: this.item.isOwner,
+      relativeTo: this.item
+    });
+    context.qualityMechanicsValue = String(context.system.mechanics ?? "");
+    context.qualityMechanicsHTML = context.isQuality
+      ? await foundry.applications.ux.TextEditor.enrichHTML(context.qualityMechanicsValue, { secrets: this.item.isOwner, relativeTo: this.item })
+      : "";
+    context.hasGMDescription = context.isPhysical && context.isGM;
+    context.gmDescriptionValue = String(gmDescription ?? "");
+    context.gmDescriptionHTML = context.hasGMDescription
+      ? await foundry.applications.ux.TextEditor.enrichHTML(context.gmDescriptionValue, { secrets: true, relativeTo: this.item })
+      : "";
     return context;
   }
 
@@ -214,6 +297,8 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     });
     this.element.querySelectorAll("[data-action='addActionEffect']").forEach(button => button.addEventListener("click", event => this.#onAddActionEffect(event)));
     this.element.querySelectorAll("[data-action='removeActionEffect']").forEach(button => button.addEventListener("click", event => this.#onRemoveActionEffect(event)));
+    this.element.querySelectorAll("[data-action='setItemTab']").forEach(button => button.addEventListener("click", event => this.#onSetItemTab(event)));
+    this.element.querySelectorAll("[data-action='setCharacterOptionArtwork']").forEach(button => button.addEventListener("click", event => this.#onSetCharacterOptionArtwork(event)));
     this.element.querySelectorAll("[data-action='setPhysicalTab']").forEach(button => button.addEventListener("click", event => this.#onSetPhysicalTab(event)));
     this.element.querySelectorAll("[data-action='addPhysicalRule']").forEach(button => button.addEventListener("click", event => this.#onAddPhysicalRule(event)));
     this.element.querySelectorAll("[data-action='removePhysicalRule']").forEach(button => button.addEventListener("click", event => this.#onRemovePhysicalRule(event)));
@@ -238,6 +323,37 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
   /** @override */
   _prepareSubmitData(event, form, formData) {
     const submitData = super._prepareSubmitData(event, form, formData);
+    if (foundry.utils.hasProperty(submitData, "system.definitionId")) {
+      const definitionId = normalizeDefinitionId(foundry.utils.getProperty(submitData, "system.definitionId"));
+      if (definitionId && !isDefinitionId(definitionId)) {
+        ui.notifications.error("Canonical Definition ID must use lowercase segments such as veilrunner.weapon.example.");
+        foundry.utils.setProperty(submitData, "system.definitionId", this.item.system?.definitionId ?? "");
+      } else foundry.utils.setProperty(submitData, "system.definitionId", definitionId);
+    }
+    for (const key of ["intents", "providedActionIds"]) {
+      const textPath = `system.${key}Text`;
+      if (!foundry.utils.hasProperty(submitData, textPath)) continue;
+      const value = foundry.utils.getProperty(submitData, textPath);
+      foundry.utils.setProperty(submitData, `system.${key}`, key === "intents" ? normalizeItemIntents(value) : normalizeTextList(value).map(normalizeDefinitionId).filter(isDefinitionId));
+      foundry.utils.deleteProperty(submitData, textPath);
+    }
+    if (["quality", "perk", "flaw"].includes(this.item.type)) {
+      if (this.item.type === "perk" || this.item.type === "flaw") foundry.utils.setProperty(submitData, "system.kind", this.item.type);
+      for (const [textKey, dataPath, definitionIds = false] of [
+        ["system.tagsText", "system.tags"],
+        ["system.recommendationTagsText", "system.recommendationTags"],
+        ["system.requirements.requiredDefinitionIdsText", "system.requirements.requiredDefinitionIds", true],
+        ["system.requirements.requiredTagsText", "system.requirements.requiredTags"]
+      ]) {
+        if (!foundry.utils.hasProperty(submitData, textKey)) continue;
+        const values = normalizeTextList(foundry.utils.getProperty(submitData, textKey));
+        foundry.utils.setProperty(submitData, dataPath, definitionIds ? values.map(normalizeDefinitionId).filter(isDefinitionId) : values);
+        foundry.utils.deleteProperty(submitData, textKey);
+      }
+      if (foundry.utils.hasProperty(submitData, "system.requirements.minimumLevel")) {
+        foundry.utils.setProperty(submitData, "system.requirements.minimumLevel", Math.max(0, Math.trunc(Number(foundry.utils.getProperty(submitData, "system.requirements.minimumLevel")) || 0)));
+      }
+    }
     if (PHYSICAL_ITEM_TYPES.includes(this.item.type)) {
       for (const path of ["system.traitsText", "system.requiredSlots", "system.rules"]) {
         if (!foundry.utils.hasProperty(submitData, path)) continue;
@@ -251,10 +367,11 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
         }
       }
       const compatibilityRoot = this.item.type === "weapon" ? "system.firearm.compatibility" : "system.compatibility";
-      for (const key of ["ammoTypes", "allow", "block"]) {
+      for (const key of ["ammoTypes", "allow", "block", "allowDefinitionIds", "blockDefinitionIds"]) {
         const textPath = `${compatibilityRoot}.${key}Text`;
         if (!foundry.utils.hasProperty(submitData, textPath)) continue;
-        foundry.utils.setProperty(submitData, `${compatibilityRoot}.${key}`, normalizeTextList(foundry.utils.getProperty(submitData, textPath)));
+        const values = normalizeTextList(foundry.utils.getProperty(submitData, textPath));
+        foundry.utils.setProperty(submitData, `${compatibilityRoot}.${key}`, key.endsWith("DefinitionIds") ? values.map(normalizeDefinitionId).filter(isDefinitionId) : values);
         foundry.utils.deleteProperty(submitData, textPath);
       }
       if (this.item.type === "magazine") {
@@ -282,11 +399,12 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
       foundry.utils.setProperty(submitData, "system.damageDie", number("system.damageDie", 2, 6));
       foundry.utils.setProperty(submitData, "system.damageLevelInterval", number("system.damageLevelInterval", 1, 3));
       if (this.item.type === "action" && foundry.utils.getProperty(submitData, "system.activationKind") === "ability") foundry.utils.setProperty(submitData, "system.actions", 0);
-      if (this.item.type === "action") {
-        for (const key of ["requiredItemTypes", "requiredItemTraits"]) {
+      if (["action", "ability"].includes(this.item.type)) {
+        for (const key of ["requiredItemTypes", "requiredItemTraits", "requiredDefinitionIds", "requiredItemIntents", "requiredEffects", "requiredTargetEffects"]) {
           const textPath = `system.${key}Text`;
           if (!foundry.utils.hasProperty(submitData, textPath)) continue;
-          foundry.utils.setProperty(submitData, `system.${key}`, normalizeTextList(foundry.utils.getProperty(submitData, textPath)));
+          const values = normalizeTextList(foundry.utils.getProperty(submitData, textPath));
+          foundry.utils.setProperty(submitData, `system.${key}`, key === "requiredDefinitionIds" ? values.map(normalizeDefinitionId).filter(isDefinitionId) : key === "requiredItemIntents" ? normalizeItemIntents(values) : values);
           foundry.utils.deleteProperty(submitData, textPath);
         }
       }
@@ -299,13 +417,78 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
       foundry.utils.setProperty(submitData, "system.tree.talentCost", number("system.tree.talentCost", 0, 1));
       foundry.utils.setProperty(submitData, "system.tree.rankCost", number("system.tree.rankCost", 0, 1));
       foundry.utils.setProperty(submitData, "system.tree.requiredLevel", number("system.tree.requiredLevel", 1, 1));
+      foundry.utils.setProperty(submitData, "system.rankScaling.min", number("system.rankScaling.min", 1, 1));
+      foundry.utils.setProperty(submitData, "system.rankScaling.max", Math.min(20, number("system.rankScaling.max", 1, 20)));
+      foundry.utils.setProperty(submitData, "system.rankScaling.manaPerRank", number("system.rankScaling.manaPerRank", 0, 0));
+      foundry.utils.setProperty(submitData, "system.rankScaling.staminaPerRank", number("system.rankScaling.staminaPerRank", 0, 0));
+      foundry.utils.setProperty(submitData, "system.rankScaling.actionPerRank", number("system.rankScaling.actionPerRank", 0, 0));
       if (foundry.utils.hasProperty(submitData, "system.effects")) foundry.utils.setProperty(submitData, "system.effects", normalizeActionEffects(foundry.utils.getProperty(submitData, "system.effects")));
+      if (foundry.utils.hasProperty(submitData, "system.composerText")) {
+        foundry.utils.setProperty(submitData, "system.composer", normalizeComposerFields(foundry.utils.getProperty(submitData, "system.composerText")));
+        delete submitData.system.composerText;
+      }
+      for (const [textKey, dataKey] of [["requirementsJson", "requirements"], ["consumesJson", "consumes"], ["enhancementsJson", "enhancements"], ["augmentsJson", "augments"]]) {
+        const path = `system.${textKey}`;
+        if (!foundry.utils.hasProperty(submitData, path)) continue;
+        try {
+          const parsed = JSON.parse(String(foundry.utils.getProperty(submitData, path) || "[]"));
+          foundry.utils.setProperty(submitData, `system.${dataKey}`, Array.isArray(parsed) ? parsed : []);
+        } catch (error) {
+          ui.notifications.error(`${dataKey} must be a valid JSON array.`);
+          foundry.utils.setProperty(submitData, `system.${dataKey}`, foundry.utils.deepClone(this.item.system?.[dataKey] ?? []));
+        }
+        foundry.utils.deleteProperty(submitData, path);
+      }
     }
-    if (["species", "origin", "background"].includes(this.item.type)
+    if (PHYSICAL_ITEM_TYPES.includes(this.item.type) && foundry.utils.hasProperty(submitData, "system.hudActionsJson")) {
+      try {
+        const parsed = JSON.parse(String(foundry.utils.getProperty(submitData, "system.hudActionsJson") || "[]"));
+        foundry.utils.setProperty(submitData, "system.hudActions", Array.isArray(parsed) ? parsed : []);
+      } catch (error) {
+        ui.notifications.error("HUD Actions must be a valid JSON array.");
+        foundry.utils.setProperty(submitData, "system.hudActions", foundry.utils.deepClone(this.item.system?.hudActions ?? []));
+      }
+      foundry.utils.deleteProperty(submitData, "system.hudActionsJson");
+    }
+    if (this.item.type === "weapon") {
+      for (const [textKey, dataKey, label] of [["fireModesJson", "fireModes", "Fire Modes"], ["optionsJson", "options", "Firearm Options"]]) {
+        const path = `system.firearm.${textKey}`;
+        if (!foundry.utils.hasProperty(submitData, path)) continue;
+        try {
+          const parsed = JSON.parse(String(foundry.utils.getProperty(submitData, path) || "[]"));
+          foundry.utils.setProperty(submitData, `system.firearm.${dataKey}`, Array.isArray(parsed) ? parsed : []);
+        } catch (error) {
+          ui.notifications.error(`${label} must be a valid JSON array.`);
+          foundry.utils.setProperty(submitData, `system.firearm.${dataKey}`, foundry.utils.deepClone(this.item.system?.firearm?.[dataKey] ?? []));
+        }
+        foundry.utils.deleteProperty(submitData, path);
+      }
+    }
+    if (["species", "origin", "background", "discipline"].includes(this.item.type)
       && foundry.utils.hasProperty(submitData, "system.persona")) {
       const raw = foundry.utils.getProperty(submitData, "system.persona");
       const modifiers = Array.isArray(raw) ? raw : String(raw ?? "").split(/[\n,]/);
       foundry.utils.setProperty(submitData, "system.persona", modifiers.map(value => String(value).trim()).filter(Boolean));
+    }
+    if (this.item.type === "discipline") {
+      for (const key of ["primaryAttributes", "bonusAttributes"]) {
+        const path = `system.${key}`;
+        if (foundry.utils.hasProperty(submitData, path)) foundry.utils.setProperty(submitData, path, normalizeTextList(foundry.utils.getProperty(submitData, path)));
+      }
+      if (foundry.utils.hasProperty(submitData, "system.tagsText")) {
+        foundry.utils.setProperty(submitData, "system.tags", normalizeTextList(foundry.utils.getProperty(submitData, "system.tagsText")));
+        foundry.utils.deleteProperty(submitData, "system.tagsText");
+      }
+      if (foundry.utils.hasProperty(submitData, "system.abilitiesJson")) {
+        try {
+          const parsed = JSON.parse(String(foundry.utils.getProperty(submitData, "system.abilitiesJson") || "[]"));
+          foundry.utils.setProperty(submitData, "system.abilities", Array.isArray(parsed) ? parsed : []);
+        } catch (error) {
+          ui.notifications.error("Discipline abilities must be a valid JSON array.");
+          foundry.utils.setProperty(submitData, "system.abilities", foundry.utils.deepClone(this.item.system?.abilities ?? []));
+        }
+        foundry.utils.deleteProperty(submitData, "system.abilitiesJson");
+      }
     }
     if (this.item.type !== "armor") return submitData;
 
@@ -319,6 +502,42 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
       foundry.utils.setProperty(submitData, "system.effects", effects);
     }
     return submitData;
+  }
+
+  async #onSetItemTab(event) {
+    event.preventDefault();
+    const tab = event.currentTarget?.dataset.tab;
+    if (!["details", "description"].includes(tab) || tab === this.itemTab) return;
+    await this.submit({ preventClose: true });
+    this.itemTab = tab;
+    this.render();
+  }
+
+  async #onSetCharacterOptionArtwork(event) {
+    event.preventDefault();
+    if (!["species", "origin", "background"].includes(this.item.type) || !this.item.isOwner) return;
+    try {
+      const FilePickerClass = getFilePickerClass();
+      if (!FilePickerClass) throw new Error("FilePicker is not available.");
+      const picker = new FilePickerClass({
+        type: "image",
+        current: this.item.img,
+        callback: async path => {
+          if (!path) return;
+          try {
+            await this.item.update({ img: path });
+            this.render();
+          } catch (error) {
+            console.error("Veilrunner | Failed to save character-option artwork", error);
+            ui.notifications.error("Unable to save Item artwork. If this Item is in a compendium, make sure the compendium is unlocked.");
+          }
+        }
+      });
+      await renderFilePicker(picker);
+    } catch (error) {
+      console.error("Veilrunner | Failed to open character-option artwork picker", error);
+      ui.notifications.error("Unable to choose Item artwork. If this Item is in a compendium, make sure the compendium is unlocked.");
+    }
   }
 
   async #onSetPhysicalTab(event) {

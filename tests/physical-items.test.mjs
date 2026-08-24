@@ -49,12 +49,19 @@ for (const file of modelFiles) {
   assert.ok(schema.rules, `${file} exposes shared rules`);
   assert.ok(schema.requiredSlots, `${file} exposes slot restrictions`);
   assert.ok(schema.description, `${file} exposes descriptions`);
+  assert.ok(schema.definitionId && schema.intents && schema.providedActionIds, `${file} exposes shared identity fields`);
   assert.ok(schema.durability.fields.wearRate, `${file} exposes durability wear rate`);
   assert.ok(schema.durability.fields.wearAmount, `${file} exposes durability wear amount`);
 }
 
 const { registerConfig } = await import("../modules/config.mjs");
 registerConfig();
+assert.ok(CONFIG.Item.dataModels.quality, "quality is registered in CONFIG.Item.dataModels");
+assert.ok(CONFIG.Item.dataModels.perk, "perk is registered in CONFIG.Item.dataModels");
+assert.ok(CONFIG.Item.dataModels.flaw, "flaw is registered in CONFIG.Item.dataModels");
+const qualitySchema = CONFIG.Item.dataModels.quality.defineSchema();
+assert.ok(qualitySchema.kind && qualitySchema.tier && qualitySchema.pillar, "quality exposes catalog identity fields");
+assert.ok(qualitySchema.requirements.fields.requiredDefinitionIds, "quality exposes structured prerequisites");
 for (const type of ["weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"]) {
   assert.ok(CONFIG.Item.dataModels[type], `${type} is registered in CONFIG.Item.dataModels`);
 }
@@ -65,6 +72,12 @@ assert.deepEqual(CONFIG.Actor.dataModels.hero.migrateData({ equipment: fullEquip
 
 const systemManifest = JSON.parse(fs.readFileSync(new URL("../system.json", import.meta.url), "utf8"));
 const localization = JSON.parse(fs.readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
+assert.ok(systemManifest.documentTypes.Item.quality, "quality is declared in system.json");
+assert.equal(localization.TYPES.Item.quality, "Perk / Flaw", "quality has a Create Item label");
+assert.ok(systemManifest.documentTypes.Item.perk && systemManifest.documentTypes.Item.flaw, "perk and flaw are declared in system.json");
+assert.equal(localization.TYPES.Item.perk, "Perk");
+assert.equal(localization.TYPES.Item.flaw, "Flaw");
+assert.ok(systemManifest.packs.some(pack => pack.name === "qualities-perks" && pack.type === "Item"), "Perks & Flaws Library is registered as an Item compendium");
 for (const type of ["weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"]) {
   assert.ok(systemManifest.documentTypes.Item[type], `${type} is declared in system.json`);
   assert.equal(typeof localization.TYPES.Item[type], "string", `${type} has a Create Item label`);
@@ -91,6 +104,7 @@ assert.doesNotMatch(physicalTemplate, /name="system\.damage\.(?:dice|die)"/, "we
 assert.match(physicalTemplate, /name="system\.damage\.base"/);
 assert.match(physicalTemplate, /name="system\.damage\.max"/);
 assert.match(physicalTemplate, /name="system\.weaponType"><select|name="system\.weaponType"/);
+assert.match(physicalTemplate, /name="system\.grade"/, "physical Item authoring exposes canonical Grade");
 assert.match(physicalTemplate, /data-physical-trait-list/);
 assert.match(physicalTemplate, /data-action="togglePhysicalTrait"/);
 assert.match(physicalTemplate, /data-trait-catalog="true"/);
@@ -115,7 +129,7 @@ const { equipPhysicalItem, equipmentAssignments, itemAcceptsEquipmentSlot, unequ
 const { equipmentBySlot } = await import("../modules/rules/item-rules.mjs");
 const {
   DAMAGE_TYPE_GROUPS, ITEM_RARITIES, WEAPON_TYPE_GROUPS,
-  itemRarityData, migratePhysicalItemData, normalizeItemRarity
+  itemRarityData, migratePhysicalItemData, normalizeItemRarity, normalizeWeaponType
 } = await import("../modules/data/item/physical.mjs");
 const { default: WeaponModel, migrateWeaponData, parseDamageFormula } = await import("../modules/data/item/weapon.mjs");
 const { nextDurabilityState } = await import("../modules/items/durability.mjs");
@@ -128,11 +142,12 @@ class ItemCollection extends Array {
 const weapon = {
   id: "weapon-1", uuid: "Actor.hero.Item.weapon-1", name: "Test Pistol", type: "weapon", img: "pistol.webp",
   system: {
+    definitionId: "veilrunner.weapon.test-pistol", intents: ["weapon", "equippable", "action-provider"],
     requiredSlots: ["mainHand", "offhand"], traits: ["firearm"], weaponKind: "firearm", actions: 1,
     attack: { formula: "1d10", selector: "attack" }, damage: { dice: 1, die: 6, modifier: 0, type: "piercing" },
     firearm: {
       magazineMode: "detachable", loadedMagazineId: "mag-1", capacity: 0,
-      compatibility: { flexible: false, caliber: "9mm", ammoTypes: ["ballistic"], allow: [], block: [] }
+      compatibility: { flexible: false, caliber: "9mm", ammoTypes: ["ballistic"], allowDefinitionIds: [], blockDefinitionIds: [], allow: [], block: [] }
     },
     rules: [
       { key: "RollOption", option: "weapon:ready", enabled: true, requiresEquipped: true },
@@ -143,11 +158,11 @@ const weapon = {
 };
 const magazine = {
   id: "mag-1", uuid: "Actor.hero.Item.mag-1", name: "9mm Magazine", type: "magazine", img: "mag.webp",
-  system: { capacity: 10, rounds: 4, ammoId: "ammo-1", ammoCaliber: "9mm", ammoType: "ballistic", compatibility: { caliber: "9mm", ammoTypes: ["ballistic"], allow: [], block: [], flexible: false }, rules: [], requiredSlots: [] }
+  system: { definitionId: "veilrunner.magazine.test-9mm", intents: ["market-sellable"], capacity: 10, rounds: 4, ammoId: "ammo-1", ammoCaliber: "9mm", ammoType: "ballistic", compatibility: { caliber: "9mm", ammoTypes: ["ballistic"], allowDefinitionIds: [], blockDefinitionIds: [], allow: [], block: [], flexible: false }, rules: [], requiredSlots: [] }
 };
 const ammo = {
   id: "ammo-1", uuid: "Actor.hero.Item.ammo-1", name: "9mm Rounds", type: "ammunition", img: "ammo.webp",
-  system: { quantity: 20, caliber: "9mm", ammoType: "ballistic", rules: [], requiredSlots: [] }
+  system: { definitionId: "veilrunner.ammunition.test-9mm", intents: ["ammunition", "market-sellable"], quantity: 20, caliber: "9mm", ammoType: "ballistic", rules: [], requiredSlots: [] }
 };
 const accessory = {
   id: "item-2", uuid: "Actor.hero.Item.item-2", name: "Sight", type: "accessory",
@@ -175,6 +190,12 @@ assert.equal(isMagazineCompatible(weapon, magazine), true);
 weapon.system.firearm.compatibility.block = [ammo.id];
 assert.equal(isAmmoCompatible(weapon, ammo), false, "explicit blocks override normal compatibility");
 weapon.system.firearm.compatibility.block = [];
+weapon.system.firearm.compatibility.blockDefinitionIds = [ammo.system.definitionId];
+assert.equal(isAmmoCompatible(weapon, ammo), false, "canonical blocks override normal compatibility");
+weapon.system.firearm.compatibility.blockDefinitionIds = [];
+weapon.system.firearm.compatibility.allowDefinitionIds = [ammo.system.definitionId];
+assert.equal(isAmmoCompatible(weapon, ammo), true, "canonical definition IDs support specific ammunition compatibility");
+weapon.system.firearm.compatibility.allowDefinitionIds = [];
 assert.equal(validateRuleElement({ key: "ActiveEffectLike", path: "__proto__.unsafe" }).valid, false);
 const { default: MagazineModel } = await import("../modules/data/item/magazine.mjs");
 assert.equal(MagazineModel.migrateData({ capacity: 4, rounds: 9 }).rounds, 4);
@@ -195,8 +216,12 @@ assert.deepEqual(ITEM_RARITIES.map(({ tier, name, color }) => [tier, name, color
 ]);
 assert.equal(normalizeItemRarity("Ash White"), "common", "legacy color names normalize to rarity slugs");
 assert.equal(migratePhysicalItemData({ rarity: "Legendary" }).rarity, "legendary");
+assert.equal(migratePhysicalItemData({ grade: 0 }).grade, 1, "physical Item Grade is a positive integer");
 assert.equal(itemRarityData({ system: { rarity: "unique" } }).color, "#FF007F");
-assert.equal(WEAPON_TYPE_GROUPS.flatMap(group => group.types).length, 21, "one catalog contains every weapon type");
+assert.deepEqual(WEAPON_TYPE_GROUPS.map(group => group.key), ["arcane", "blades", "finesse", "martial", "lightFirearms", "mediumFirearms", "heavyFirearms"]);
+assert.equal(WEAPON_TYPE_GROUPS.flatMap(group => group.types).length, 23, "one catalog mirrors every Weapons compendium subtype folder");
+assert.equal(WEAPON_TYPE_GROUPS.at(-1).types.at(-1), "projector", "Projector is the final weapon option");
+assert.equal(normalizeWeaponType("Heavy Rifles"), "marksmanRifle", "legacy weapon types migrate to the compendium roster");
 assert.deepEqual(DAMAGE_TYPE_GROUPS.map(group => group.key), ["physical", "elemental", "cosmic"]);
 assert.deepEqual(parseDamageFormula("1d10"), { dice: 1, die: 10 });
 assert.equal(parseDamageFormula("2d8 + 3"), null, "only a simple dice term is derived into dice and die parts");

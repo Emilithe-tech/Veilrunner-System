@@ -1,0 +1,18 @@
+<section class="vr-hud-self vr-hud-panel" aria-label="Player combat status">
+  <div class="vr-hud-portrait-frame"><img class="vr-hud-portrait" src="{{actor.img}}" alt="" /></div>
+  <div class="vr-hud-self-body">
+    <header><strong>{{actor.name}}</strong><span>LVL {{actor.level}}</span></header>
+    <div class="vr-hud-resource-stack">
+      {{#each resources as |resource|}}
+        {{#if resource.visible}}
+          <div class="vr-hud-resource-row resource-{{resource.key}}">
+            <span class="vr-hud-resource-label">{{resource.key}}</span>
+            <span class="vr-hud-resource-bar"><i style="width:{{resource.percent}}%"></i></span>
+            <span class="vr-hud-resource-value">{{resource.value}} / {{resource.max}}</span>
+          </div>
+        {{/if}}
+      {{/each}}
+    </div>
+    <footer><span class="vr-pan-state"><i class="fa-solid fa-signal"></i> PAN {{panState}}</span><button type="button" data-action="toggleMotion" title="Toggle reduced HUD motion"><i class="fa-solid fa-universal-access"></i></button></footer>
+  </div>
+</section>

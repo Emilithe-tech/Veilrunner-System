@@ -18,13 +18,13 @@ assert.deepEqual(groups[0].options.map(option => option.label), [
   "Ammunition", "Armor", "Consumable", "Container", "Equipment", "Magazine", "Shield", "Treasure", "Weapon"
 ]);
 assert.deepEqual(groups[1].options.map(option => option.label), [
-  "Accessory", "Background", "Origin", "Profession", "Species"
+  "Accessory", "Archetype", "Background", "Discipline", "Flaw", "Origin", "Perk", "Profession", "Species"
 ]);
 assert.deepEqual(groups[2].options.map(option => option.label), ["Ability", "Action"]);
 
 const groupedTypes = groups.flatMap(group => group.options.map(option => option.value));
-assert.deepEqual(new Set(groupedTypes), new Set(registeredTypes), "every registered Item type appears once");
-assert.equal(groupedTypes.length, registeredTypes.length, "no Item type is duplicated");
+assert.deepEqual(new Set(groupedTypes), new Set(registeredTypes.filter(type => type !== "quality")), "every public Item type appears once");
+assert.equal(groupedTypes.length, registeredTypes.length - 1, "the compatibility-only quality type is hidden");
 
 for (const group of ITEM_CREATE_TYPE_GROUPS) {
   const key = group.label.split(".").reduce((value, part) => value?.[part], localization);

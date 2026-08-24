@@ -1,4 +1,4 @@
-import { migratePhysicalItemData, physicalItemFields } from "./physical.mjs";
+import { WEAPON_TYPES, migratePhysicalItemData, physicalItemFields } from "./physical.mjs";
 
 const { StringField, NumberField, HTMLField, BooleanField, SchemaField } = foundry.data.fields;
 
@@ -27,29 +27,7 @@ export default class TreasureData extends foundry.abstract.TypeDataModel {
         required: true,
         blank: true,
         initial: "",
-        choices: {
-          shortBlades: "VEILRUNNER.WeaponFilter.shortBlades",
-          longBlades: "VEILRUNNER.WeaponFilter.longBlades",
-          heavyBlades: "VEILRUNNER.WeaponFilter.heavyBlades",
-          melee: "VEILRUNNER.WeaponFilter.melee",
-          staves: "VEILRUNNER.WeaponFilter.staves",
-          blunt: "VEILRUNNER.WeaponFilter.blunt",
-          pistols: "VEILRUNNER.WeaponFilter.pistols",
-          smgs: "VEILRUNNER.WeaponFilter.smgs",
-          shotguns: "VEILRUNNER.WeaponFilter.shotguns",
-          assaultRifles: "VEILRUNNER.WeaponFilter.assaultRifles",
-          heavyRifles: "VEILRUNNER.WeaponFilter.heavyRifles",
-          sniperRifles: "VEILRUNNER.WeaponFilter.sniperRifles",
-          launchers: "VEILRUNNER.WeaponFilter.launchers",
-          heavyCannons: "VEILRUNNER.WeaponFilter.heavyCannons",
-          lmgs: "VEILRUNNER.WeaponFilter.lmgs",
-          wands: "VEILRUNNER.WeaponFilter.wands",
-          scepters: "VEILRUNNER.WeaponFilter.scepters",
-          greatStaves: "VEILRUNNER.WeaponFilter.greatStaves",
-          flexible: "VEILRUNNER.WeaponFilter.flexible",
-          thrown: "VEILRUNNER.WeaponFilter.thrown",
-          bows: "VEILRUNNER.WeaponFilter.bows"
-        }
+        choices: Object.fromEntries(WEAPON_TYPES.map(type => [type, `VEILRUNNER.WeaponFilter.${type}`]))
       }),
       quantity: new NumberField({ required: true, integer: true, min: 0, initial: 1, nullable: false }),
       weight: new NumberField({ required: true, min: 0, initial: 0, nullable: false }),

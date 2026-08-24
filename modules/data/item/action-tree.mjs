@@ -2,6 +2,24 @@
 const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
 const whole = (initial = 0) => new NumberField({ required: true, integer: true, min: 0, initial, nullable: false });
+const text = (initial = "") => new StringField({ required: true, blank: true, initial });
+
+function resourceCostSchema() {
+  return new SchemaField({ mana: whole(), stamina: whole(), health: whole() });
+}
+
+function composerFieldSchema() {
+  return new SchemaField({
+    key: new StringField({ required: true, blank: false, initial: "option" }),
+    label: text(),
+    type: new StringField({ required: true, blank: false, initial: "select", choices: { select: "Select", rank: "Rank", toggle: "Toggle", number: "Number" } }),
+    choices: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+    required: new BooleanField({ required: true, initial: false }),
+    min: whole(),
+    max: whole(20),
+    defaultValue: text()
+  });
+}
 
 export const ACTION_TRAIT_SEED = Object.freeze([
   "elemental", "primal", "arcane", "spirit", "creation", "intrinsic", "occult", "divine",
@@ -20,7 +38,46 @@ export const ACTION_TRAIT_SEED = Object.freeze([
 export function actionTreeSchema() {
   return {
     traits: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
-    resourceCosts: new SchemaField({ mana: whole(), stamina: whole(), health: whole() }),
+    governingAttribute: text(),
+    resourceCosts: resourceCostSchema(),
+    requirements: new ArrayField(new SchemaField({
+      scope: new StringField({ required: true, blank: false, initial: "actor", choices: { actor: "Actor", target: "Target" } }),
+      type: new StringField({ required: true, blank: false, initial: "effect", choices: { effect: "Effect", resource: "Resource", "health-percent": "Health Percent", "actor-type": "Actor Type", trait: "Trait", range: "Range" } }),
+      key: text(),
+      operator: new StringField({ required: true, blank: false, initial: "eq", choices: { eq: "=", neq: "!=", gt: ">", gte: ">=", lt: "<", lte: "<=" } }),
+      value: text(),
+      knowledge: new StringField({ required: true, blank: false, initial: "known", choices: { known: "Known to Player", mechanical: "Mechanical Truth" } }),
+      reason: text()
+    }), { initial: [] }),
+    consumes: new ArrayField(new SchemaField({
+      scope: new StringField({ required: true, blank: false, initial: "actor", choices: { actor: "Actor", target: "Target" } }),
+      effect: text(),
+      stacks: whole(1)
+    }), { initial: [] }),
+    composer: new ArrayField(composerFieldSchema(), { initial: [] }),
+    enhancements: new ArrayField(new SchemaField({
+      id: new StringField({ required: true, blank: false, initial: "enhancement" }),
+      label: text(),
+      description: text(),
+      costs: resourceCostSchema(),
+      actionAdjustment: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
+      maxStacks: whole(1)
+    }), { initial: [] }),
+    augments: new ArrayField(new SchemaField({
+      definitionId: text(),
+      label: text(),
+      minRank: whole(1),
+      maxRank: whole(20),
+      requiredTraits: new ArrayField(text(), { initial: [] })
+    }), { initial: [] }),
+    rankScaling: new SchemaField({
+      enabled: new BooleanField({ required: true, initial: false }),
+      min: whole(1),
+      max: whole(20),
+      manaPerRank: whole(),
+      staminaPerRank: whole(),
+      actionPerRank: whole()
+    }),
     effects: new ArrayField(new SchemaField({
       scope: new StringField({ required: true, blank: false, initial: "actor", choices: { actor: "Actor", area: "Area" } }),
       target: new StringField({ required: true, blank: true, initial: "" }),

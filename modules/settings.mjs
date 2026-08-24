@@ -1,4 +1,6 @@
 import { ACTION_TRAIT_SEED } from "./data/item/action-tree.mjs";
+import { TalentTreeEditorMenu } from "./apps/character-creation.mjs";
+import { DEFAULT_HEALTH_BANDS, DEFAULT_INTEL_MODULES, DEFAULT_WEAPON_FAMILIES, EFFECT_DISCLOSURE } from "./apps/action-hud/constants.mjs";
 
 export const VEILRUNNER_SETTINGS = {
   allowPlayerDatapad: "allowPlayerDatapad",
@@ -26,7 +28,14 @@ export const VEILRUNNER_SETTINGS = {
   combatCarouselPosition: "combatCarouselPosition",
   talentTreeCatalog: "talentTreeCatalog",
   actionTraits: "actionTraits",
-  physicalItemTraits: "physicalItemTraits"
+  physicalItemTraits: "physicalItemTraits",
+  storefrontSampleCatalog: "storefrontSampleCatalog",
+  combatHudHealthBands: "combatHudHealthBands",
+  combatHudIntelModules: "combatHudIntelModules",
+  combatHudWeaponFamilies: "combatHudWeaponFamilies",
+  combatHudPanConfig: "combatHudPanConfig",
+  combatHudVisibilityModes: "combatHudVisibilityModes",
+  combatHudSaveFormula: "combatHudSaveFormula"
 };
 
 const QUEST_OBJECTIVE_VISIBILITY = {
@@ -117,6 +126,15 @@ export function refreshVeilrunnerCombatUi() {
 export function registerSettings() {
   const sid = game.system.id;
 
+  game.settings.registerMenu(sid, "talentTreeEditor", {
+    name: "Configure Talents & Skills",
+    label: "Open Tree Editor",
+    hint: "Open the shared GM authoring interface for Skills and Magic tree nodes, layout, connections, and traits.",
+    icon: "fa-solid fa-diagram-project",
+    type: TalentTreeEditorMenu,
+    restricted: true
+  });
+
   game.settings.register(sid, VEILRUNNER_SETTINGS.talentTreeCatalog, {
     name: "Talents & Skills Catalog", hint: "Shared GM-authored School, Practice, and Spell or Skill layout with global prerequisite paths.",
     scope: "world", config: false, type: Object, default: {}, restricted: true
@@ -124,20 +142,54 @@ export function registerSettings() {
   game.settings.register(sid, VEILRUNNER_SETTINGS.actionTraits, {
     name: "Action Traits", hint: "GM-managed Action and Ability trait registry.",
     scope: "world", config: false, type: Array,
-    default: ACTION_TRAIT_SEED.map(id => ({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), retired: false })), restricted: true
+    default: ACTION_TRAIT_SEED.map(id => ({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), attackPenaltyAdjustment: id === "special" ? 2 : id === "agile" ? 1 : id === "heavy" ? -1 : 0, retired: false })), restricted: true
   });
   game.settings.register(sid, VEILRUNNER_SETTINGS.physicalItemTraits, {
     name: "Physical Item Traits", hint: "Shared trait catalog built while physical items are authored.",
     scope: "world", config: false, type: Array, default: [], restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.combatHudHealthBands, {
+    name: "Combat HUD Health Bands", hint: "GM-authored qualitative thresholds used when exact telemetry is unavailable.",
+    scope: "world", config: false, type: Array, default: DEFAULT_HEALTH_BANDS.map(entry => ({ ...entry })), restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.combatHudIntelModules, {
+    name: "Combat HUD Intel Modules", hint: "Subsystems that may be revealed for a networked target.",
+    scope: "world", config: false, type: Array, default: DEFAULT_INTEL_MODULES.map(entry => ({ ...entry })), restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.combatHudWeaponFamilies, {
+    name: "Combat HUD Weapon Families", hint: "Broad HUD weapon families mapped to authored Veilrunner categories.",
+    scope: "world", config: false, type: Array, default: DEFAULT_WEAPON_FAMILIES.map(entry => ({ ...entry, categories: [] })), restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.combatHudPanConfig, {
+    name: "Combat HUD PAN", hint: "Presentation policy for stable, degraded, jammed, and lost telemetry.",
+    scope: "world", config: false, type: Object, default: { glitchEnabled: true, degradedNumbers: false }, restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.combatHudVisibilityModes, {
+    name: "Combat HUD Effect Visibility", hint: "Available ActiveEffect disclosure modes.",
+    scope: "world", config: false, type: Object, default: Object.fromEntries(Object.values(EFFECT_DISCLOSURE).map(value => [value, value])), restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.combatHudSaveFormula, {
+    name: "Combat HUD Save Formula", hint: "Direct HUD saving throw formula. @modifier is the authored save value.",
+    scope: "world", config: true, type: String, default: "1d10 + @modifier", restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.storefrontSampleCatalog, {
+    name: "Enable Storefront Sample Fixtures",
+    hint: "Show the removable, non-canonical sample catalog used to test storefront scrolling, filters, and pagination.",
+    scope: "world", config: true, type: Boolean, default: false, restricted: true
   });
   Hooks.once("ready", async () => {
     if (!game.user?.isGM) return;
     const current = foundry.utils.deepClone(game.settings.get(sid, VEILRUNNER_SETTINGS.actionTraits) ?? []);
     const known = new Set(current.map(entry => entry.id));
     const missing = ACTION_TRAIT_SEED.filter(id => !known.has(id));
-    if (!missing.length) return;
-    current.push(...missing.map(id => ({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), retired: false })));
-    await game.settings.set(sid, VEILRUNNER_SETTINGS.actionTraits, current);
+    current.push(...missing.map(id => ({ id, label: id.replace(/(^|-)\w/g, value => value.toUpperCase()), attackPenaltyAdjustment: id === "special" ? 2 : id === "agile" ? 1 : id === "heavy" ? -1 : 0, retired: false })));
+    let changed = Boolean(missing.length);
+    for (const entry of current) {
+      if (entry.attackPenaltyAdjustment !== undefined) continue;
+      entry.attackPenaltyAdjustment = entry.id === "special" ? 2 : entry.id === "agile" ? 1 : entry.id === "heavy" ? -1 : 0;
+      changed = true;
+    }
+    if (changed) await game.settings.set(sid, VEILRUNNER_SETTINGS.actionTraits, current);
   });
 
   game.settings.register(sid, VEILRUNNER_SETTINGS.allowPlayerDatapad, {

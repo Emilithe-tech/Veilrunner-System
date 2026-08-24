@@ -9,8 +9,10 @@ import { DATAPAD_TEMPLATE_PARTIALS, registerDatapad } from "./modules/apps/datap
 import { registerReferenceJournals } from "./modules/apps/reference-journals.mjs";
 import { registerInitiativeBandDecider } from "./modules/apps/initiative-band-decider.mjs";
 import { registerCombatCarousel } from "./modules/apps/combat-carousel.mjs";
+import { registerActionHud } from "./modules/apps/action-hud/controller.mjs";
 import { registerItemCreateDialogGroups } from "./modules/apps/item-create-dialog.mjs";
 import { registerSettings } from "./modules/settings.mjs";
+import { migrateOfficialCompendiumDefinitions } from "./modules/data/item/identity.mjs";
 
 const PARTY_SHEET_PARTIALS = [
   "systems/veilrunner/templates/actor/party/parts/party.hbs",
@@ -48,8 +50,16 @@ const ITEM_SHEET_PARTIALS = [
   "systems/veilrunner/templates/item/parts/physical.hbs"
 ];
 
+const ACTION_HUD_TEMPLATE_PARTIALS = [
+  "systems/veilrunner/templates/action-hud/party.hbs",
+  "systems/veilrunner/templates/action-hud/self.hbs",
+  "systems/veilrunner/templates/action-hud/workspace.hbs",
+  "systems/veilrunner/templates/action-hud/target.hbs",
+  "systems/veilrunner/templates/action-hud/economy.hbs"
+];
+
 Hooks.once("init", async () => {
-  await foundry.applications.handlebars.loadTemplates([...PARTY_SHEET_PARTIALS, ...HERO_SHEET_PARTIALS, ...ITEM_SHEET_PARTIALS, ...DATAPAD_TEMPLATE_PARTIALS]);
+  await foundry.applications.handlebars.loadTemplates([...PARTY_SHEET_PARTIALS, ...HERO_SHEET_PARTIALS, ...ITEM_SHEET_PARTIALS, ...ACTION_HUD_TEMPLATE_PARTIALS, ...DATAPAD_TEMPLATE_PARTIALS]);
 
   registerConfig();
   registerSettings();
@@ -60,6 +70,7 @@ Hooks.once("init", async () => {
   registerReferenceJournals();
   registerInitiativeBandDecider();
   registerCombatCarousel();
+  registerActionHud();
   registerItemCreateDialogGroups();
 
   const { DocumentSheetConfig } = foundry.applications.apps;
@@ -79,10 +90,12 @@ Hooks.once("init", async () => {
 
   DocumentSheetConfig.registerSheet(foundry.documents.Item, sid, VeilrunnerItemSheet, {
     types: [
-      "action", "accessory", "ability", "armor", "profession", "treasure", "species", "origin", "background",
-      "weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"
+      "action", "accessory", "ability", "armor", "archetype", "profession", "discipline", "treasure", "species", "origin", "background",
+      "quality", "perk", "flaw", "weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"
     ],
     makeDefault: true,
     label: "VEILRUNNER.SheetLabel.item"
   });
 });
+
+Hooks.once("ready", () => migrateOfficialCompendiumDefinitions().catch(error => console.error("Veilrunner | Item identity migration failed", error)));

@@ -1,0 +1,12 @@
+<footer class="vr-hud-economy-rail vr-hud-panel" aria-label="Combat economy">
+  <section><span>AP</span><strong>{{#if economy}}{{economy.actions}} / {{economy.limits.actions}}{{else}}—{{/if}}</strong><i class="fa-solid fa-hexagon"></i></section>
+  <section><span>RX</span><strong>{{#if economy}}{{economy.reactions}} / {{economy.limits.reactions}}{{else}}—{{/if}}</strong><i class="fa-solid fa-shield-halved"></i></section>
+  <section><span>Move</span><strong>{{#if economy.movement}}{{economy.movement}}{{else}}—{{/if}}</strong><i class="fa-solid fa-boot"></i></section>
+  <button type="button" data-action="setWorkspace" data-workspace="saves"><span>Saves</span><strong>3</strong><i class="fa-solid fa-snowflake"></i></button>
+  <section><span>Sustain</span><strong>—</strong><i class="fa-solid fa-hourglass"></i></section>
+  <section><span>Status</span><strong>{{target.conditions.length}}</strong><i class="fa-solid fa-wave-square"></i></section>
+  <section class="vr-hud-macro-strip" aria-label="Assigned macros">
+    <span class="vr-hud-macro-label">Macros</span>
+    <div>{{#each macros as |macro|}}<button type="button" data-action="useAction" data-action-id="{{macro.id}}" title="Slot {{macro.slot}}: {{macro.name}}" aria-label="Macro slot {{macro.slot}}: {{macro.name}}"><small>{{macro.slot}}</small><img src="{{macro.img}}" alt="" /></button>{{else}}<em>No Macros Assigned</em>{{/each}}</div>
+  </section>
+</footer>

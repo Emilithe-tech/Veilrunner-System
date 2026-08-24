@@ -1,42 +1,47 @@
-import { VEILRUNNER_PERSONA_INDEX_MODIFIERS, VEILRUNNER_PROFESSIONS } from "../data/professions.mjs";
+import { VEILRUNNER_PERSONA_INDEX_MODIFIERS } from "../data/professions.mjs";
+import { ARCHETYPE_OPTIONS, ARCHETYPE_SUMMARIES, fallbackPathRecords, sortPathEntries } from "../data/path-options.mjs";
 import { attributePointsForLevel, attributePointsGainedAtLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
 import { xpForLevel } from "../data/xp.mjs";
 import { applyHeroLevelUp } from "../data/level-up.mjs";
 import { talentTreeCatalog, talentTreePage, talentTreeRoot, saveTalentTreeCatalog, skillPointCostForLevel } from "../data/talent-tree.mjs";
-import { VEILRUNNER_STARTER_STORE } from "../data/starter-store.mjs";
+import { starterStoreContext } from "../data/starter-store.mjs";
+import { ChargenBuildStore } from "./chargen/build-store.mjs";
+import { validateChargenBuild } from "./chargen/validation.mjs";
+import { renderChargenHeader, renderDetailsPanel } from "./chargen/shell.mjs";
+import { renderLiveBuild } from "./chargen/live-build.mjs";
+import { renderSelectionBrowser } from "./chargen/selection-browser.mjs";
+import { magicTreeAccess, purchasedTalentTreePage, schoolAccessBranchId, searchTalentTree, talentTreeRecords } from "./chargen/talent-tree-view.mjs";
+import { CatalogIndex, CatalogProvider, registerCatalogInvalidation } from "./chargen/storefront/catalog-provider.mjs";
+import { addToCart, cartItemCount, cartTotal, cartWeight, mergeCarts, normalizeCart, removeFromCart, setCartQuantity } from "./chargen/storefront/cart.mjs";
+import { DEFAULT_CATALOG_QUERY, catalogFacets, paginateCatalog, queryCatalog } from "./chargen/storefront/query.mjs";
+import { buildStorefrontCommit, validateStorefrontTransaction } from "./chargen/storefront/transaction.mjs";
+import { renderStorefrontBrowser, renderStorefrontContext } from "./chargen/storefront/view.mjs";
+import { QualityCatalogProvider, qualityCatalogFacets, queryQualityCatalog, registerQualityCatalogInvalidation } from "./chargen/quality-catalog.mjs";
+import {
+  QUALITY_LIMITS, QUALITY_PILLARS, QUALITY_TIERS, auditQualityBuild, evaluateQualitySelection,
+  qualitySelectionId, qualitySelectionSnapshot, tierCost
+} from "./chargen/quality-rules.mjs";
 
-const ARCHETYPE_OPTIONS = ["Physique", "Armament", "Magic", "Tech", "Social"];
-const PROFESSION_ARCHETYPES = {
-  "Berserker": "Physique",
-  "Gymnast": "Physique",
-  "Martial Artist": "Physique",
-  "Vanguard": "Physique",
-  "Duelist": "Armament",
-  "Field Technician": "Armament",
-  "Marksman": "Armament",
-  "Amplifier": "Magic",
-  "Cleric": "Magic",
-  "Conjurer": "Magic",
-  "Druid": "Magic",
-  "Elemental Adept": "Magic",
-  "Magus": "Magic"
-};
-const EXTRA_PROFESSION_TREE = [
-  { archetype: "Tech", profession: "Hardware", disciplines: ["Siliconsmith", "Gridtech", "Fabricator", "Signal Engineer"] },
-  { archetype: "Tech", profession: "Software", disciplines: ["Cyber Tech", "Programmer", "Comforcer", "Netrunner"] },
-  { archetype: "Tech", profession: "Mechanic", disciplines: ["Auto-Mechanic", "Cyber-mechanic"] },
-  { archetype: "Tech", profession: "Vehicle Pilot", disciplines: ["Ground Operator", "Walker Operator", "Marine Operator", "Aerial Operator", "Astromech Operator", "Space Operator"] },
-  { archetype: "Tech", profession: "Drone Operator", disciplines: ["Humanoid", "Multipedal", "Aquatic", "Aerial", "Astromech", "Stationary"] },
-  { archetype: "Social", profession: "Investigator", disciplines: ["Forensic Analyst", "Occult Analyst"] },
-  { archetype: "Social", profession: "Negotiator", disciplines: ["Con Artist", "Diplomat"] },
-  { archetype: "Social", profession: "Infiltrator", disciplines: ["Chameleon", "Scout", "Locksmith", "Tracker"] },
-  { archetype: "Magic", profession: "Magus", disciplines: ["Blood Mage", "Sorcerer", "Thaumaturge", "Wizard"] }
-];
+const MAGIC_ACCESS_BRANCH_ID = "root:magic";
+const MAGIC_ACCESS_COST = 5;
+
 const ATTRIBUTE_GROUPS = [
   { key: "physical", label: "Physical", attributes: ["strength", "dexterity", "agility", "reaction"] },
   { key: "mental", label: "Mental", attributes: ["intelligence", "wisdom", "focus", "logic"] },
   { key: "social", label: "Social", attributes: ["charisma", "perception"] }
 ];
+const ATTRIBUTE_ICONS = Object.freeze({
+  strength: "fa-solid fa-hand-fist",
+  dexterity: "fa-solid fa-crosshairs",
+  agility: "fa-solid fa-person-running",
+  reaction: "fa-solid fa-bullseye",
+  intelligence: "fa-solid fa-book-open",
+  wisdom: "fa-solid fa-eye",
+  focus: "fa-solid fa-sun",
+  logic: "fa-solid fa-asterisk",
+  charisma: "fa-solid fa-user",
+  perception: "fa-solid fa-eye"
+});
 const PERSONA_AXES = [
   { key: "criminalLawful", left: "Criminal", right: "Lawful" },
   { key: "ruthlessEmpathy", left: "Ruthless", right: "Empathy" },
@@ -47,6 +52,12 @@ const REFERENCE_PACKS = Object.freeze({
   origin: "Veilrunner.origins",
   background: "Veilrunner.backgrounds"
 });
+const UNIQUE_ABILITY_PACKS = Object.freeze([
+  "Veilrunner.unique-abilities",
+  "Veilrunner.unique-actions",
+  "Veilrunner.unique-reactions",
+  "Veilrunner.unique-traits"
+]);
 const SPECIES_GROUPS = Object.freeze([
   { label: "Mammalian", options: ["Human", "Elf", "Dwarf", "Ork", "Troll", "Goblin"] },
   { label: "Reptillian", options: ["Lizardfolk", "Dragonborn", "Kobold"] },
@@ -67,8 +78,8 @@ const LEVEL_OPTIONS = Object.freeze([
   { level: 30, label: "Prime", icon: "fa-solid fa-star" },
   { level: 40, label: "Elite Tier", icon: "fa-solid fa-crown" }
 ]);
-const QUALITY_FLAW_TIERS = Object.freeze(["Minor", "Moderate", "Significant", "Major", "Extreme"]);
-const QUALITY_FLAW_PILLARS = Object.freeze(["Physical", "Social", "Magical", "Technical"]);
+const QUALITY_FLAW_TIERS = QUALITY_TIERS;
+const QUALITY_FLAW_PILLARS = QUALITY_PILLARS;
 const PERSONA_DIRECTIONS = Object.freeze({
   criminal: { axis: "criminalLawful", direction: -1 }, lawful: { axis: "criminalLawful", direction: 1 },
   ruthless: { axis: "ruthlessEmpathy", direction: -1 }, empathy: { axis: "ruthlessEmpathy", direction: 1 }, empathetic: { axis: "ruthlessEmpathy", direction: 1 },
@@ -91,45 +102,32 @@ const TREE_COLUMNS = [
 const STEPS = [
   { key: "level", label: "Starting Level", icon: "fa-solid fa-chart-line" },
   { key: "species", label: "Species", icon: "fa-solid fa-dna" },
-  { key: "origin", label: "Origin", icon: "fa-solid fa-earth-americas" },
+  { key: "origin", label: "Home Planet", icon: "fa-solid fa-earth-americas" },
   { key: "background", label: "Background", icon: "fa-solid fa-scroll" },
   { key: "profession", label: "Path", icon: "fa-solid fa-id-card-clip" },
   { key: "attributes", label: "Attributes", icon: "fa-solid fa-dumbbell" },
   { key: "talents", label: "Talents & Skills", icon: "fa-solid fa-diagram-project" },
   { key: "qualitiesFlaws", label: "Perks & Flaws", icon: "fa-solid fa-scale-balanced" },
   { key: "contacts", label: "Contacts", icon: "fa-solid fa-address-book" },
-  { key: "languages", label: "Languages", icon: "fa-solid fa-language" },
-  { key: "persona", label: "Persona Index", icon: "fa-solid fa-sliders" },
-  { key: "credits", label: "Purchases", icon: "fa-solid fa-cart-shopping" },
-  { key: "bio", label: "Biography", icon: "fa-solid fa-book-open" },
+  { key: "credits", label: "Galactic Market", icon: "fa-solid fa-cart-shopping" },
+  { key: "identity", label: "Identity", icon: "fa-solid fa-id-card" },
   { key: "review", label: "Review", icon: "fa-solid fa-circle-check" }
 ];
 const STEP_GROUPS = Object.freeze([
   { label: "Level of Play", keys: ["level"] },
-  { label: "Identity", keys: ["species", "origin", "background"] },
+  { label: "Origin", keys: ["species", "origin", "background"] },
   { label: "Build", keys: ["profession", "attributes", "talents", "qualitiesFlaws"] },
-  { label: "Details", keys: ["contacts", "languages", "persona", "credits", "bio"] },
+  { label: "Details", keys: ["contacts", "credits", "identity"] },
   { label: "Review", keys: ["review"] }
 ]);
 const LEVEL_UP_STEP_KEYS = Object.freeze(["attributes", "talents", "qualitiesFlaws", "review"]);
 const existingCreators = new Map();
+let existingTalentTreeEditor = null;
 const UNSAFE_PROPERTY_PATH_SEGMENT = /(?:^|\.)(?:__proto__|constructor|prototype)(?:\.|$)/i;
 
 function normalizeArchetype(value) {
   const archetype = String(value ?? "").trim();
-  return archetype === "Technical" ? "Tech" : archetype;
-}
-
-function professionTreeRecords() {
-  const records = VEILRUNNER_PROFESSIONS.map(profession => ({
-    archetype: normalizeArchetype(PROFESSION_ARCHETYPES[profession.name]),
-    profession: profession.name,
-    disciplines: profession.disciplines.map(discipline => discipline.name)
-  }));
-  for (const extra of EXTRA_PROFESSION_TREE) {
-    if (!records.some(record => record.profession === extra.profession)) records.push(extra);
-  }
-  return records;
+  return archetype === "Tech" ? "Technical" : archetype;
 }
 
 function escape(value) {
@@ -147,6 +145,16 @@ function isSafePropertyPath(path) {
 
 function listFromText(value) {
   return String(value ?? "").split(/[\n,]/).map(entry => entry.trim()).filter(Boolean);
+}
+
+function uniqueAbilityKey(profession, discipline, ability) {
+  return [profession, discipline, ability].map(value => String(value ?? "").trim().toLowerCase()).join(":");
+}
+
+function plainTextFromHtml(value) {
+  const template = document.createElement("template");
+  template.innerHTML = String(value ?? "");
+  return String(template.content.textContent ?? "").trim();
 }
 
 function treeRequirement(value) {
@@ -189,6 +197,28 @@ function personaModifierDeltas(modifiers) {
 
 function clampPersona(value) {
   return Math.max(-100, Math.min(100, number(value)));
+}
+
+let guardedFilePickerBase = null;
+let guardedFilePickerClass = null;
+
+function getFilePickerClass() {
+  const FilePickerClass = foundry.applications?.apps?.FilePicker?.implementation ?? foundry.applications?.apps?.FilePicker ?? null;
+  if (!FilePickerClass) return null;
+  if (guardedFilePickerBase === FilePickerClass && guardedFilePickerClass) return guardedFilePickerClass;
+  guardedFilePickerBase = FilePickerClass;
+  guardedFilePickerClass = class VeilrunnerChargenFilePicker extends FilePickerClass {
+    _onSearchFilter(...args) {
+      if (!this.element?.parentElement) return;
+      return super._onSearchFilter(...args);
+    }
+  };
+  return guardedFilePickerClass;
+}
+
+async function renderFilePicker(picker) {
+  if (typeof picker.browse === "function") return picker.browse();
+  try { return picker.render(true); } catch (_error) { return picker.render({ force: true }); }
 }
 
 function biographyHtml(state) {
@@ -242,10 +272,14 @@ function defaultState(actor) {
     qualityFlawDialog: null,
     contactFocus: 0,
     qualityFlawSearch: "",
+    qualityFlawMode: "all",
     qualityFlawTypeFilter: "all",
     qualityFlawPillarFilter: "all",
     qualityFlawTierFilter: "all",
-    qualityFlawFocus: { kind: "quality", tier: "Minor", points: 1, pillar: "Physical" },
+    qualityFlawTagFilter: "all",
+    qualityFlawAvailableOnly: false,
+    qualityFlawVisibleCount: 80,
+    qualityFlawFocus: null,
     talentPointsSpent: number(system.characterGeneration?.talentPointsSpent),
     talentNotes: system.characterGeneration?.notes ?? "",
     skillPointsSpent: number(system.characterGeneration?.skillPointsSpent),
@@ -253,6 +287,11 @@ function defaultState(actor) {
     skillNotes: "",
     credits: number(system.credits),
     creditsSpent: number(system.characterGeneration?.creditsSpent),
+    storefront: {
+      cart: [],
+      purchases: [],
+      query: { ...DEFAULT_CATALOG_QUERY }, page: 1, scrollTop: 0, selectedDefinitionId: "", rightPane: "details"
+    },
     purchases: "",
     contacts: foundry.utils.deepClone(system.contacts ?? []),
     languages: textFromList(system.knownLanguages),
@@ -263,6 +302,10 @@ function defaultState(actor) {
     personality: "",
     history: "",
     personaIndex: foundry.utils.deepClone(system.personaIndex ?? {}),
+    portraitImage: actor.img || system.portraitImage || "icons/svg/mystery-man.svg",
+    portraitCrop: foundry.utils.deepClone(system.portraitCrop ?? { x: 50, y: 50, zoom: 1, rotation: 0, flipX: false }),
+    references: foundry.utils.deepClone(system.characterGeneration?.references ?? {}),
+    detailSelection: null,
     // Existing characters retain their authored Persona values; new creation
     // previews the evolving recommendation until a player edits it.
     personaTouched: Object.values(system.personaIndex ?? {}).some(value => number(value) !== 0)
@@ -276,53 +319,113 @@ export function registerCharacterCreation() {
   });
 }
 
-export function openCharacterCreation(actor, { mode = "creation" } = {}) {
+export function openCharacterCreation(actor, { mode = "creation", portraitEditor = null } = {}) {
   const existing = existingCreators.get(actor.id);
   if (existing) {
+    if (portraitEditor) existing.portraitEditor = portraitEditor;
     existing.bringToFront();
     return existing;
   }
-  const creator = new CharacterCreationOverlay(actor, { mode });
+  const creator = new CharacterCreationOverlay(actor, { mode, portraitEditor });
   existingCreators.set(actor.id, creator);
   creator.render();
   return creator;
 }
 
+export function openTalentTreeEditor({ page = "magic", nodeId = "", actor = null } = {}) {
+  if (!game.user?.isGM) {
+    ui.notifications.warn("Only a GM can configure the Talents & Skills tree.");
+    return null;
+  }
+  if (existingTalentTreeEditor?.root?.isConnected) {
+    existingTalentTreeEditor.treePage = page === "skills" ? "skills" : "magic";
+    existingTalentTreeEditor.focusTreeNode(nodeId);
+    existingTalentTreeEditor.bringToFront();
+    existingTalentTreeEditor.draw();
+    return existingTalentTreeEditor;
+  }
+  const editorActor = actor ?? { id: "talent-tree-editor", name: "", img: "icons/svg/mystery-man.svg", system: {}, sheet: null };
+  existingTalentTreeEditor = new CharacterCreationOverlay(editorActor, { mode: "treeEditor", page, nodeId });
+  existingTalentTreeEditor.focusTreeNode(nodeId);
+  existingTalentTreeEditor.render();
+  return existingTalentTreeEditor;
+}
+
+export class TalentTreeEditorMenu extends foundry.applications.api.ApplicationV2 {
+  render() {
+    openTalentTreeEditor();
+    return this;
+  }
+}
+
 class CharacterCreationOverlay {
-  constructor(actor, { mode = "creation" } = {}) {
+  constructor(actor, { mode = "creation", page = "magic", nodeId = "", portraitEditor = null } = {}) {
     this.actor = actor;
-    this.mode = mode === "levelUp" ? "levelUp" : "creation";
+    this.portraitEditor = portraitEditor;
+    this.mode = mode === "treeEditor" ? "treeEditor" : mode === "levelUp" ? "levelUp" : "creation";
+    this.isTreeEditor = this.mode === "treeEditor";
     this.step = 0;
     this.treeCanvasOpen = false;
-    this.treePage = "magic";
+    this.treePage = page === "skills" ? "skills" : "magic";
     this.pathTransitioning = false;
     this.openTreeGroups = new Set();
     this.animateNavigation = false;
+    this.renderedStepKey = null;
     this.authorNode = null;
     this.traitEditorOpen = false;
     this.treeZoom = 1;
     this.treePan = null;
+    this.personaDrag = null;
     this.treeViewport = {};
     this.treeViewportInitialized = {};
     this.treeCanvasDimensions = { skills: { width: 10000, height: 6000 }, magic: { width: 10000, height: 6000 } };
     this.treeUndoStack = [];
     this.openPracticeId = null;
+    this.treeFocus = nodeId ? { id: nodeId, kind: "" } : null;
+    this.treeSearch = "";
+    this.treePurchasedOnly = false;
+    this.pendingTreeCenterId = nodeId || "";
     this.treeNodeDrag = null;
     this.nodeMoveMode = false;
     this.selectedTreeNodes = new Set();
     this.treeRingTool = { active: false, radius: 500, rotation: -90 };
+    this.liveBuildCollapsed = new Set();
+    this.inspectorTab = "overview";
+    this.selectionModes = { archetype: "guided", profession: "guided", discipline: "guided" };
+    this.disciplineSort = "discipline";
+    this.activeAttributePath = "attributes.physical.reaction";
+    this.pathStage = null;
     this.connectionDrag = null;
     this.suppressTreeClick = false;
     this.connectionTool = { active: false, source: null, operation: "connect", requiredLevel: 1, bend: 0, thickness: 2, sourceAnchor: "auto", targetAnchor: "auto", pattern: "solid", glow: 1, color: "" };
-    this.state = defaultState(actor);
+    this.store = new ChargenBuildStore(defaultState(actor), {
+      setProperty: foundry.utils.setProperty,
+      deepClone: foundry.utils.deepClone
+    });
+    this.state = this.store.state;
+    let includeStorefrontSamples = false;
+    try { includeStorefrontSamples = Boolean(game.settings.get(game.system.id, "storefrontSampleCatalog")); } catch (_error) { /* Setting is unavailable in isolated tests. */ }
+    this.catalogProvider = new CatalogProvider(starterStoreContext({ includeSamples: includeStorefrontSamples }));
+    this.catalogIndex = new CatalogIndex(this.catalogProvider);
+    this.catalogRecords = [];
+    this.unregisterCatalogInvalidation = registerCatalogInvalidation(this.catalogIndex);
+    this.qualityCatalogProvider = new QualityCatalogProvider();
+    this.qualityCatalogRecords = [];
+    this.unregisterQualityCatalogInvalidation = registerQualityCatalogInvalidation(this.qualityCatalogProvider, async () => {
+      this.qualityCatalogRecords = await this.qualityCatalogProvider.records();
+      if (this.root.isConnected && this.#steps[this.step]?.key === "qualitiesFlaws") this.#draw();
+    });
     this.initialTalentTree = foundry.utils.deepClone(this.state.talentTree);
     if (this.mode === "levelUp") {
       this.state.startingLevel = Math.max(1, number(actor.system?.level, 1) + 1);
       this.state.startingLevelLocked = true;
     }
     this.referenceOptions = Object.fromEntries(Object.keys(REFERENCE_PACKS).map(key => [key, []]));
+    this.pathReferenceOptions = { archetype: [], profession: [], discipline: [] };
+    this.pathCatalogLoaded = false;
+    this.uniqueAbilityReferences = new Map();
     this.root = document.createElement("div");
-    this.root.className = "veilrunner vr-character-creation";
+    this.root.className = `veilrunner vr-character-creation${this.isTreeEditor ? " vr-talent-tree-editor vr-cc-talent-mode" : ""}`;
     this.root.tabIndex = -1;
   }
 
@@ -335,26 +438,63 @@ class CharacterCreationOverlay {
     this.root.focus();
   }
 
+  draw() {
+    this.#draw();
+  }
+
+  focusTreeNode(nodeId = "") {
+    const record = nodeId ? this.#treeCatalogRecords().find(candidate => candidate.id === nodeId) : null;
+    this.treeFocus = record ? { id: record.id, kind: record.kind } : null;
+    this.openPracticeId = record?.kind === "spell" ? record.practice.id : null;
+    this.pendingTreeCenterId = record?.id ?? "";
+    this.treeViewportInitialized[this.#treeViewportKey()] = false;
+  }
+
   async render() {
-    actorSheetClose(this.actor);
+    if (!this.isTreeEditor) actorSheetClose(this.actor);
     document.body.append(this.root);
     this.root.addEventListener("click", event => this.#onClick(event));
     this.root.addEventListener("input", event => this.#onInput(event));
     this.root.addEventListener("change", event => this.#onInput(event));
+    this.root.addEventListener("scroll", event => {
+      if (event.target.matches?.("[data-discipline-scroll-row]")) this.#syncDisciplineScrollButtons(event.target);
+      if (event.target.matches?.("[data-quality-results]") && event.target.scrollTop + event.target.clientHeight >= event.target.scrollHeight - 240) {
+        const total = Number(event.target.dataset.resultTotal) || 0;
+        if (this.state.qualityFlawVisibleCount < total) {
+          this.state.qualityFlawVisibleCount += 40;
+          this.#draw();
+        }
+      }
+    }, true);
     this.root.addEventListener("contextmenu", event => this.#onTreeContextMenu(event));
     this.root.addEventListener("pointerdown", event => this.#onTreePanStart(event));
     this.root.addEventListener("pointermove", event => this.#onTreePanMove(event));
     this.root.addEventListener("pointerup", event => this.#onTreePanEnd(event));
+    this.root.addEventListener("pointercancel", event => this.#onTreePanEnd(event));
+    this.root.addEventListener("keydown", event => this.#onPersonaKeyDown(event));
     this.root.addEventListener("wheel", event => this.#onTreeWheel(event), { passive: false });
+    this.root.addEventListener("dragover", event => { if (event.target.closest?.(".vr-cc-storefront")) event.preventDefault(); });
+    this.root.addEventListener("drop", event => this.#onStorefrontDrop(event));
+    this.treeCatalogHook = Hooks.on("veilrunnerTalentTreeCatalogChanged", () => {
+      if (!this.root.isConnected) return;
+      if (this.isTreeEditor || this.#steps[this.step]?.key === "talents") this.#redrawTreePreservingViewport();
+    });
     this.#draw();
+    if (this.isTreeEditor) return;
     this.root.focus();
-    await this.#loadReferenceOptions();
+    await Promise.all([this.#loadReferenceOptions(), this.#loadPathReferenceOptions(), this.#loadUniqueAbilityReferences()]);
+    this.catalogRecords = await this.catalogIndex.records();
+    this.qualityCatalogRecords = await this.qualityCatalogProvider.records();
     if (this.root.isConnected) this.#draw();
   }
 
   close({ renderSheet = false } = {}) {
+    this.unregisterCatalogInvalidation?.();
+    this.unregisterQualityCatalogInvalidation?.();
+    if (this.treeCatalogHook !== undefined) Hooks.off("veilrunnerTalentTreeCatalogChanged", this.treeCatalogHook);
     this.root.remove();
-    existingCreators.delete(this.actor.id);
+    if (this.isTreeEditor) existingTalentTreeEditor = null;
+    else existingCreators.delete(this.actor.id);
     if (renderSheet) this.actor.sheet?.render(true);
   }
 
@@ -364,36 +504,49 @@ class CharacterCreationOverlay {
       const previousKey = previousTreeBoard.dataset.viewportKey ?? (previousTreeBoard.closest(".vr-cc-talent-canvas")?.classList.contains("magic") ? "magic:main" : "skills:main");
       this.treeViewport[previousKey] = { left: previousTreeBoard.scrollLeft, top: previousTreeBoard.scrollTop };
     }
+    const previousStoreList = this.root.querySelector?.("[data-storefront-scroll]");
+    if (previousStoreList && this.state.storefront) this.state.storefront.scrollTop = previousStoreList.scrollTop;
+    if (this.isTreeEditor) {
+      this.root.innerHTML = `<div class="vr-cc-tree-editor-shell">
+        <header class="vr-cc-tree-editor-title"><div><span>Veilrunner Configuration</span><h1>Talents &amp; Skills Tree Editor</h1></div><button type="button" class="vr-cc-icon" data-action="cancel" aria-label="Close tree editor"><i class="fa-solid fa-xmark"></i></button></header>
+        ${this.#treeEditorHeader()}
+        <section class="vr-cc-tree-editor-canvas">${this.#talentCanvasV2()}</section>
+      </div>`;
+      this.#decorateTreeNodeEditor();
+      this.#decorateTreeShapes();
+      this.#decorateTreeLineCrossings();
+      this.#decorateTreeRingPreview();
+      this.#decorateConnectionToolbar();
+      this.#decorateConnectionSockets();
+      this.#restoreTreeViewport();
+      if (this.pendingTreeCenterId) this.#centerTreeOnNode(this.pendingTreeCenterId);
+      return;
+    }
     const steps = this.#steps;
     const current = steps[this.step];
-    if (current?.key === "persona" && !this.state.personaTouched) this.state.personaIndex = this.#personaRecommendation().values;
+    const validation = this.#validation();
+    const identitySectionChanged = Boolean(this.renderedStepKey && this.renderedStepKey !== current?.key && ["species", "origin", "background"].includes(current?.key));
+    if (current?.key === "identity" && !this.state.personaTouched) this.state.personaIndex = this.#personaRecommendation().values;
     this.root.classList.toggle("vr-cc-review-mode", current?.key === "review");
     this.root.classList.toggle("vr-cc-talent-mode", current?.key === "talents");
+    this.root.classList.toggle("vr-cc-attribute-mode", current?.key === "attributes");
+    this.root.classList.toggle("vr-cc-quality-mode", current?.key === "qualitiesFlaws");
+    this.root.classList.toggle("vr-cc-major-card-mode", ["level", "profession"].includes(current?.key));
+    this.root.classList.toggle("vr-cc-identity-section-change", identitySectionChanged);
     this.root.innerHTML = `
       <div class="vr-cc-shell">
-        <aside class="vr-cc-rail">
-          <div class="vr-cc-brand">
-            <span>Veilrunner</span>
-            <strong>Character Generation</strong>
-          </div>
-          <nav class="vr-cc-steps">${this.#treeNavigation(steps)}</nav>
-          <footer class="vr-cc-progress"><span>Character Generation</span><strong>${this.step + 1} / ${steps.length}</strong><progress max="${steps.length}" value="${this.step + 1}"></progress></footer>
-        </aside>
+        ${renderChargenHeader(steps, this.step, validation, STEP_GROUPS.filter(group => group.keys.some(key => steps.some(step => step.key === key))))}
+        <div class="vr-cc-corner-brand"><span>Veilrunner</span><strong>Character Generation</strong></div>
+        <button type="button" class="vr-cc-icon vr-cc-shell-close" data-action="cancel" title="Close character generation" aria-label="Close character generation"><i class="fa-solid fa-xmark"></i></button>
+        <aside class="vr-cc-live-build">${this.#liveBuild()}</aside>
         <main class="vr-cc-main">
-          ${current.key === "talents" ? this.#talentHeader(current, steps.length) : `<header class="vr-cc-header"><div><span>Step ${this.step + 1} of ${steps.length}</span><h1>${escape(current.label)}</h1></div></header>`}
+          ${current.key === "talents" ? this.#talentHeader(current, steps.length) : ""}
           <section class="vr-cc-panel">${this.#stepContent(current.key)}</section>
         </main>
-        ${current.key === "talents" ? "" : `<aside class="vr-cc-info">${this.#infoPanelContent(current.key)}</aside>`}
-        <footer class="vr-cc-footer vr-cc-flow-footer">
-          <button type="button" class="vr-cc-btn" data-action="previous" ${this.step === 0 ? "disabled" : ""}><i class="fa-solid fa-arrow-left"></i><span>Back</span></button>
-          <div class="vr-cc-footer-status">${escape(this.#summaryLine())}</div>
-          ${this.step === steps.length - 1
-            ? `<button type="button" class="vr-cc-btn primary" data-action="confirm"><i class="fa-solid fa-check"></i><span>Confirm</span></button>`
-            : `<button type="button" class="vr-cc-btn primary" data-action="next"><span>Next</span><i class="fa-solid fa-arrow-right"></i></button>`}
-        </footer>
-        ${current.key === "review" ? "" : `<aside class="vr-cc-live-build">${this.#liveBuild()}</aside>`}
+        ${current.key === "talents" ? this.#talentInspector() : current.key === "credits" ? this.#storefrontPanel() : current.key === "attributes" ? `<aside class="vr-cc-info vr-cc-details-pane vr-cc-attribute-details">${this.#infoPanelContent(current.key)}${this.#inspectorAdvance(current.key)}</aside>` : current.key === "level" ? `<aside class="vr-cc-info vr-cc-details-pane vr-cc-reference-details vr-cc-level-details">${this.#infoPanelContent(current.key)}${this.#inspectorAdvance(current.key)}</aside>` : renderDetailsPanel(this.state.detailSelection?.stepKey === current.key ? this.state.detailSelection : null, this.#infoPanelContent(current.key), this.inspectorTab, this.#inspectorAdvance(current.key))}
       </div>
       ${this.#qualityFlawDialogMarkup()}`;
+    this.renderedStepKey = current?.key ?? null;
     this.#decorateTreeNodeEditor();
     this.#decorateTreeShapes();
     this.#decorateTreeLineCrossings();
@@ -401,7 +554,26 @@ class CharacterCreationOverlay {
     this.#decorateConnectionToolbar();
     this.#decorateConnectionSockets();
     this.#restoreTreeViewport();
+    if (this.pendingTreeCenterId) this.#centerTreeOnNode(this.pendingTreeCenterId);
+    requestAnimationFrame(() => this.#syncDisciplineScrollButtons());
+    requestAnimationFrame(() => {
+      const storeList = this.root.querySelector?.("[data-storefront-scroll]");
+      if (storeList) storeList.scrollTop = Math.max(0, number(this.state.storefront?.scrollTop));
+    });
     this.animateNavigation = false;
+  }
+
+  #syncDisciplineScrollButtons(target = null) {
+    const tracks = target ? [target] : [...this.root.querySelectorAll("[data-discipline-scroll-row]")];
+    for (const track of tracks) {
+      const row = track.closest(".vr-cc-selection-row");
+      if (!row) continue;
+      const maximum = Math.max(0, track.scrollWidth - track.clientWidth);
+      const previous = row.querySelector('.vr-cc-selection-row-scroll.previous');
+      const next = row.querySelector('.vr-cc-selection-row-scroll.next');
+      if (previous) previous.hidden = track.scrollLeft <= 1;
+      if (next) next.hidden = maximum <= 1 || track.scrollLeft >= maximum - 1;
+    }
   }
 
   #decorateTreeNodeEditor() {
@@ -509,9 +681,8 @@ class CharacterCreationOverlay {
     const input = document.createElement("input");
     input.type = "number";
     input.min = "1";
-    input.max = "20";
     input.name = "connectionTool.requiredLevel";
-    input.value = String(Math.max(1, Math.min(20, number(this.connectionTool.requiredLevel, 1))));
+    input.value = String(Math.max(1, number(this.connectionTool.requiredLevel, 1)));
     label.append(input);
     toolbar.insertBefore(label, toolbar.children[2] ?? null);
   }
@@ -545,7 +716,7 @@ class CharacterCreationOverlay {
   #refreshInfoPanel() {
     const panel = this.root.querySelector(".vr-cc-info");
     const current = this.#steps[this.step];
-    if (panel && current) panel.innerHTML = this.#infoPanelContent(current.key);
+    if (panel && current) panel.innerHTML = `${this.#infoPanelContent(current.key)}${this.#inspectorAdvance(current.key)}`;
   }
 
   #stepContent(key) {
@@ -555,11 +726,9 @@ class CharacterCreationOverlay {
     if (key === "attributes") return this.#attributesStep();
     if (key === "qualitiesFlaws") return this.#qualitiesFlawsStep();
     if (key === "talents") return this.#talentsAndSkillsStep();
-    if (key === "credits") return this.#creditsStep();
+    if (key === "credits") return this.#storefrontBrowser();
     if (key === "contacts") return this.#contactsStep();
-    if (key === "languages") return this.#textareaOnly("languages", "Languages", "One language per line, or comma separated.");
-    if (key === "persona") return this.#personaStep();
-    if (key === "bio") return this.#bioStep();
+    if (key === "identity") return this.#identityStep();
     return this.#reviewStep();
   }
 
@@ -584,40 +753,100 @@ class CharacterCreationOverlay {
     return `<label class="vr-cc-field tall"><span>${escape(title)}</span><textarea name="${path}" placeholder="${escape(placeholder)}">${escape(this.state[path])}</textarea></label>`;
   }
 
+  #pathEntry(kind, name, context = {}) {
+    const normalizedName = String(name ?? "").trim();
+    if (!normalizedName) return null;
+    return (this.pathReferenceOptions[kind] ?? []).find(entry => entry.name === normalizedName
+      && (!context.archetype || entry.archetype === context.archetype)
+      && (!context.profession || entry.profession === context.profession)) ?? null;
+  }
+
+  #pathRecords() {
+    if (!this.pathCatalogLoaded) return fallbackPathRecords();
+    const archetypesById = new Map((this.pathReferenceOptions.archetype ?? []).map(entry => [entry.definitionId, entry]));
+    const disciplines = this.pathReferenceOptions.discipline ?? [];
+    return (this.pathReferenceOptions.profession ?? []).map(profession => {
+      const archetype = archetypesById.get(profession.archetypeId);
+      return {
+        archetype: normalizeArchetype(archetype?.name || profession.archetype),
+        profession: profession.name,
+        disciplines: disciplines.filter(discipline => discipline.professionId === profession.definitionId
+          || (!discipline.professionId && discipline.profession === profession.name)).map(discipline => discipline.name)
+      };
+    }).filter(record => record.archetype && record.profession);
+  }
+
+  #syncPathReferences() {
+    this.state.references ??= {};
+    this.state.references.archetype = this.#pathEntry("archetype", this.state.archetype)?.uuid ?? "";
+    this.state.references.profession = this.#pathEntry("profession", this.state.profession, { archetype: this.state.archetype })?.uuid ?? "";
+    this.state.references.discipline = this.#pathEntry("discipline", this.state.discipline, { profession: this.state.profession })?.uuid ?? "";
+  }
+
   #professionStep() {
-    const records = professionTreeRecords();
+    const records = this.#pathRecords();
     const professions = this.state.archetype
       ? records.filter(record => record.archetype === this.state.archetype)
       : [];
     const selectedRecord = records.find(record => record.profession === this.state.profession);
     const disciplines = this.state.profession ? selectedRecord?.disciplines ?? [] : [];
-    return `<div class="vr-cc-path-grid">
-      ${this.#pathButtonGroup("archetype", "Archetype", ARCHETYPE_OPTIONS, this.state.archetype)}
-      ${this.state.archetype ? this.#pathButtonGroup("profession", "Profession", professions.map(p => p.profession).sort(), this.state.profession, !this.state.profession) : ""}
-      ${this.state.profession ? this.#pathButtonGroup("discipline", "Discipline", disciplines.slice().sort(), this.state.discipline, !this.state.discipline) : ""}
-    </div>`;
+    const archetypeNames = this.pathCatalogLoaded ? (this.pathReferenceOptions.archetype ?? []).map(entry => entry.name) : ARCHETYPE_OPTIONS;
+    const mode = this.selectionModes.discipline === "all" ? "all" : "guided";
+    const stage = this.pathStage ?? (!this.state.archetype ? "archetype" : !this.state.profession ? "profession" : "discipline");
+    const stages = [{ key: "archetype", label: "Archetype", enabled: true }, { key: "profession", label: "Profession", enabled: mode === "all" || Boolean(this.state.archetype) }, { key: "discipline", label: "Discipline", enabled: mode === "all" || Boolean(this.state.profession) }];
+    const pathNav = `<nav class="vr-cc-path-stage-nav" aria-label="Path selection navigator"><div class="vr-cc-path-stage-flow">${stages.map(entry => `<button type="button" data-action="path-stage" data-path-stage="${entry.key}" class="${mode === "guided" ? stage === entry.key ? "active" : "" : this.disciplineSort === entry.key ? "active" : ""}" ${entry.enabled ? "" : "disabled"}>${escape(entry.label)}</button>`).join("")}</div><div class="vr-cc-path-mode-flow"><button type="button" data-action="selection-mode" data-selection-path="discipline" data-selection-mode="guided" class="${mode === "guided" ? "active" : ""}">Guided</button><button type="button" data-action="selection-mode" data-selection-path="discipline" data-selection-mode="all" class="${mode === "all" ? "active" : ""}">All</button></div></nav>`;
+    const pathImage = (path, value, context = {}) => {
+      const reference = this.#pathEntry(path, value, context);
+      return reference?.img ?? "";
+    };
+    const disciplineOption = (record, discipline, context = "") => {
+      const access = magicTreeAccess(record.archetype, record.profession, discipline);
+      const school = access.schoolId ? talentTreePage("magic").find(entry => entry.id === access.schoolId) : null;
+      const grant = school ? `Grants ${school.name} School` : "";
+      return { value: discipline, label: discipline, caption: [context, grant].filter(Boolean).join(" · "), img: pathImage("discipline", discipline, record), archetype: record.archetype, profession: record.profession };
+    };
+    if (mode === "all") {
+      const byName = (left, right) => left.label.localeCompare(right.label);
+      const disciplinesAll = records.flatMap(record => record.disciplines.map(discipline => disciplineOption(record, discipline, record.profession))).sort(byName);
+      const groups = this.disciplineSort === "archetype"
+        ? archetypeNames.map(archetype => ({ label: archetype, options: disciplinesAll.filter(option => option.archetype === archetype).sort(byName) }))
+        : this.disciplineSort === "profession"
+          ? records.slice().sort((left, right) => left.profession.localeCompare(right.profession)).map(record => ({ label: record.profession, options: record.disciplines.slice().sort().map(discipline => disciplineOption(record, discipline, record.archetype)) }))
+          : [];
+      const sortLabel = this.disciplineSort === "archetype" ? "by Archetype" : this.disciplineSort === "profession" ? "by Profession" : "alphabetically";
+      return `<div class="vr-cc-path-workspace">${pathNav}${renderSelectionBrowser({ path: "discipline", label: `All Disciplines - ${sortLabel}`, options: groups.length ? [] : disciplinesAll, groups, selected: this.state.discipline, mode })}</div>`;
+    }
+    const options = stage === "archetype"
+      ? archetypeNames.map(archetype => ({ value: archetype, label: archetype, caption: "Archetype", img: pathImage("archetype", archetype) }))
+      : stage === "profession"
+        ? professions.slice().sort((left, right) => left.profession.localeCompare(right.profession)).map(record => ({ value: record.profession, label: record.profession, caption: "Profession", img: pathImage("profession", record.profession, record) }))
+        : disciplines.slice().sort().map(discipline => disciplineOption(selectedRecord, discipline));
+    const selected = this.state[stage];
+    return `<div class="vr-cc-path-workspace">${pathNav}${this.#pathButtonGroup(stage, stage === "archetype" ? "Archetype" : stage === "profession" ? "Profession" : "Discipline", options, selected)}</div>`;
   }
 
   #pathButtonGroup(path, label, options, selected, animate = false) {
-    const revealed = animate ? "revealed" : "";
-    return `<section class="vr-cc-path-group ${revealed}" data-path-group="${path}">
-      <h2>${escape(label)}</h2>
-      <div class="vr-cc-path-buttons">
-        ${options.length ? options.map(option => `
-          <button type="button" class="vr-cc-path-btn ${option === selected ? "active" : ""}"
-                  data-path-choice="${path}" data-value="${escape(option)}">
-            <span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-regular fa-image"></i></span><span class="vr-cc-choice-name">${escape(option)}</span>
-          </button>
-        `).join("") : `<p class="vr-cc-path-empty">Choose ${path === "discipline" ? "a profession" : "an archetype"} first.</p>`}
-      </div>
-    </section>`;
+    return renderSelectionBrowser({ path, label, options, selected, mode: "guided", recommendation: null, animate });
   }
 
-  #professionReference() {
-    const profession = VEILRUNNER_PROFESSIONS.find(entry => entry.name === this.state.profession);
-    const discipline = profession?.disciplines.find(entry => entry.name === this.state.discipline);
-    const personaModifiers = VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? discipline?.persona ?? [];
+  #inspectorAdvance(key) {
+    if (key === "review") return `<footer class="vr-cc-inspector-action"><button type="button" class="vr-cc-btn primary" data-action="confirm"><span>Confirm</span><i class="fa-solid fa-check" aria-hidden="true"></i></button></footer>`;
+    const selectable = ["level", "species", "origin", "background", "profession", "attributes"];
+    if (!selectable.includes(key)) return "";
+    const ready = key === "level" ? this.#hasStartingLevel()
+      : key === "profession" ? Boolean(this.state.discipline)
+        : ["species", "origin", "background"].includes(key) ? Boolean(this.state[key])
+          : true;
+    return `<footer class="vr-cc-inspector-action"><button type="button" class="vr-cc-btn primary" data-action="next" ${ready ? "" : "disabled"}><span>Select</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></footer>`;
+  }
+
+  #professionReference(stage = "discipline") {
+    const profession = stage === "archetype" ? null : this.#pathEntry("profession", this.state.profession, { archetype: this.state.archetype });
+    const discipline = stage === "discipline" ? this.#pathEntry("discipline", this.state.discipline, { profession: this.state.profession }) : null;
+    const personaModifiers = discipline?.persona?.length ? discipline.persona : VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? [];
     const archetypeSummary = this.#archetypeSummary(this.state.archetype);
+    const grantedSchoolId = discipline ? magicTreeAccess(this.state.archetype, this.state.profession, this.state.discipline).schoolId : "";
+    const grantedSchool = grantedSchoolId ? talentTreePage("magic").find(entry => entry.id === grantedSchoolId) : null;
     if (!this.state.archetype && !profession && !discipline) return "<strong>Summary</strong><p>Select an archetype, profession, and discipline to see available local reference text.</p>";
     const abilityReference = discipline?.abilities?.length ? `<div class="vr-cc-unique-list">
         ${discipline.abilities.map(ability => `<article class="vr-cc-unique">
@@ -635,10 +864,48 @@ class CharacterCreationOverlay {
       <dl>
         <div><dt>Primary Weapon</dt><dd>${escape(discipline.primaryWeapon)}</dd></div>
         <div><dt>Bonus Skill</dt><dd>${escape(discipline.bonusSkill)}</dd></div>
+        ${grantedSchool ? `<div><dt>Granted School</dt><dd>${escape(grantedSchool.name)}</dd></div>` : ""}
         ${personaModifiers.length ? `<div><dt>Persona Index</dt><dd>${escape(personaModifiers.join(", "))}</dd></div>` : ""}
       </dl>
       ${abilityReference}
-      ${discipline.background ? `<div class="vr-cc-discipline-background"><strong>Background</strong><p>${escape(discipline.background)}</p></div>` : ""}` : ""}`;
+      ${discipline.description ? `<div class="vr-cc-discipline-background"><strong>Background</strong><p>${escape(discipline.description)}</p></div>` : ""}` : ""}`;
+  }
+
+  #disciplineDetailSelection() {
+    const discipline = this.#pathEntry("discipline", this.state.discipline, { profession: this.state.profession });
+    const record = this.#pathRecords().find(entry => entry.profession === this.state.profession);
+    if (!this.state.discipline) return null;
+    const persona = discipline?.persona?.length ? discipline.persona : VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? [];
+    const grantedSchoolId = magicTreeAccess(this.state.archetype || record?.archetype, this.state.profession, this.state.discipline).schoolId;
+    const grantedSchool = grantedSchoolId ? talentTreePage("magic").find(entry => entry.id === grantedSchoolId) : null;
+    return {
+      stepKey: "profession",
+      kind: "Discipline",
+      name: this.state.discipline,
+      profession: this.state.profession,
+      archetype: this.state.archetype || record?.archetype || "",
+      tags: [...(discipline?.tags ?? []), ...(grantedSchool ? [`Grants ${grantedSchool.name} School`] : [])],
+      img: discipline?.img ?? "",
+      summary: discipline?.summary ?? "",
+      mechanicalSummary: discipline?.summary ?? "",
+      abilities: (discipline?.abilities ?? []).map(ability => {
+        const reference = this.uniqueAbilityReferences.get(uniqueAbilityKey(this.state.profession, this.state.discipline, ability.name));
+        return {
+          ...foundry.utils.deepClone(ability),
+          summary: reference?.summary || ability.summary || "",
+          description: reference?.description || ability.description || ability.text || ""
+        };
+      }),
+      lore: discipline?.description ?? "",
+      details: {
+        primaryAttributes: discipline?.primaryAttributes ?? [],
+        bonusAttributes: discipline?.bonusAttributes ?? [],
+        primaryWeapon: discipline?.primaryWeapon ?? "",
+        bonusSkill: discipline?.bonusSkill ?? "",
+        grantedSchool: grantedSchool?.name ?? "",
+        persona
+      }
+    };
   }
 
   #refreshLiveBuild() {
@@ -652,18 +919,18 @@ class CharacterCreationOverlay {
       const leftPips = Math.floor(Math.max(0, -value) / 10);
       const rightPips = Math.floor(Math.max(0, value) / 10);
       for (const pips of this.root.querySelectorAll(`[data-persona-axis="${axis.key}"]`)) {
-        pips.style.setProperty("--vr-persona-position", `${((value + 100) / 2).toFixed(1)}%`);
         pips.setAttribute("aria-label", `${axis.left} to ${axis.right}: ${value}`);
+        const markerTrack = pips.matches(".vr-cc-live-pips, .vr-cc-persona-pips") ? pips : pips.querySelector(".vr-cc-live-pips, .vr-cc-persona-pips");
+        markerTrack?.style.setProperty("--vr-persona-position", `${(value + 100) / 2}%`);
+        markerTrack?.setAttribute("aria-label", `${axis.left} to ${axis.right}: ${value}`);
+        markerTrack?.setAttribute("aria-valuenow", String(value));
+        markerTrack?.setAttribute("aria-valuetext", `${value > 0 ? "+" : ""}${value}, toward ${value < 0 ? axis.left : value > 0 ? axis.right : "center"}`);
         pips.querySelectorAll(".left i").forEach((pip, index) => pip.classList.toggle("active", index >= 10 - leftPips));
         pips.querySelectorAll(".right i").forEach((pip, index) => pip.classList.toggle("active", index < rightPips));
+        const score = pips.closest(".vr-cc-live-axis")?.querySelector(".vr-cc-live-axis-labels strong");
+        if (score) score.textContent = `${value > 0 ? "+" : ""}${value}`;
       }
     }
-  }
-
-  #personaPips(axis, value) {
-    const leftPips = Math.floor(Math.max(0, -value) / 10);
-    const rightPips = Math.floor(Math.max(0, value) / 10);
-    return `<span class="vr-cc-persona-pips" data-persona-axis="${axis.key}" style="--vr-persona-position: ${((value + 100) / 2).toFixed(1)}%" aria-label="${escape(`${axis.left} to ${axis.right}: ${value}`)}"><span class="vr-cc-persona-pip-side left">${Array.from({ length: 10 }, (_, index) => `<i class="${index >= 10 - leftPips ? "active" : ""}"></i>`).join("")}</span><b aria-hidden="true"></b><span class="vr-cc-persona-pip-side right">${Array.from({ length: 10 }, (_, index) => `<i class="${index < rightPips ? "active" : ""}"></i>`).join("")}</span><em aria-hidden="true"></em></span>`;
   }
 
   #treeNavigation(steps) {
@@ -689,11 +956,16 @@ class CharacterCreationOverlay {
       const pack = game.packs.get(packId);
       if (!pack) return [key, []];
       try {
-        const index = await pack.getIndex({ fields: ["system.persona", "system.description"] });
+        const index = await pack.getIndex({ fields: ["system.persona", "system.description", "folder"] });
+        const folders = new Map((pack.folders?.contents ?? []).map(folder => [folder.id, folder.name]));
         return [key, index.filter(entry => entry.type === key).map(entry => ({
+          id: entry._id ?? entry.id,
+          uuid: entry.uuid ?? `Compendium.${pack.collection}.${entry._id ?? entry.id}`,
           name: entry.name,
+          img: entry.img ?? "",
           persona: foundry.utils.getProperty(entry, "system.persona") ?? entry.system?.persona ?? [],
-          description: foundry.utils.getProperty(entry, "system.description") ?? entry.system?.description ?? ""
+          description: foundry.utils.getProperty(entry, "system.description") ?? entry.system?.description ?? "",
+          category: folders.get(entry.folder) ?? key
         })).sort((a, b) => a.name.localeCompare(b.name))];
       } catch (error) {
         console.warn(`Veilrunner | Unable to load ${key} character options.`, error);
@@ -701,6 +973,76 @@ class CharacterCreationOverlay {
       }
     }));
     this.referenceOptions = Object.fromEntries(entries);
+  }
+
+  async #loadPathReferenceOptions() {
+    const definitions = [
+      ["archetype", "Veilrunner.archetypes", ["system.definitionId", "system.summary", "system.description"]],
+      ["profession", "Veilrunner.professions", ["system.definitionId", "system.archetypeId", "system.archetype", "system.summary", "system.pageImage", "system.description"]],
+      ["discipline", "Veilrunner.disciplines", [
+        "system.definitionId", "system.professionId", "system.profession", "system.summary", "system.description", "system.pageImage",
+        "system.primaryWeapon", "system.primaryAttributes", "system.bonusAttributes", "system.bonusSkill", "system.persona",
+        "system.tags", "system.abilities", "system.source", "system.sourcePage", "flags.veilrunner.abilities"
+      ]]
+    ];
+    const catalog = { archetype: [], profession: [], discipline: [] };
+    for (const [kind, packId, fields] of definitions) {
+      const pack = game.packs.get(packId);
+      if (!pack) {
+        console.warn(`Veilrunner | Missing ${kind} Path compendium (${packId}).`);
+        continue;
+      }
+      try {
+        const index = await pack.getIndex({ fields });
+        catalog[kind] = sortPathEntries(kind, index.filter(entry => entry.type === kind).map(entry => {
+          const read = key => foundry.utils.getProperty(entry, `system.${key}`) ?? entry.system?.[key];
+          return {
+            id: entry._id ?? entry.id,
+            uuid: entry.uuid ?? `Compendium.${pack.collection}.${entry._id ?? entry.id}`,
+            kind, name: String(entry.name ?? "").trim(), img: String(entry.img || read("pageImage") || "").trim(),
+            definitionId: String(read("definitionId") ?? "").trim(),
+            archetypeId: String(read("archetypeId") ?? "").trim(), archetype: normalizeArchetype(read("archetype")),
+            professionId: String(read("professionId") ?? "").trim(), profession: String(read("profession") ?? "").trim(),
+            summary: String(read("summary") ?? "").trim(), description: plainTextFromHtml(read("description")),
+            primaryWeapon: String(read("primaryWeapon") ?? "").trim(), primaryAttributes: read("primaryAttributes") ?? [],
+            bonusAttributes: read("bonusAttributes") ?? [], bonusSkill: String(read("bonusSkill") ?? "").trim(),
+            persona: read("persona") ?? [], tags: read("tags") ?? [],
+            abilities: read("abilities") ?? foundry.utils.getProperty(entry, "flags.veilrunner.abilities") ?? entry.flags?.veilrunner?.abilities ?? []
+          };
+        }).filter(entry => entry.name));
+      } catch (error) {
+        console.warn(`Veilrunner | Unable to load ${kind} Path definitions.`, error);
+      }
+    }
+    this.pathReferenceOptions = catalog;
+    this.pathCatalogLoaded = true;
+    this.#syncPathReferences();
+  }
+
+  async #loadUniqueAbilityReferences() {
+    const references = new Map();
+    for (const packId of UNIQUE_ABILITY_PACKS) {
+      const pack = game.packs.get(packId);
+      if (!pack) continue;
+      try {
+        const index = await pack.getIndex({ fields: ["system.summary", "system.description", "flags.veilrunner.profession", "flags.veilrunner.discipline", "flags.veilrunner.sourceAbilityName", "flags.veilrunner.rulesText"] });
+        for (const entry of index) {
+          const profession = foundry.utils.getProperty(entry, "flags.veilrunner.profession") ?? entry.flags?.veilrunner?.profession;
+          const discipline = foundry.utils.getProperty(entry, "flags.veilrunner.discipline") ?? entry.flags?.veilrunner?.discipline;
+          const ability = foundry.utils.getProperty(entry, "flags.veilrunner.sourceAbilityName") ?? entry.flags?.veilrunner?.sourceAbilityName ?? entry.name;
+          if (!profession || !discipline || !ability) continue;
+          const html = foundry.utils.getProperty(entry, "system.description") ?? entry.system?.description ?? "";
+          const rulesText = foundry.utils.getProperty(entry, "flags.veilrunner.rulesText") ?? entry.flags?.veilrunner?.rulesText ?? "";
+          references.set(uniqueAbilityKey(profession, discipline, ability), {
+            summary: foundry.utils.getProperty(entry, "system.summary") ?? entry.system?.summary ?? "",
+            description: plainTextFromHtml(html) || rulesText
+          });
+        }
+      } catch (error) {
+        console.warn(`Veilrunner | Unable to load ${packId} unique abilities.`, error);
+      }
+    }
+    this.uniqueAbilityReferences = references;
   }
 
   #referenceChoiceStep(key) {
@@ -720,54 +1062,63 @@ class CharacterCreationOverlay {
   }
 
   #speciesChoiceStep() {
-    return this.#referenceCards("species", SPECIES_GROUPS.flatMap(group => group.options.map(name => ({ category: group.label, name }))), "Choose a species. Stats and biography details can be added later.");
+    return this.#referenceCards("species", this.referenceOptions.species ?? [], "");
   }
 
   #originChoiceStep() {
-    return this.#referenceCards("origin", ORIGIN_OPTIONS.map(name => ({ category: "Origin", name })), "Choose an origin. Literature and other origin details can be added later.");
+    return this.#referenceCards("origin", this.referenceOptions.origin ?? [], "");
   }
 
   #backgroundChoiceStep() {
-    return this.#referenceCards("background", BACKGROUND_OPTIONS.map(name => ({ category: "Background", name })), "Choose a background. Literature and other background details can be added later.");
+    return this.#referenceCards("background", this.referenceOptions.background ?? [], "");
   }
 
   #referenceCards(path, entries, intro) {
     const selected = String(this.state[path] ?? "");
+    const pathLabel = STEPS.find(step => step.key === path)?.label ?? path;
+    if (!entries.length) return `<section class="vr-cc-empty-catalog"><h2>No ${escape(pathLabel)} entries yet</h2><p>This campaign has no canonical ${escape(pathLabel.toLowerCase())} definitions available. A GM can author them in the corresponding compendium.</p></section>`;
     const optionNames = new Set(entries.map(entry => entry.name));
     const categories = [];
     for (const entry of entries) {
-      let category = categories.find(group => group.name === entry.category);
+      let category = categories.find(group => group.name === (entry.category ?? pathLabel));
       if (!category) {
-        category = { name: entry.category, entries: [] };
+        category = { name: entry.category ?? pathLabel, entries: [] };
         categories.push(category);
       }
       category.entries.push(entry);
     }
-    return `<div class="vr-cc-reference-cards">
-      <p class="vr-cc-reference-cards-intro">${escape(intro)}</p>
+    if (path === "species") {
+      categories.sort((left, right) => {
+        const leftName = String(left.name ?? "");
+        const rightName = String(right.name ?? "");
+        const leftIsMammalian = leftName.localeCompare("Mammalian", undefined, { sensitivity: "base" }) === 0;
+        const rightIsMammalian = rightName.localeCompare("Mammalian", undefined, { sensitivity: "base" }) === 0;
+        if (leftIsMammalian !== rightIsMammalian) return leftIsMammalian ? -1 : 1;
+        return leftName.localeCompare(rightName, undefined, { sensitivity: "base" });
+      });
+    }
+    return `<div class="vr-cc-reference-cards vr-cc-reference-cards-${escape(path)} ${intro ? "" : "vr-cc-reference-cards-no-intro"}">
+      ${intro ? `<p class="vr-cc-reference-cards-intro">${escape(intro)}</p>` : ""}
       <div class="vr-cc-reference-card-grid">
-        ${categories.map(category => `<section class="vr-cc-reference-card-category"><h2>${escape(category.name)}</h2><div class="vr-cc-reference-card-options">
-          ${category.entries.map(entry => `<button type="button" class="vr-cc-reference-card ${entry.name === selected ? "active" : ""}" data-reference-choice-path="${escape(path)}" data-reference-choice-value="${escape(entry.name)}" aria-pressed="${entry.name === selected}">
-            <span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-regular fa-image"></i></span><span class="vr-cc-choice-name">${escape(entry.name)}</span>
+        ${categories.map(category => { const visibleRows = Math.min(5, Math.max(1, Math.ceil(category.entries.length / 8))); const rowGap = Math.max(0, visibleRows - 1) * .7; return `<section class="vr-cc-reference-card-category"><h2>${escape(category.name)}</h2><div class="vr-cc-reference-card-options" style="--vr-reference-visible-rows:${visibleRows};--vr-reference-row-height:calc((100% - ${rowGap}rem) / ${visibleRows})">
+          ${category.entries.map(entry => `<button type="button" class="vr-cc-reference-card vr-cc-selection-card vr-cc-full-art-choice-card vr-cc-identity-choice-card ${entry.name === selected ? "active selected" : ""}" data-reference-choice-path="${escape(path)}" data-reference-choice-value="${escape(entry.name)}" data-reference-choice-uuid="${escape(entry.uuid ?? "")}" aria-pressed="${entry.name === selected}">
+            <span class="vr-cc-choice-image vr-cc-selection-art" aria-hidden="true">${entry.img ? `<img src="${escape(entry.img)}" alt="" />` : '<i class="fa-regular fa-image"></i>'}</span><strong class="vr-cc-choice-name">${escape(entry.name)}</strong>
           </button>`).join("")}
-        </div></section>`).join("")}
+        </div></section>`; }).join("")}
       </div>
-      ${selected && !optionNames.has(selected) ? `<div class="vr-cc-reference-card-current">Current ${escape(path)}: <strong>${escape(selected)}</strong></div>` : ""}
+      ${selected && !optionNames.has(selected) ? `<div class="vr-cc-reference-card-current">Current ${escape(pathLabel)}: <strong>${escape(selected)}</strong></div>` : ""}
     </div>`;
   }
 
   #levelStep() {
     const selected = number(this.state.startingLevel);
-    return `<div class="vr-cc-reference-cards vr-cc-level-cards">
-      <label class="vr-cc-field vr-cc-name-at-level"><span>Character Name <small>(optional)</small></span><input name="name" type="text" value="${escape(this.state.name)}" placeholder="You can add this later" /></label>
-      <p class="vr-cc-reference-cards-intro">Choose a starting level before selecting a species. This sets the MVP Attribute, Talent, and Skill Point pools.</p>
+    return `<div class="vr-cc-reference-cards vr-cc-level-cards vr-cc-reference-cards-no-intro">
       <section class="vr-cc-reference-card-category"><h2>Starting Level</h2><div class="vr-cc-reference-card-options">
-        ${LEVEL_OPTIONS.map(option => `<button type="button" class="vr-cc-reference-card ${option.level === selected ? "active" : ""}" data-level-choice="${option.level}" aria-pressed="${option.level === selected}">
-          <span class="vr-cc-choice-image" aria-hidden="true"><i class="${option.icon}"></i></span><span class="vr-cc-choice-name vr-cc-level-choice-name"><span>Level ${option.level}</span><small>${escape(option.label)}</small></span>
+        ${LEVEL_OPTIONS.map(option => `<button type="button" class="vr-cc-reference-card vr-cc-full-art-choice-card vr-cc-level-full-art-card ${option.level === selected ? "active" : ""}" data-level-choice="${option.level}" aria-pressed="${option.level === selected}">
+          <span class="vr-cc-choice-image vr-cc-selection-art" aria-hidden="true"><i class="${option.icon}"></i></span><span class="vr-cc-choice-name vr-cc-level-choice-name"><span>Level ${option.level}</span><small>${escape(option.label)}</small></span>
         </button>`).join("")}
-        <label class="vr-cc-level-custom ${selected && !LEVEL_OPTIONS.some(option => option.level === selected) ? "active" : ""}">
-          <span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-solid fa-gears"></i></span><span class="vr-cc-choice-name vr-cc-level-choice-name"><span>Custom Level</span><small>Enter a level</small></span>
-          <input name="startingLevel" type="number" min="1" step="1" value="${selected && !LEVEL_OPTIONS.some(option => option.level === selected) ? selected : ""}" placeholder="Level" />
+        <label class="vr-cc-level-custom vr-cc-full-art-choice-card vr-cc-level-full-art-card ${selected && !LEVEL_OPTIONS.some(option => option.level === selected) ? "active" : ""}">
+          <span class="vr-cc-choice-image vr-cc-selection-art" aria-hidden="true"><i class="fa-solid fa-gears"></i></span><span class="vr-cc-choice-name vr-cc-level-choice-name"><span>Custom Level</span><small>Enter a level</small><input name="startingLevel" type="number" min="1" step="1" value="${selected && !LEVEL_OPTIONS.some(option => option.level === selected) ? selected : ""}" placeholder="Level" /></span>
         </label>
       </div></section>
     </div>`;
@@ -782,7 +1133,10 @@ class CharacterCreationOverlay {
   }
 
   #selectedReference(key) {
-    return (this.referenceOptions[key] ?? []).find(entry => entry.name === this.state[key]) ?? null;
+    const uuid = this.state.references?.[key];
+    return (this.referenceOptions[key] ?? []).find(entry => entry.uuid === uuid)
+      ?? (this.referenceOptions[key] ?? []).find(entry => entry.name === this.state[key])
+      ?? null;
   }
 
   #abilityTypeBadge(type) {
@@ -804,95 +1158,98 @@ class CharacterCreationOverlay {
   }
 
   #archetypeSummary(archetype) {
-    const summaries = {
-      Physique: "Body-led characters who solve problems through force, movement, endurance, and close action.",
-      Armament: "Weapon and battlefield specialists who rely on training, equipment, tactics, and combat readiness.",
-      Magic: "Supernatural specialists who shape encounters through spells, elemental force, healing, conjuration, or occult technique.",
-      Tech: "Technical operators who build, hack, repair, pilot, program, and leverage machines or networks.",
-      Social: "Influence and investigation specialists who navigate people, factions, deception, diplomacy, and hidden truths."
-    };
-    return summaries[archetype] ?? "Choose an archetype to focus the available professions.";
+    return this.#pathEntry("archetype", archetype)?.summary
+      || ARCHETYPE_SUMMARIES[archetype]
+      || "Choose an archetype to focus the available professions.";
   }
 
   #attributesStep() {
     const budget = attributePointsForLevel(this.state.startingLevel);
     const spent = this.#attributePointCost();
-    return `<div class="vr-cc-attribute-budget"><strong>${Math.max(0, budget - spent)} AP available</strong><span>${spent} / ${budget} spent. The starting value of 1 is free; each increase costs its new value in AP.</span></div><div class="vr-cc-attributes">${ATTRIBUTE_GROUPS.map(group => `
+    return `<div class="vr-cc-attribute-workspace"><header><h1>Allocate Attribute Points</h1><div class="vr-cc-attribute-points-available"><span>Available Attribute Points (AP)</span><strong>${Math.max(0, budget - spent)}</strong></div></header><div class="vr-cc-attributes">${ATTRIBUTE_GROUPS.map(group => `
       <section>
         <h2>${escape(group.label)}</h2>
         ${group.attributes.map(attribute => {
           const path = `attributes.${group.key}.${attribute}`;
           const value = number(foundry.utils.getProperty(this.state, path));
-          const nextCost = value + 1;
+          const nextCost = value;
           const hint = game.i18n.localize(`VEILRUNNER.AttributeHint.${attribute}`);
-          return `<div class="vr-cc-attribute"><span>${escape(game.i18n.localize(`VEILRUNNER.Attribute.${attribute}`))}</span><div class="vr-cc-attribute-value"><button type="button" data-attribute-adjust="${path}" data-direction="-1" ${value <= 1 ? "disabled" : ""}>−</button><input type="number" name="${path}" min="1" step="1" value="${value}" aria-label="${escape(game.i18n.localize(`VEILRUNNER.Attribute.${attribute}`))} value" /><button type="button" data-attribute-adjust="${path}" data-direction="1" ${spent + nextCost > budget ? "disabled" : ""}>+</button></div><small class="vr-cc-attribute-description">${escape(hint)}</small><small class="vr-cc-attribute-cost">Next: ${nextCost} AP</small></div>`;
+          const label = game.i18n.localize(`VEILRUNNER.Attribute.${attribute}`);
+          return `<article class="vr-cc-attribute ${this.activeAttributePath === path ? "selected" : ""}"><button type="button" class="vr-cc-attribute-heading" data-attribute-select="${path}"><i class="${ATTRIBUTE_ICONS[attribute] ?? "fa-solid fa-circle"}" aria-hidden="true"></i><span>${escape(label)}</span></button><div class="vr-cc-attribute-value"><button type="button" data-attribute-adjust="${path}" data-direction="-1" aria-label="Decrease ${escape(label)}" ${value <= 1 ? "disabled" : ""}>−</button><input type="number" name="${path}" min="1" step="1" value="${value}" aria-label="${escape(label)} value" /><button type="button" data-attribute-adjust="${path}" data-direction="1" aria-label="Increase ${escape(label)}" ${spent + nextCost > budget ? "disabled" : ""}>+</button></div><small class="vr-cc-attribute-description">${escape(hint)}</small><small class="vr-cc-attribute-cost">Next: ${nextCost} AP</small></article>`;
         }).join("")}
       </section>`).join("")}
-    </div>`;
+    </div></div>`;
   }
 
   #qualitiesFlawsStep() {
-    const query = String(this.state.qualityFlawSearch ?? "").trim().toLowerCase();
-    const type = ["all", "quality", "flaw"].includes(this.state.qualityFlawTypeFilter) ? this.state.qualityFlawTypeFilter : "all";
-    const pillar = ["all", ...QUALITY_FLAW_PILLARS].includes(this.state.qualityFlawPillarFilter) ? this.state.qualityFlawPillarFilter : "all";
-    const tierFilter = ["all", ...QUALITY_FLAW_TIERS].includes(this.state.qualityFlawTierFilter) ? this.state.qualityFlawTierFilter : "all";
-    const matches = (...values) => !query || values.some(value => String(value).toLowerCase().includes(query));
-    const visibleRows = QUALITY_FLAW_TIERS.flatMap((tier, index) => ["quality", "flaw"].map(kind => ({ kind, tier, points: index + 1, pillar: pillar === "all" ? "" : pillar })))
-      .filter(row => (type === "all" || row.kind === type) && (tierFilter === "all" || row.tier === tierFilter) && matches(row.tier, row.pillar, `custom ${row.kind === "quality" ? "perk" : "flaw"}`));
-    const pill = (action, value, label, active) => `<button type="button" class="vr-cc-qf-pill ${active ? "active" : ""}" data-action="${action}" data-qf-filter="${value}" aria-pressed="${active}">${escape(label)}</button>`;
-    return `<div class="vr-cc-qf-toolbar">
-        <label class="vr-cc-qf-search"><i class="fa-solid fa-magnifying-glass"></i><input name="qualityFlawSearch" type="search" value="${escape(this.state.qualityFlawSearch)}" placeholder="Search perks and flaws" aria-label="Search perks and flaws" /></label>
+    const audit = this.#qualityFlawAudit();
+    const records = this.#qualityFlawRecords();
+    const facets = qualityCatalogFacets(records);
+    const mode = ["all", "perks", "flaws", "selected"].includes(this.state.qualityFlawMode) ? this.state.qualityFlawMode : "all";
+    const results = queryQualityCatalog(records, {
+      mode: mode === "selected" ? "selected" : "all",
+      type: mode === "perks" ? "perk" : mode === "flaws" ? "flaw" : "all",
+      pillar: this.state.qualityFlawPillarFilter,
+      tier: this.state.qualityFlawTierFilter,
+      tag: this.state.qualityFlawTagFilter,
+      availableOnly: this.state.qualityFlawAvailableOnly,
+      search: this.state.qualityFlawSearch
+    }, this.#qualityFlawBuild());
+    const visible = results.slice(0, Math.max(80, number(this.state.qualityFlawVisibleCount, 80)));
+    const option = (value, label, selected) => `<option value="${escape(value)}" ${selected ? "selected" : ""}>${escape(label)}</option>`;
+    const modeButton = (value, label) => `<button type="button" data-action="set-qf-mode" data-qf-mode="${value}" class="${mode === value ? "active" : ""}" aria-pressed="${mode === value}">${label}</button>`;
+    const empty = `<p class="vr-cc-qf-empty">No perks or flaws match the current view.</p>`;
+    return `<section class="vr-cc-qf-browser">
+      ${this.#qualityFlawQuota(audit)}
+      <nav class="vr-cc-qf-modes" aria-label="Perk and flaw discovery mode">
+        <label class="vr-cc-qf-search"><i class="fa-solid fa-magnifying-glass"></i><input name="qualityFlawSearch" type="search" value="${escape(this.state.qualityFlawSearch)}" placeholder="Search" aria-label="Search perks and flaws" /></label>
+        ${modeButton("all", "Browse all")}${modeButton("perks", "Browse Perks")}${modeButton("flaws", "Browse Flaws")}
+        <button type="button" data-action="toggle-qf-available" class="vr-cc-qf-available-button ${this.state.qualityFlawAvailableOnly ? "active" : ""}" aria-pressed="${this.state.qualityFlawAvailableOnly}">Available Only</button>
+        ${modeButton("selected", "Selected")}
+        <label class="vr-cc-qf-inline-filter"><span>Pillar</span><select name="qualityFlawPillarFilter">${option("all", "All", this.state.qualityFlawPillarFilter === "all")}${facets.pillars.map(value => option(value, value, this.state.qualityFlawPillarFilter === value)).join("")}</select></label>
+        <label class="vr-cc-qf-inline-filter"><span>Tier</span><select name="qualityFlawTierFilter">${option("all", "All", this.state.qualityFlawTierFilter === "all")}${facets.tiers.map(value => option(value, value, this.state.qualityFlawTierFilter === value)).join("")}</select></label>
+        <label class="vr-cc-qf-inline-filter"><span>Tags</span><select name="qualityFlawTagFilter">${option("all", "All", this.state.qualityFlawTagFilter === "all")}${facets.tags.map(value => option(value, value, this.state.qualityFlawTagFilter === value)).join("")}</select></label>
+        <button type="button" class="vr-cc-qf-custom" data-action="open-qf-dialog" data-qf-kind="quality" data-qf-tier="Minor" data-qf-points="1"><i class="fa-solid fa-pen"></i><span>Create Custom</span></button>
+      </nav>
+      <div class="vr-cc-qf-results" data-quality-results data-result-total="${results.length}">
+        <div class="vr-cc-qf-grid">${visible.length ? visible.map(record => this.#qualityFlawChoiceCard(record, audit)).join("") : empty}</div>
+        ${visible.length < results.length ? `<p class="vr-cc-qf-result-count">Showing ${visible.length} of ${results.length}; scroll for more.</p>` : results.length ? `<p class="vr-cc-qf-result-count">${results.length} result${results.length === 1 ? "" : "s"}</p>` : ""}
       </div>
-      <div class="vr-cc-qf-filters" aria-label="Perk and flaw filters">
-        <div><span>Type</span>${pill("set-qf-type", "all", "All", type === "all")}${pill("set-qf-type", "quality", "Perks", type === "quality")}${pill("set-qf-type", "flaw", "Flaws", type === "flaw")}</div>
-        <div><span>Pillar</span>${pill("set-qf-pillar", "all", "All Pillars", pillar === "all")}${QUALITY_FLAW_PILLARS.map(value => pill("set-qf-pillar", value, value, pillar === value)).join("")}</div>
-        <div><span>Tier</span>${pill("set-qf-tier", "all", "All Tiers", tierFilter === "all")}${QUALITY_FLAW_TIERS.map((value, index) => pill("set-qf-tier", value, `${index + 1} PT`, tierFilter === value)).join("")}</div>
-      </div>
-      <div class="vr-cc-qf-grid">
-        ${visibleRows.length ? visibleRows.map(row => `<section class="vr-cc-qf-tier-row">
-          <div class="vr-cc-qf-tier-options">
-            ${this.#qualityFlawChoiceCard(row.kind, row.tier, row.points, row.pillar)}
-          </div>
-        </section>`).join("") : `<p class="vr-cc-qf-empty">No perks or flaws match those filters.</p>`}
-      </div>`;
+    </section>`;
   }
 
-  #qualityFlawChoiceCard(kind, tier, points, pillar = "") {
-    const focus = this.state.qualityFlawFocus ?? {};
-    const focused = focus.kind === kind && focus.tier === tier && focus.points === points && focus.pillar === pillar;
-    return `<article class="vr-cc-qf-choice-card ${kind} ${focused ? "focused" : ""}">
-        <button type="button" class="vr-cc-qf-choice-focus" data-action="focus-qf-choice" data-qf-kind="${kind}" data-qf-tier="${tier}" data-qf-points="${points}" data-qf-pillar="${pillar}" aria-label="Inspect custom ${kind === "quality" ? "perk" : "flaw"}"></button>
-        <header><span class="vr-cc-qf-choice-icon"><i class="fa-solid ${kind === "quality" ? "fa-sparkles" : "fa-triangle-exclamation"}"></i></span><strong>${points} PT</strong></header>
-        <strong>Custom ${kind === "quality" ? "Perk" : "Flaw"}</strong>
-        <small>${escape(tier)} - ${escape(pillar || "Choose pillar")}</small>
-        <button type="button" class="vr-cc-btn" data-action="open-qf-dialog" data-qf-kind="${kind}" data-qf-tier="${tier}" data-qf-points="${points}" ${pillar ? `data-qf-pillar="${pillar}"` : ""}>Select</button>
-      </article>`;
+  #qualityFlawChoiceCard(record, audit) {
+    const focused = this.state.qualityFlawFocus?.id === record.id;
+    const selected = Boolean(record.selected);
+    const evaluation = evaluateQualitySelection(record, this.#qualityFlawBuild(), audit);
+    const locked = !selected && !evaluation.canSelect;
+    const accent = record.kind === "flaw" ? "flaw" : "perk";
+    const stateIcon = selected ? "fa-check" : locked ? "fa-lock" : "";
+    const action = selected
+      ? `<button type="button" data-action="remove-selected-quality" data-quality-id="${escape(record.id)}" data-selected-kind="${escape(record.selectedKind)}" data-selected-index="${record.selectedIndex}" class="vr-cc-qf-state selected"><i class="fa-solid fa-check"></i><span>Selected</span></button>`
+      : locked
+        ? `<span class="vr-cc-qf-state locked">${escape(evaluation.conciseReason)}</span>`
+        : `<button type="button" data-action="select-quality" data-quality-id="${escape(record.id)}" class="vr-cc-qf-add" aria-label="Add ${escape(record.name)}"><i class="fa-solid fa-plus"></i></button>`;
+    const pillarClass = `pillar-${String(record.pillar ?? "Physical").toLowerCase()}`;
+    return `<article tabindex="0" class="vr-cc-qf-choice-card ${accent} ${pillarClass} ${focused ? "focused" : ""} ${selected ? "selected" : ""} ${locked ? "locked" : ""}" data-quality-id="${escape(record.id)}" aria-label="${escape(`${record.name}, ${record.tier} ${record.kind}`)}">
+      <header><strong>${escape(record.tier)} · ${tierCost(record.tier)} ${record.kind === "flaw" ? "FP" : "PP"}</strong>${stateIcon ? `<i class="fa-solid ${stateIcon}" aria-hidden="true"></i>` : ""}</header>
+      <h3 title="${escape(record.name)}">${escape(record.name)}</h3>
+      <p>${record.kind === "flaw" ? "Flaw" : "Perk"} · ${escape(record.pillar)}</p>
+      ${action}
+    </article>`;
   }
 
   #qualityFlawQuota(audit = this.#qualityFlawAudit()) {
-    return `<section class="vr-cc-qf-quota"><strong>Perk & Flaw Quota</strong><span>Perks ${audit.qualityPoints}/10 | Flaws ${audit.flawPoints}/20 minimum | Minor ${audit.minorPoints}/8 | Resolve potential: ${audit.resolvePotential}</span></section>`;
-  }
-
-  #qualityFlawTracker() {
-    const audit = this.#qualityFlawAudit();
-    const pillarBar = pillar => {
-      const points = audit.pillarPoints[pillar] ?? 0;
-      return `<div class="vr-cc-qf-pillar"><span>${escape(pillar)}</span><progress max="10" value="${points}"></progress><strong>${points}/10</strong></div>`;
-    };
-    return `<header class="vr-cc-live-header"><div><span>Live Rules & Math</span><h2>Perks & Flaws</h2></div></header>
-      <div class="vr-cc-live-scroll vr-cc-qf-tracker">
-        ${this.#qualityFlawQuota(audit)}
-        <section class="vr-cc-qf-rules"><h3>Limits</h3><ul><li>Minor entries: ${audit.minorPoints}/8 pts</li><li>Perks: ${audit.qualityPoints}/10 pts</li><li>Flaws: ${audit.flawPoints}/20 pts minimum</li></ul></section>
-        <section class="vr-cc-qf-pillar-breakdown"><h3>Pillar Breakdown</h3>${QUALITY_FLAW_PILLARS.map(pillarBar).join("")}</section>
-        ${this.#qualityFlawTaken("quality", "Selected Perks", this.state.qualitiesTaken)}
-        ${this.#qualityFlawTaken("flaw", "Selected Flaws", this.state.flawsTaken)}
-      </div>`;
-  }
-
-  #qualityFlawTaken(kind, label, entries) {
-    return `<section class="vr-cc-qf-taken ${kind}"><h2>${label}</h2><div class="vr-cc-qf-card-list">
-      ${entries.length ? entries.map((entry, index) => `<article class="vr-cc-qf-card"><header><span>${escape(entry.tier)}</span><strong>${escape(entry.points)} pts</strong></header><h3>${escape(entry.name)}</h3><small>${escape(entry.pillar)}</small><p>${escape(entry.description || "No description entered.")}</p><button type="button" class="vr-cc-btn" data-action="remove-${kind}" data-index="${index}">Unselect</button></article>`).join("") : `<p class="vr-cc-qf-empty">No ${kind === "quality" ? "perks" : "flaws"} selected yet.</p>`}
-    </div></section>`;
+    const metric = (className, icon, label, value, limit, status, note = "") => `<section class="vr-cc-qf-metric ${className}"><i class="fa-solid ${icon}" aria-hidden="true"></i><div><span>${label}</span><strong>${value} / ${limit}</strong><b>${status}</b>${note ? `<small>${note}</small>` : ""}</div></section>`;
+    const perkScale = Math.max(1, ...Object.values(audit.perkPillarTotals));
+    const perkPillars = QUALITY_FLAW_PILLARS.map(pillar => `<div class="pillar-${pillar.toLowerCase()}"><span>${pillar}</span><strong>${audit.perkPillarTotals[pillar]}</strong><progress max="${perkScale}" value="${audit.perkPillarTotals[pillar]}" aria-label="${pillar} perk points: ${audit.perkPillarTotals[pillar]}"></progress></div>`).join("");
+    const flawPillars = QUALITY_FLAW_PILLARS.map(pillar => `<div class="pillar-${pillar.toLowerCase()}"><span>${pillar}</span><strong>${audit.flawPillarTotals[pillar]} / ${QUALITY_LIMITS.pillarMaximum}</strong><progress max="${QUALITY_LIMITS.pillarMaximum}" value="${audit.flawPillarTotals[pillar]}"></progress></div>`).join("");
+    return `<header class="vr-cc-qf-quota">
+      ${metric("perk", "fa-star", "Perk Points", audit.perkPointsUsed, audit.perkCapacity, `${audit.perkPointsRemaining} remaining`, `Level ${Math.min(50, Math.max(1, number(this.state.startingLevel, 1)))} capacity`)}
+      <section class="vr-cc-qf-metric pillars perks"><div><span>Perks by Pillar</span><div class="vr-cc-qf-pillar-list">${perkPillars}</div></div></section>
+      <section class="vr-cc-qf-metric flaw combined"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><div class="vr-cc-qf-flaw-totals"><div><span>Total Flaw Points</span><strong>${audit.flawPoints} / ${QUALITY_LIMITS.flawMinimum}</strong><b>${audit.flawRequirementMet ? "Requirement met" : `${audit.flawRequirementRemaining} required`}</b></div><div><span>Minor Flaw Points</span><strong>${audit.minorFlawPoints} / ${QUALITY_LIMITS.minorFlawMaximum}</strong></div></div></section>
+      <section class="vr-cc-qf-metric pillars flaws"><div><span>Flaws per Pillar</span><div class="vr-cc-qf-pillar-list">${flawPillars}</div></div></section>
+    </header>`;
   }
 
   #qualityFlawDialogMarkup() {
@@ -903,8 +1260,10 @@ class CharacterCreationOverlay {
       <header><div><span>${escape(dialog.tier)} Tier</span><h2>Custom ${kindLabel}</h2></div><button type="button" class="vr-cc-icon" data-action="cancel-qf-dialog" title="Close"><i class="fa-solid fa-xmark"></i></button></header>
       <div class="vr-cc-qf-dialog-fields">
         <label class="vr-cc-field"><span>Name</span><input name="qualityFlawDialog.name" value="${escape(dialog.name)}" autofocus /></label>
+        <label class="vr-cc-field"><span>Type</span><select name="qualityFlawDialog.kind"><option value="quality" ${dialog.kind === "quality" ? "selected" : ""}>Perk</option><option value="flaw" ${dialog.kind === "flaw" ? "selected" : ""}>Flaw</option></select></label>
+        <label class="vr-cc-field"><span>Tier</span><select name="qualityFlawDialog.tier">${QUALITY_FLAW_TIERS.map(tier => `<option value="${tier}" ${tier === dialog.tier ? "selected" : ""}>${tier}</option>`).join("")}</select></label>
         <label class="vr-cc-field"><span>Pillar</span><select name="qualityFlawDialog.pillar">${QUALITY_FLAW_PILLARS.map(pillar => `<option value="${pillar}" ${pillar === dialog.pillar ? "selected" : ""}>${pillar}</option>`).join("")}</select></label>
-        <label class="vr-cc-field"><span>Points</span><input name="qualityFlawDialog.points" type="number" min="1" max="10" value="${Math.max(1, number(dialog.points, 1))}" /></label>
+        <label class="vr-cc-field"><span>Derived Cost</span><input type="text" value="${tierCost(dialog.tier)} ${dialog.kind === "flaw" ? "FP" : "PP"}" disabled /></label>
         <label class="vr-cc-field"><span>Description</span><textarea name="qualityFlawDialog.description" rows="5" placeholder="Describe how this ${kindLabel.toLowerCase()} affects play.">${escape(dialog.description)}</textarea></label>
       </div>
       <footer><button type="button" class="vr-cc-btn" data-action="cancel-qf-dialog">Cancel</button><button type="button" class="vr-cc-btn primary" data-action="save-qf-dialog">Add ${kindLabel}</button></footer>
@@ -912,15 +1271,47 @@ class CharacterCreationOverlay {
   }
 
   #qualityFlawAudit() {
-    const total = entries => entries.reduce((sum, entry) => sum + Math.max(0, number(entry.points)), 0);
-    const qualityPoints = total(this.state.qualitiesTaken ?? []);
-    const flawPoints = total(this.state.flawsTaken ?? []);
-    const minorPoints = [...(this.state.qualitiesTaken ?? []), ...(this.state.flawsTaken ?? [])]
-      .filter(entry => entry.tier === "Minor").reduce((sum, entry) => sum + Math.max(0, number(entry.points)), 0);
-    const exceedsPillar = (entries, entry) => total(entries.filter(item => String(item.pillar).trim().toLowerCase() === String(entry.pillar).trim().toLowerCase())) + Math.max(0, number(entry.points)) > 10;
-    const allEntries = [...(this.state.qualitiesTaken ?? []), ...(this.state.flawsTaken ?? [])];
-    const pillarPoints = Object.fromEntries(QUALITY_FLAW_PILLARS.map(pillar => [pillar, total(allEntries.filter(entry => entry.pillar === pillar))]));
-    return { qualityPoints, flawPoints, minorPoints, resolvePotential: Math.floor(flawPoints / 5), pillarPoints, exceedsPillar };
+    const audit = auditQualityBuild(this.#qualityFlawBuild());
+    return { ...audit, qualityPoints: audit.perkPointsUsed, minorPoints: audit.minorFlawPoints, pillarPoints: audit.pillarTotals, resolvePotential: Math.floor(audit.flawPoints / 5) };
+  }
+
+  #qualityFlawBuild() {
+    return {
+      level: this.state.startingLevel || this.actor.system?.level || 1,
+      qualitiesTaken: this.state.qualitiesTaken ?? [], flawsTaken: this.state.flawsTaken ?? [],
+      tags: [...(this.actor.system?.tags ?? []), this.state.archetype, this.state.profession, this.state.discipline].filter(Boolean),
+      species: this.state.species, origin: this.state.origin, background: this.state.background,
+      archetype: this.state.archetype, profession: this.state.profession, discipline: this.state.discipline
+    };
+  }
+
+  #qualityFlawRecords() {
+    const perks = this.state.qualitiesTaken ?? [];
+    const flaws = this.state.flawsTaken ?? [];
+    const selected = [...perks.map((entry, index) => ({ entry, index, kind: "perk" })), ...flaws.map((entry, index) => ({ entry, index, kind: "flaw" }))];
+    const records = (this.qualityCatalogRecords ?? []).map(record => {
+      const location = selected.find(candidate => qualitySelectionId(candidate.entry) === record.definitionId);
+      return location ? { ...record, selected: true, selectedKind: location.kind, selectedIndex: location.index } : { ...record, selected: false };
+    });
+    const known = new Set(records.filter(record => record.selected).map(record => record.definitionId));
+    for (const location of selected) {
+      const sourceId = qualitySelectionId(location.entry);
+      if (sourceId && known.has(sourceId)) continue;
+      const tier = QUALITY_FLAW_TIERS.includes(location.entry.tier) ? location.entry.tier : "Minor";
+      records.push({
+        id: sourceId || `selected-${location.kind}-${location.index}`,
+        definitionId: sourceId,
+        sourceUuid: location.entry.sourceUuid ?? "",
+        name: location.entry.name || `Custom ${location.kind === "flaw" ? "Flaw" : "Perk"}`,
+        kind: location.kind, tier, points: tierCost(tier), pillar: QUALITY_FLAW_PILLARS.includes(location.entry.pillar) ? location.entry.pillar : "Physical",
+        summary: "", description: location.entry.description ?? "", mechanics: location.entry.mechanics ?? "",
+        requirements: { text: location.entry.requirements ?? "", minimumLevel: 0, requiredDefinitionIds: [], requiredTags: [] },
+        requirementsText: location.entry.requirements ?? "", tags: location.entry.tags ?? [], recommendationTags: [], effects: [],
+        searchText: [location.entry.name, location.entry.description, location.entry.mechanics, location.entry.requirements, ...(location.entry.tags ?? [])].join(" ").toLowerCase(),
+        selected: true, selectedKind: location.kind, selectedIndex: location.index
+      });
+    }
+    return records;
   }
 
   #infoPanelContent(key) {
@@ -928,29 +1319,31 @@ class CharacterCreationOverlay {
     const selectedPath = [this.state.archetype, this.state.profession, this.state.discipline].filter(Boolean).join(" / ");
     const generic = {
       species: ["Select Species", "Choose the character's species or lineage. Use the exact table name when the finalized rules text is available."],
-      origin: ["Select Origin", "Choose where the character comes from. Origin can later drive baseline persona, contacts, language, and cultural hooks."],
+      origin: ["Select Home Planet", "Choose the character's home planet. This selection can later drive baseline persona, contacts, language, and cultural hooks."],
       background: ["Select Background", "Choose the character's pre-adventuring background. This is a likely source for baseline persona and starting proficiencies."],
       talents: ["Talents & Skills", "Open the tree canvas to choose skill and spell branches, then confirm to return those selections to character generation."],
-      credits: ["Purchases", "Track remaining credits, credits spent, and purchase notes. Purchases are folded into the character biography on confirm."],
+      credits: ["Galactic Market", "Browse the market, build a cart, and purchase a starting loadout. Confirmed purchases are folded into the character biography on confirm."],
       contacts: ["Contacts", "Create one or more starting contacts. On confirm, these are also mirrored into the sheet's Relationships panel."],
-      languages: ["Known Languages", "Enter one language per line or comma separated. The saved list is also included in generated biography notes."],
-      bio: ["Biographical Information", "Name, pronouns, age, size, appearance, personality, and history are written into the sheet identity and biography fields."],
-      persona: ["Persona Index", "The recommendation combines the selected species, origin, background, and discipline. Apply it, then fine-tune any axis."],
+      identity: ["Identity", "Complete the character's biography, known languages, and Persona Index together. These remain stored in their existing sheet fields."],
       review: ["Review", "Confirming writes all selections into the Hero actor, marks character generation complete, closes this canvas, and opens the sheet."]
     };
 
     if (key === "level") {
       const level = number(this.state.startingLevel);
       const choice = LEVEL_OPTIONS.find(option => option.level === level);
-      const label = choice ? `Lvl ${choice.level} - ${choice.label}` : level ? `Lvl ${level} - Custom` : "No level selected";
-      return `<div class="vr-cc-info-heading"><span>Information</span><h2>Starting Level</h2></div>
-        <div class="vr-cc-reference vr-cc-level-info">
-          <h3>Level of Play</h3>
-          <strong>${escape(label)}</strong>
-          <div class="vr-cc-level-description-slot">The character begins at Level 1 and receives the starting points for this level of play. Add the campaign description for this tier here.</div>
-          ${level ? `<h3>Attribute Points (AP)</h3><p>${Math.max(0, attributePointsForLevel(level) - this.#attributePointCost())} available. Cumulative pool through Level ${level}: ${attributePointsForLevel(level)} AP; Level ${level} contributes ${attributePointsGainedAtLevel(level)} AP. The 1-point minimum is free; each increase costs its new value in AP.</p>
-          <h3>Talent Points (TP)</h3><p>${talentPointsForLevel(level)} available.</p>
-          <h3>Skill Points (SP)</h3><p>${skillPointsForLevel(level)} available.</p>` : ""}
+      const description = level
+        ? `This selects the Level ${level} starting tier. The Hero actor begins at Level 1 while this tier supplies the cumulative character-generation point pools shown below.`
+        : "Choose a starting-level card to preview its character-generation point pools and use it for the remaining selections.";
+      const label = choice ? `Level ${choice.level} — ${choice.label}` : level ? `Level ${level} — Custom` : "Select Starting Level";
+      const icon = choice?.icon ?? (level ? "fa-solid fa-gears" : "fa-solid fa-chart-line");
+      return `<div class="vr-cc-info-heading"><span>Level of Play</span><h2>${escape(label)}</h2></div>
+        <div class="vr-cc-inspector-art-placeholder vr-cc-level-inspector-art" aria-hidden="true"><i class="${icon}"></i></div>
+        <nav class="vr-cc-inspector-tabs vr-cc-inspector-about-tab" aria-label="About"><span>About</span></nav>
+        <div class="vr-cc-reference vr-cc-inspector-content vr-cc-level-info">
+          <p>${escape(description)}</p>
+          ${level ? `<div class="vr-cc-level-pools"><section><h3>Attribute Points (AP)</h3><strong>${Math.max(0, attributePointsForLevel(level) - this.#attributePointCost())} available</strong><p>Cumulative pool through Level ${level}: ${attributePointsForLevel(level)} AP; Level ${level} contributes ${attributePointsGainedAtLevel(level)} AP. The 1-point minimum is free; increase cost equals the new attribute level minus 1.</p></section>
+          <section><h3>Talent Points (TP)</h3><strong>${talentPointsForLevel(level)} available</strong></section>
+          <section><h3>Skill Points (SP)</h3><strong>${skillPointsForLevel(level)} available</strong></section></div>` : ""}
         </div>`;
     }
 
@@ -961,7 +1354,7 @@ class CharacterCreationOverlay {
       const fallbackDescription = key === "species"
         ? "Species currently establishes the character's lineage selection only. Stats and biography details can be added later."
         : key === "origin"
-          ? "Origin currently establishes the character's selection only. Literature and other origin details can be added later."
+          ? "Home Planet currently establishes the character's origin selection only. Literature and other planetary details can be added later."
         : key === "background"
           ? "Background currently establishes the character's selection only. Literature and other background details can be added later."
         : `Choose a ${title.toLowerCase()} from the reference library. Its Persona Index modifiers are included in the recommendation.`;
@@ -972,29 +1365,43 @@ class CharacterCreationOverlay {
     }
 
     if (key === "profession") {
+      const mode = this.selectionModes.discipline === "all" ? "all" : "guided";
+      const stage = mode === "all" ? "discipline" : this.pathStage ?? (!this.state.archetype ? "archetype" : !this.state.profession ? "profession" : "discipline");
+      const stageLabel = stage === "archetype" ? "Archetype" : stage === "profession" ? "Profession" : "Discipline";
+      const stageHelp = stage === "archetype"
+        ? "Choose the broad path category that will filter the available professions."
+        : stage === "profession"
+          ? "Choose a profession within the selected archetype to reveal its disciplines."
+          : mode === "all"
+            ? "Choose any authored discipline. Its linked archetype and profession are selected with it."
+            : "Choose a discipline within the selected profession to complete the path.";
+      const stageReference = mode === "all"
+        ? "<strong>Browse All Disciplines</strong><p>Select a Discipline card to inspect its profession, archetype, abilities, and authored background.</p>"
+        : this.#professionReference(stage);
       return `<div class="vr-cc-info-heading">
-        <span>Information</span>
-        <h2>Path</h2>
+        <span>Path Selection</span>
+        <h2>${escape(stageLabel)}</h2>
       </div>
-      <div class="vr-cc-reference">${this.#professionReference()}</div>`;
+      <div class="vr-cc-reference"><p>${escape(stageHelp)}</p>${stageReference}</div>`;
     }
 
     if (key === "attributes") {
-      return `<div class="vr-cc-info-heading">
-        <span>Information</span>
-        <h2>Attribute Points</h2>
-      </div>
-      <div class="vr-cc-reference">
-        <strong>${Math.max(0, attributePointsForLevel(this.state.startingLevel) - this.#attributePointCost())} AP Available</strong>
-        <p>${this.#attributePointCost()} of ${attributePointsForLevel(this.state.startingLevel)} AP spent. The 1-point minimum is free; each increase costs its new value in AP.</p>
-      </div>
-      <div class="vr-cc-info-summary">
-        ${ATTRIBUTE_GROUPS.map(group => `<div><dt>${escape(group.label)}</dt><dd>${group.attributes.reduce((sum, attr) => sum + number(foundry.utils.getProperty(this.state, `attributes.${group.key}.${attr}`)), 0)}</dd></div>`).join("")}
-      </div>`;
+      const path = this.activeAttributePath || "attributes.physical.reaction";
+      const attribute = path.split(".").at(-1);
+      const label = game.i18n.localize(`VEILRUNNER.Attribute.${attribute}`);
+      const hint = game.i18n.localize(`VEILRUNNER.AttributeHint.${attribute}`);
+      const value = Math.max(1, number(foundry.utils.getProperty(this.state, path), 1));
+      return `<div class="vr-cc-info-heading"><span>Attribute Details</span></div>
+        <section class="vr-cc-attribute-detail-card">
+          <h2><i class="${ATTRIBUTE_ICONS[attribute] ?? "fa-solid fa-circle"}" aria-hidden="true"></i>${escape(label)}</h2>
+          <div class="vr-cc-attribute-detail-copy"><h3>Description</h3><p>${escape(hint)}</p><h3>Related Systems</h3><p class="vr-cc-empty-related">No linked systems are authored for this attribute.</p></div>
+          <footer><span>Next Increase Cost</span><strong>${value} AP</strong></footer>
+        </section>
+        <section class="vr-cc-attribute-summary"><h3>Attribute Summary</h3><dl>${ATTRIBUTE_GROUPS.map((group, index) => `<div><dt><i class="${["fa-solid fa-shield-halved", "fa-solid fa-brain", "fa-solid fa-chess-knight"][index]}" aria-hidden="true"></i>${escape(group.label)}</dt><dd>${group.attributes.reduce((sum, attr) => sum + number(foundry.utils.getProperty(this.state, `attributes.${group.key}.${attr}`)), 0)}</dd></div>`).join("")}</dl></section>`;
     }
 
-    if (key === "persona") {
-      return `<div class="vr-cc-info-heading"><span>Persona Index</span><h2>Ten-point markers</h2></div><div class="vr-cc-reference vr-cc-persona-guide"><p>Each illuminated segment is 10 points. The marker shows the current position; negative values move toward the left label and positive values toward the right label.</p>${PERSONA_AXES.map(axis => {
+    if (key === "identity") {
+      return `<div class="vr-cc-info-heading"><span>Details</span><h2>Identity</h2></div><div class="vr-cc-reference vr-cc-persona-guide"><p>Biography, Languages, and Persona Index are edited together in this subsection.</p><p>Each illuminated Persona segment is 10 points. The marker shows the current position; negative values move toward the left label and positive values toward the right label.</p>${PERSONA_AXES.map(axis => {
         const value = clampPersona(this.state.personaIndex?.[axis.key]);
         const direction = value === 0 ? "Balanced" : `${Math.abs(value)} toward ${value < 0 ? axis.left : axis.right}`;
         return `<div><strong>${escape(axis.left)} / ${escape(axis.right)}</strong><span>-100 Â· -90 Â· -80 Â· -70 Â· -60 Â· -50 Â· -40 Â· -30 Â· -20 Â· -10 Â· 0 Â· +10 Â· +20 Â· +30 Â· +40 Â· +50 Â· +60 Â· +70 Â· +80 Â· +90 Â· +100</span><small>Current: ${escape(direction)}</small></div>`;
@@ -1002,14 +1409,38 @@ class CharacterCreationOverlay {
     }
 
     if (key === "qualitiesFlaws") {
-      const focus = this.state.qualityFlawFocus ?? { kind: "quality", tier: "Minor", points: 1, pillar: "Physical" };
+      const focus = this.#qualityFlawRecords().find(record => record.id === this.state.qualityFlawFocus?.id) ?? this.state.qualityFlawFocus;
+      if (!focus) return `<div class="vr-cc-info-heading"><span>Item Inspector</span><h2>Build Rules</h2></div>
+        <div class="vr-cc-reference vr-cc-qf-inspector vr-cc-qf-build-rules">
+          <p class="warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>At least ${QUALITY_LIMITS.flawMinimum} flaw points are required.</span></p>
+          <p class="warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Minor flaws cannot exceed ${QUALITY_LIMITS.minorFlawMaximum} points.</span></p>
+          <p class="information"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>No flaw pillar may exceed ${QUALITY_LIMITS.pillarMaximum} points. Perk pillars have no limit.</span></p>
+        </div>`;
       const typeLabel = focus.kind === "flaw" ? "Flaw" : "Perk";
-      return `<div class="vr-cc-info-heading"><span>Item Inspector</span><h2>Custom ${typeLabel}</h2></div>
-        <div class="vr-cc-reference vr-cc-qf-inspector">
-          <div class="vr-cc-qf-inspector-badge">${escape(focus.points)} PT · ${escape(focus.tier)}</div>
-          <h3>${escape(focus.pillar)} ${typeLabel}</h3>
-          <p>Select opens the editable entry form. Add the finalized mechanical triggers, prerequisites, and lore description there; this system does not invent missing rule text.</p>
-          <p><b>Rule context:</b> each pillar is limited to 10 points. Minor entries collectively cannot exceed 8 points.</p>
+      const evaluation = evaluateQualitySelection(focus, this.#qualityFlawBuild());
+      const impact = evaluation.impact;
+      const action = focus.selected
+        ? `<button type="button" class="vr-cc-btn vr-cc-qf-inspector-action" data-action="remove-selected-quality" data-quality-id="${escape(focus.id)}" data-selected-kind="${escape(focus.selectedKind)}" data-selected-index="${focus.selectedIndex}"><i class="fa-solid fa-xmark"></i><span>Remove ${typeLabel}</span></button>`
+        : `<button type="button" class="vr-cc-btn primary vr-cc-qf-inspector-action" data-action="select-quality" data-quality-id="${escape(focus.id)}" ${evaluation.canSelect ? "" : "disabled"}><i class="fa-solid fa-plus"></i><span>Add ${typeLabel}</span></button>`;
+      const availability = focus.selected
+        ? `<div class="vr-cc-qf-availability available"><i class="fa-solid fa-check"></i><span>Selected</span></div>`
+        : evaluation.canSelect
+          ? `<div class="vr-cc-qf-availability available"><i class="fa-solid fa-circle-check"></i><span>Available</span></div>`
+          : `<div class="vr-cc-qf-availability blocked"><i class="fa-solid fa-triangle-exclamation"></i><span>Cannot select: ${escape(evaluation.selectionBlockingDetails.join(" "))}</span></div>`;
+      return `<div class="vr-cc-info-heading"><span>Item Inspector</span><h2>${escape(focus.name)}</h2></div>
+        <div class="vr-cc-reference vr-cc-qf-inspector ${focus.kind}">
+          <div class="vr-cc-qf-inspector-badges"><span>${escape(focus.tier)} · ${tierCost(focus.tier)} ${focus.kind === "flaw" ? "FP" : "PP"}</span><span>${typeLabel}</span><span>${escape(focus.pillar)}</span></div>
+          ${focus.description ? `<section><h3>Description</h3><p>${escape(focus.description)}</p></section>` : ""}
+          ${focus.requirementsText ? `<section><h3>Requirements</h3><p>${escape(focus.requirementsText)}</p></section>` : ""}
+          ${focus.tags?.length ? `<section><h3>Tags</h3><p>${focus.tags.map(escape).join(" · ")}</p></section>` : ""}
+          ${focus.mechanics ? `<section><h3>Mechanical Effects</h3><p>${escape(focus.mechanics)}</p></section>` : ""}
+          ${focus.effects?.length ? `<section><h3>Active Effects</h3><ul>${focus.effects.map(effect => `<li>${escape(effect)}</li>`).join("")}</ul></section>` : ""}
+          <section class="vr-cc-qf-impact"><h3>Selection Impact</h3>
+            ${impact.perkPoints ? `<p><span>Perk Points</span><strong>${impact.perkPoints.from} → ${impact.perkPoints.to} / ${impact.perkPoints.maximum}</strong></p>` : ""}
+            ${impact.flawPoints ? `<p><span>Flaw Points</span><strong>${impact.flawPoints.from} → ${impact.flawPoints.to} / ${impact.flawPoints.minimum} minimum</strong></p>` : ""}
+            <p><span>${escape(impact.pillar.name)}</span><strong>${impact.pillar.from} → ${impact.pillar.to}${impact.pillar.maximum == null ? " · No limit" : ` / ${impact.pillar.maximum}`}</strong></p>
+          </section>
+          ${availability}${action}
         </div>`;
     }
 
@@ -1028,16 +1459,138 @@ class CharacterCreationOverlay {
     return this.#talentCanvasV2();
   }
 
-  #talentHeader(current, stepCount) {
-    const page = this.treePage === "magic" ? "magic" : "skills";
+  #treeCatalogRecords(page = this.treePage) {
+    const root = talentTreeRoot(page);
+    return [
+      { kind: "root", id: root.id, name: root.name, root, node: root, search: `${root.name} tree` },
+      ...talentTreeRecords(talentTreePage(page))
+    ];
+  }
+
+  #magicAccess() {
+    return magicTreeAccess(this.state.archetype, this.state.profession, this.state.discipline);
+  }
+
+  #magicRootAccess(tree = this.state.talentTree) {
+    const archetype = this.#magicAccess().rootUnlocked;
+    const branches = new Set(tree?.branches ?? []);
+    const leaves = new Set((tree?.leaves ?? []).filter(entry => number(entry.rank) > 0).map(entry => entry.id));
+    const purchased = branches.has(MAGIC_ACCESS_BRANCH_ID);
+    const established = !purchased && talentTreePage("magic").some(school =>
+      branches.has(schoolAccessBranchId(school.id)) || (school.practices ?? []).some(practice =>
+        branches.has(practice.id) || (practice.spells ?? []).some(spell => leaves.has(spell.id))
+      )
+    );
+    return { unlocked: archetype || purchased || established, archetype, purchased, established };
+  }
+
+  #schoolHasTreeInvestment(school, tree = this.state.talentTree) {
+    const branches = new Set(tree?.branches ?? []);
+    const leaves = new Map((tree?.leaves ?? []).map(entry => [entry.id, Math.max(0, number(entry.rank))]));
+    return (school.practices ?? []).some(practice => branches.has(practice.id) || (practice.spells ?? []).some(spell => (leaves.get(spell.id) ?? 0) > 0));
+  }
+
+  #schoolAccess(school, page = this.treePage) {
+    if (page !== "magic") return { unlocked: true, granted: true, purchased: false, established: false };
+    const granted = this.#magicAccess().schoolId === school.id;
+    const purchased = (this.state.talentTree?.branches ?? []).includes(schoolAccessBranchId(school.id));
+    const established = this.#schoolHasTreeInvestment(school, this.initialTalentTree);
+    const rootUnlocked = this.#magicRootAccess().unlocked;
+    return { unlocked: rootUnlocked && (granted || purchased || established), granted, purchased, established, rootUnlocked };
+  }
+
+  #selectedTreeRecord() {
+    if (!this.treeFocus?.id) return null;
+    return this.#treeCatalogRecords().find(record => record.id === this.treeFocus.id) ?? null;
+  }
+
+  #treeSearchResults() {
+    const query = String(this.treeSearch ?? "").trim().toLowerCase();
+    if (!query) return [];
+    return searchTalentTree(this.#treeCatalogRecords(), query);
+  }
+
+  #talentHeader(current) {
+    const results = this.#treeSearchResults();
     return `<header class="vr-cc-header vr-cc-talent-header">
-      <div class="vr-cc-talent-heading"><span>Step ${this.step + 1} of ${stepCount}</span><h1>${escape(current.label)}</h1></div>
-      <nav class="vr-cc-tree-tabs" aria-label="Talent canvas"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}"><i class="fa-solid fa-crosshairs"></i><span>Skills</span></button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}"><i class="fa-solid fa-wand-sparkles"></i><span>Magic</span></button></nav>
-      <div class="vr-cc-tree-pools"><div><span>Talent Points</span><strong>${this.#treeAvailable("talent")}</strong></div><div><span>Skill Points</span><strong>${this.#treeAvailable("skill")}</strong></div><small>${Math.round(this.treeZoom * 100)}%</small><button type="button" class="vr-cc-btn vr-cc-tree-undo" data-action="undo-tree-purchase" ${this.treeUndoStack.length ? "" : "disabled"}><i class="fa-solid fa-rotate-left"></i><span>Undo</span></button></div>
-      ${game.user.isGM ? `<div class="vr-cc-tree-author-actions"><button type="button" class="vr-cc-btn ${this.nodeMoveMode ? "active" : ""}" data-action="toggle-tree-move"><i class="fa-solid fa-arrows-up-down-left-right"></i><span>${this.nodeMoveMode ? "Finish Moving" : "Move Nodes"}</span></button><button type="button" class="vr-cc-btn ${this.connectionTool.active ? "active" : ""}" data-action="toggle-tree-connect"><i class="fa-solid fa-link"></i><span>${this.connectionTool.active ? "Cancel Connect" : "Connect Nodes"}</span></button><button type="button" class="vr-cc-btn" data-action="add-tree-node"><i class="fa-solid fa-pen-ruler"></i><span>Node Editor</span></button><button type="button" class="vr-cc-btn" data-action="manage-tree-traits"><i class="fa-solid fa-tags"></i><span>Traits</span></button></div>` : ""}
-      ${game.user.isGM && this.connectionTool.active ? this.#connectionToolbar() : ""}
-      ${game.user.isGM && this.nodeMoveMode ? this.#nodeAlignmentToolbar() : ""}
+      <div class="vr-cc-tree-pools"><div><span>Talent Points</span><strong>${this.#treeAvailable("talent")}</strong></div><div><span>Skill Points</span><strong>${this.#treeAvailable("skill")}</strong></div><button type="button" class="vr-cc-btn vr-cc-tree-undo" data-action="undo-tree-purchase" ${this.treeUndoStack.length ? "" : "disabled"}><i class="fa-solid fa-rotate-left"></i><span>Undo</span></button></div>
+      <div class="vr-cc-tree-browse-tools"><div class="vr-cc-tree-search"><i class="fa-solid fa-magnifying-glass"></i><input name="treeSearch" value="${escape(this.treeSearch)}" placeholder="Search practices, skills, and spells" autocomplete="off" />${results.length ? `<div class="vr-cc-tree-search-results">${results.map(record => `<button type="button" data-action="tree-search-result" data-tree-search-id="${escape(record.id)}"><strong>${escape(record.name)}</strong><small>${escape([record.school?.name, record.practice?.name].filter(Boolean).join(" / "))}</small></button>`).join("")}</div>` : ""}</div><button type="button" class="vr-cc-btn" data-action="center-tree"><i class="fa-solid fa-crosshairs"></i><span>Center Tree</span></button><button type="button" class="vr-cc-btn ${this.treePurchasedOnly ? "active" : ""}" data-action="toggle-purchased-only"><i class="fa-solid fa-filter"></i><span>Purchased Only</span></button>${game.user.isGM ? `<button type="button" class="vr-cc-btn" data-action="open-tree-editor"><i class="fa-solid fa-pen-ruler"></i><span>Tree Editor</span></button>` : ""}</div>
     </header>`;
+  }
+
+  #treeEditorHeader() {
+    const page = this.treePage === "magic" ? "magic" : "skills";
+    return `<header class="vr-cc-header vr-cc-talent-header vr-cc-editor-toolbar">
+      <nav class="vr-cc-tree-tabs" aria-label="Tree editor canvas"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}"><i class="fa-solid fa-crosshairs"></i><span>Skills</span></button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}"><i class="fa-solid fa-wand-sparkles"></i><span>Magic</span></button></nav>
+      <div class="vr-cc-tree-author-actions"><button type="button" class="vr-cc-btn ${this.nodeMoveMode ? "active" : ""}" data-action="toggle-tree-move"><i class="fa-solid fa-arrows-up-down-left-right"></i><span>${this.nodeMoveMode ? "Finish Moving" : "Move Nodes"}</span></button><button type="button" class="vr-cc-btn ${this.connectionTool.active ? "active" : ""}" data-action="toggle-tree-connect"><i class="fa-solid fa-link"></i><span>${this.connectionTool.active ? "Cancel Connect" : "Connect Nodes"}</span></button><button type="button" class="vr-cc-btn" data-action="add-tree-node"><i class="fa-solid fa-pen-ruler"></i><span>Node Editor</span></button><button type="button" class="vr-cc-btn" data-action="manage-tree-traits"><i class="fa-solid fa-tags"></i><span>Traits</span></button><button type="button" class="vr-cc-btn" data-action="center-tree"><i class="fa-solid fa-crosshairs"></i><span>Center</span></button></div>
+      ${this.connectionTool.active ? this.#connectionToolbar() : ""}${this.nodeMoveMode ? this.#nodeAlignmentToolbar() : ""}
+    </header>`;
+  }
+
+  #talentInspector() {
+    const record = this.#selectedTreeRecord();
+    if (!record) return `<aside class="vr-cc-info vr-cc-details-pane vr-cc-tree-inspector vr-cc-tree-inspector-empty"><div class="vr-cc-info-heading"><span>Details</span></div><div class="vr-cc-reference"><p>Select a School, Practice, Spell, or Skill on the canvas to inspect its authored rules and purchase options.</p></div>${this.#inspectorAdvance("talents")}</aside>`;
+    const node = record.node;
+    const rankEntry = record.kind === "spell" ? (this.state.talentTree?.leaves ?? []).find(entry => entry.id === record.id) : null;
+    const rank = Math.max(0, number(rankEntry?.rank));
+    const maximum = record.kind === "spell" ? Math.max(1, number(node.maxRank, 1)) : 0;
+    const practicePurchased = record.practice ? (this.state.talentTree?.branches ?? []).includes(record.practice.id) : false;
+    const practiceRequirements = record.kind === "practice" ? (node.requires ?? []).map(treeRequirement) : [];
+    const spellRequirements = record.kind === "spell" ? (node.requires ?? []).map(treeRequirement) : [];
+    const requirements = record.kind === "practice" ? practiceRequirements.map(requirement => ({ ...requirement, met: (this.state.talentTree?.branches ?? []).includes(requirement.id) })) : spellRequirements.map(requirement => ({ ...requirement, met: number((this.state.talentTree?.leaves ?? []).find(entry => entry.id === requirement.id)?.rank) >= requirement.level }));
+    const access = this.#magicAccess();
+    const magicRootAccess = this.#magicRootAccess();
+    const rootPurchased = this.treePage === "magic" && magicRootAccess.purchased;
+    const rootAccessGranted = record.kind === "root" && (this.treePage !== "magic" || magicRootAccess.unlocked);
+    const recordSchoolAccess = record.school ? this.#schoolAccess(record.school) : { unlocked: true, granted: false, purchased: false, established: false };
+    const schoolAligned = record.kind === "school" && recordSchoolAccess.granted;
+    const schoolPurchased = record.kind === "school" && (recordSchoolAccess.purchased || recordSchoolAccess.established);
+    const levelMet = this.state.startingLevel >= Math.max(1, number(node.requiredLevel, 1));
+    const requirementsMet = requirements.every(requirement => requirement.met) && levelMet && recordSchoolAccess.unlocked;
+    const firstCost = Math.max(1, number(node.talentCost, 1));
+    const laterCost = Math.max(0, number(node.rankCost, skillPointCostForLevel(this.state.startingLevel)));
+    const records = this.#treeCatalogRecords();
+    const relatedIds = new Set((node.requires ?? []).map(value => treeRequirement(value).id));
+    for (const candidate of records) if ((candidate.node.requires ?? []).some(value => treeRequirement(value).id === record.id)) relatedIds.add(candidate.id);
+    const related = records.filter(candidate => relatedIds.has(candidate.id));
+    let authoredRequirements = requirements.length
+      ? requirements.map(requirement => `<li class="${requirement.met ? "met" : "unmet"}"><i class="fa-solid fa-${requirement.met ? "circle-check" : "circle-xmark"}"></i>${escape(records.find(candidate => candidate.id === requirement.id)?.name ?? requirement.id)}${record.kind === "spell" && requirement.level > 1 ? ` level ${requirement.level}` : ""}</li>`).join("")
+      : `<li class="met"><i class="fa-solid fa-circle-check"></i>No authored prerequisites</li>`;
+    if (record.kind === "root" && this.treePage === "magic") authoredRequirements = rootAccessGranted
+      ? `<li class="met"><i class="fa-solid fa-circle-check"></i>${magicRootAccess.archetype ? "Unlocked by Magic archetype" : magicRootAccess.purchased ? `Purchased for ${MAGIC_ACCESS_COST} Attribute Points` : "Access retained from existing Magic progression"}</li>`
+      : `<li class="unmet"><i class="fa-solid fa-lock"></i>Purchase Magic access for ${MAGIC_ACCESS_COST} Attribute Points</li>`;
+    if (record.kind === "school" && schoolAligned) authoredRequirements = `<li class="met"><i class="fa-solid fa-circle-check"></i>Granted By Discipline: ${escape(this.state.discipline)}</li>`;
+    else if (record.kind === "school" && recordSchoolAccess.purchased) authoredRequirements = `<li class="met"><i class="fa-solid fa-circle-check"></i>School access purchased for 1 Talent Point</li>`;
+    else if (record.kind === "school" && recordSchoolAccess.established) authoredRequirements = `<li class="met"><i class="fa-solid fa-circle-check"></i>School access retained from existing character progression</li>`;
+    else if (record.kind === "school") authoredRequirements = `<li class="unmet"><i class="fa-solid fa-lock"></i>Purchase School access for 1 Talent Point</li>`;
+    else if (record.school && !recordSchoolAccess.unlocked) authoredRequirements = `<li class="unmet"><i class="fa-solid fa-lock"></i>Purchase access to the ${escape(record.school.name)} School first</li>${authoredRequirements}`;
+    let action = `<button type="button" class="vr-cc-btn" data-action="center-selected-tree-node"><i class="fa-solid fa-crosshairs"></i><span>Center Node</span></button>`;
+    if (record.kind === "root" && this.treePage === "magic" && !rootAccessGranted) action = `<button type="button" class="vr-cc-btn primary" data-tree-magic-access ${this.#attributePointsAvailable() >= MAGIC_ACCESS_COST ? "" : "disabled"}><span>Purchase Magic Access</span><strong>${MAGIC_ACCESS_COST} AP</strong></button>`;
+    else if (rootAccessGranted && this.treePage === "magic") action = `<button type="button" class="vr-cc-btn access-granted" data-action="center-selected-tree-node"><i class="fa-solid fa-circle-check"></i><span>Magic Access Granted</span></button>`;
+    if (schoolAligned) action = `<button type="button" class="vr-cc-btn access-granted" data-action="center-selected-tree-node"><i class="fa-solid fa-circle-check"></i><span>Granted By Discipline</span></button>`;
+    else if (record.kind === "school" && schoolPurchased) action = `<button type="button" class="vr-cc-btn access-granted" data-action="center-selected-tree-node"><i class="fa-solid fa-circle-check"></i><span>${recordSchoolAccess.purchased ? "School Access Purchased" : "School Access Retained"}</span></button>`;
+    else if (record.kind === "school") action = `<button type="button" class="vr-cc-btn primary" data-tree-school-access="${escape(record.school.id)}" ${this.#treeAvailable("talent") >= 1 ? "" : "disabled"}><span>Purchase School Access</span><strong>1 TP</strong></button>`;
+    if (record.kind === "practice") action = practicePurchased
+      ? `<button type="button" class="vr-cc-btn primary" data-action="open-practice-view" data-practice-id="${escape(record.id)}"><span>View ${this.treePage === "magic" ? "Spells" : "Skills"}</span></button>`
+      : `<button type="button" class="vr-cc-btn primary" data-tree-practice="${escape(record.id)}" ${requirementsMet && this.#treeAvailable("talent") >= firstCost ? "" : "disabled"}><span>Purchase Practice</span><strong>${firstCost} TP</strong></button>`;
+    if (record.kind === "spell") {
+      const canPurchase = practicePurchased && requirementsMet && rank < maximum && (rank ? this.#treeAvailable("skill") >= laterCost : this.#treeAvailable("talent") >= firstCost);
+      action = `<button type="button" class="vr-cc-btn primary" data-tree-rank="${escape(record.id)}" ${canPurchase ? "" : "disabled"}><span>${rank >= maximum ? "Maximum Rank" : rank ? `Purchase Rank ${rank + 1}` : "Purchase Rank 1"}</span>${rank < maximum ? `<strong>${rank ? `${laterCost} SP` : `${firstCost} TP`}</strong>` : ""}</button>`;
+    }
+    const effects = (node.effects ?? []).filter(effect => effect?.target || effect?.value || effect?.notes);
+    const traits = (node.traits ?? []).filter(Boolean);
+    const typeLabel = record.kind === "root" ? "Talent Tree" : record.kind === "school" ? "School" : record.kind === "practice" ? "Practice" : node.type === "ability" ? "Ability" : this.treePage === "magic" ? "Spell" : "Skill";
+    const accessFact = record.kind === "root" ? `<div><dt>Access</dt><dd>${magicRootAccess.archetype ? "Archetype Granted" : rootPurchased ? `Purchased · ${MAGIC_ACCESS_COST} AP` : rootAccessGranted ? "Existing Progression" : `Purchase Required · ${MAGIC_ACCESS_COST} AP`}</dd></div>` : record.kind === "school" ? `<div><dt>Access</dt><dd>${schoolAligned ? "Granted By Discipline" : recordSchoolAccess.purchased ? "Purchased · 1 TP" : recordSchoolAccess.established ? "Existing Progression" : "Purchase Required · 1 TP"}</dd></div>` : "";
+    return `<aside class="vr-cc-info vr-cc-details-pane vr-cc-tree-inspector">
+      <div class="vr-cc-tree-inspector-scroll"><div class="vr-cc-tree-inspector-hero">${node.img ? `<img src="${escape(node.img)}" alt="" />` : `<span><i class="fa-solid ${record.kind === "spell" ? node.type === "ability" ? "fa-burst" : "fa-wand-sparkles" : record.kind === "practice" ? "fa-diamond" : "fa-diagram-project"}"></i></span>`}<div><small>${escape(typeLabel)}</small><h2>${escape(node.name)}</h2><p>${escape([record.school?.name, record.practice?.name].filter(name => name && name !== node.name).join(" / "))}</p></div></div>
+      <dl class="vr-cc-tree-inspector-facts">${accessFact}${record.kind === "spell" ? `<div><dt>Rank</dt><dd>${rank} / ${maximum}</dd></div><div><dt>Next Cost</dt><dd>${rank ? `${laterCost} SP` : `${firstCost} TP`}</dd></div>` : record.kind === "practice" ? `<div><dt>Status</dt><dd>${practicePurchased ? "Unlocked" : "Locked"}</dd></div><div><dt>Cost</dt><dd>${firstCost} TP</dd></div>` : ""}<div><dt>Required Level</dt><dd>${Math.max(1, number(node.requiredLevel, 1))}</dd></div>${node.category ? `<div><dt>Category</dt><dd>${escape(node.category)}</dd></div>` : ""}${node.type ? `<div><dt>Type</dt><dd>${escape(node.type)}</dd></div>` : ""}</dl>
+      <section><h3>Requirements</h3><ul class="vr-cc-tree-requirements">${authoredRequirements}${levelMet ? "" : `<li class="unmet"><i class="fa-solid fa-circle-xmark"></i>Character level ${Math.max(1, number(node.requiredLevel, 1))}</li>`}</ul></section>
+      <section><h3>Description</h3><p>${escape(node.description || "No description has been authored for this node.")}</p></section>
+      ${effects.length ? `<section><h3>Effects</h3><ul>${effects.map(effect => `<li>${escape([effect.scope, effect.target, effect.value, effect.duration, effect.notes].filter(Boolean).join(" · "))}</li>`).join("")}</ul></section>` : ""}
+      ${traits.length ? `<section><h3>Traits</h3><div class="vr-cc-tree-traits">${traits.map(trait => `<span>${escape(trait)}</span>`).join("")}</div></section>` : ""}
+      ${related.length ? `<section><h3>Related Nodes</h3><div class="vr-cc-tree-related">${related.map(candidate => `<button type="button" data-action="tree-search-result" data-tree-search-id="${escape(candidate.id)}">${escape(candidate.name)}</button>`).join("")}</div></section>` : ""}</div>
+      <footer class="vr-cc-tree-inspector-actions">${action}</footer>${this.#inspectorAdvance("talents")}
+    </aside>`;
   }
 
   #nodeAlignmentToolbar() {
@@ -1055,13 +1608,24 @@ class CharacterCreationOverlay {
 
   #talentCanvasV2() {
     const page = this.treePage === "magic" ? "magic" : "skills";
-    const schools = talentTreePage(page);
+    const allSchools = talentTreePage(page);
+    const purchasedLeaves = new Set((this.state.talentTree?.leaves ?? []).filter(entry => number(entry.rank) > 0).map(entry => entry.id));
+    let schools = this.treePurchasedOnly && !this.isTreeEditor
+      ? purchasedTalentTreePage(allSchools, this.state.talentTree)
+      : allSchools;
+    if (page === "magic" && this.treePurchasedOnly && !this.isTreeEditor) {
+      const grantedSchool = allSchools.find(school => school.id === this.#magicAccess().schoolId);
+      if (grantedSchool && !schools.some(school => school.id === grantedSchool.id)) schools = [...schools, { ...grantedSchool, practices: [] }];
+    }
     const practiceEntry = this.openPracticeId ? this.#treeCatalogEntry(this.openPracticeId, "practice") : null;
+    const visiblePractice = practiceEntry && this.treePurchasedOnly && !this.isTreeEditor ? { ...practiceEntry.practice, spells: (practiceEntry.practice.spells ?? []).filter(spell => purchasedLeaves.has(spell.id)) } : practiceEntry?.practice;
     const board = practiceEntry
-      ? this.#practiceSpellWorld(practiceEntry.school, practiceEntry.practice, page)
-      : schools.length ? this.#treeWorld(schools, page) : `<section class="vr-cc-tree-empty"><h2>${page === "magic" ? "Magic" : "Skills"} catalog not yet populated</h2><p>The ${page} system is separate and ready for its own Schools, Practices, and nodes.</p></section>`;
-    const breadcrumb = practiceEntry ? `<div class="vr-cc-subcanvas-heading"><button type="button" class="vr-cc-btn" data-action="close-practice-canvas"><i class="fa-solid fa-arrow-left"></i><span>All Practices</span></button><div><span>${escape(practiceEntry.school.name)}</span><strong>${escape(practiceEntry.practice.name)} ${page === "magic" ? "Spells" : "Skills"}</strong></div></div>` : "";
-    return `<section class="vr-cc-talent-canvas ${page === "magic" ? "magic" : "skills"}">${breadcrumb}<main class="vr-cc-tree-board" data-viewport-key="${escape(this.#treeViewportKey())}">${board}</main>${this.authorNode ? this.#authorNodeMarkup() : ""}${this.traitEditorOpen ? this.#traitEditorMarkup() : ""}</section>`;
+      ? this.#practiceSpellWorld(practiceEntry.school, visiblePractice, page)
+      : schools.length ? this.#treeWorld(schools, page) : `<section class="vr-cc-tree-empty"><h2>${page === "magic" ? "Magic" : "Skills"} ${this.treePurchasedOnly ? "has no purchases yet" : "catalog not yet populated"}</h2><p>${this.treePurchasedOnly ? "Turn off Purchased Only to browse available nodes." : `The ${page} system is separate and ready for its own Schools, Practices, and nodes.`}</p></section>`;
+    const breadcrumb = `<nav class="vr-cc-tree-breadcrumbs" aria-label="Tree location"><button type="button" data-action="close-practice-canvas"><i class="fa-solid fa-chevron-left"></i><span>All Practices</span></button>${practiceEntry ? `<i class="fa-solid fa-chevron-right"></i><button type="button" data-action="show-tree-school" data-tree-school-id="${escape(practiceEntry.school.id)}">${escape(practiceEntry.school.name)}</button><i class="fa-solid fa-chevron-right"></i><strong>${escape(practiceEntry.practice.name)}</strong>` : ""}</nav>`;
+    const canvasSwitch = this.isTreeEditor ? "<span></span>" : `<nav class="vr-cc-tree-canvas-switch" aria-label="Talent canvas"><button type="button" data-tree-page="skills" class="${page === "skills" ? "active" : ""}"><i class="fa-solid fa-crosshairs"></i><span>Skills</span></button><button type="button" data-tree-page="magic" class="${page === "magic" ? "active" : ""}"><i class="fa-solid fa-wand-sparkles"></i><span>Magic</span></button></nav>`;
+    const controls = `<footer class="vr-cc-tree-viewport-controls"><button type="button" data-action="fit-tree-view"><i class="fa-solid fa-expand"></i><span>Fit to View</span></button>${canvasSwitch}<div class="vr-cc-tree-zoom-controls"><button type="button" data-action="tree-zoom-out" aria-label="Zoom out"><i class="fa-solid fa-minus"></i></button><input type="range" name="treeZoom" min="0.35" max="1.8" step="0.05" value="${this.treeZoom}" aria-label="Tree zoom" /><button type="button" data-action="tree-zoom-in" aria-label="Zoom in"><i class="fa-solid fa-plus"></i></button><output>${Math.round(this.treeZoom * 100)}%</output></div></footer>`;
+    return `<section class="vr-cc-talent-canvas ${page === "magic" ? "magic" : "skills"}">${breadcrumb}<main class="vr-cc-tree-board" data-viewport-key="${escape(this.#treeViewportKey())}">${board}</main>${controls}${this.isTreeEditor && this.authorNode ? this.#authorNodeMarkup() : ""}${this.isTreeEditor && this.traitEditorOpen ? this.#traitEditorMarkup() : ""}</section>`;
   }
 
   #treeWorld(schools, page) {
@@ -1073,16 +1637,16 @@ class CharacterCreationOverlay {
     const paths = [];
     for (const school of schools) {
       const line = this.#treeLineStyle(school.rootConnection, school.color);
-      const schoolState = this.#schoolInvestment(school).total > 0 ? "active" : "available";
-      if (!line.hidden) paths.push(`<path class="vr-cc-tree-link ${schoolState} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(rootRecord, schoolMap.get(school.id), line)} d="${this.#treeConnectionPath(rootRecord, schoolMap.get(school.id), line)}" />`);
+      const schoolState = this.#schoolInvestment(school).total > 0 || (page === "magic" && this.#schoolAccess(school, page).granted) ? "active" : "available";
+      if (!line.hidden) paths.push(this.#treePathMarkup(rootRecord, schoolMap.get(school.id), line, schoolState));
     }
     for (const school of schools) for (const practice of school.practices ?? []) {
       const sources = practice.requires?.length ? practice.requires.map(value => ({ source: practiceMap.get(treeRequirement(value).id), requirement: treeRequirement(value) })).filter(entry => entry.source) : [{ source: schoolMap.get(school.id), requirement: { line: practice.schoolConnection ?? {} } }];
-      const practiceAvailable = (practice.requires ?? []).every(value => purchasedPractices.has(treeRequirement(value).id)) && this.state.startingLevel >= Math.max(1, number(practice.requiredLevel, 1));
+      const practiceAvailable = this.#schoolAccess(school, page).unlocked && (practice.requires ?? []).every(value => purchasedPractices.has(treeRequirement(value).id)) && this.state.startingLevel >= Math.max(1, number(practice.requiredLevel, 1));
       const practiceState = purchasedPractices.has(practice.id) ? "active" : practiceAvailable ? "available" : "blocked";
       for (const entry of sources) {
         const line = this.#treeLineStyle(entry.requirement.line, school.color);
-        if (!line.hidden) paths.push(`<path class="vr-cc-tree-link ${practiceState} ${entry.source.school.id !== school.id ? "cross-school" : ""} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(entry.source, practiceMap.get(practice.id), line)} d="${this.#treeConnectionPath(entry.source, practiceMap.get(practice.id), line)}" />`);
+        if (!line.hidden) paths.push(this.#treePathMarkup(entry.source, practiceMap.get(practice.id), line, practiceState, entry.source.school.id !== school.id ? "cross-school" : ""));
       }
     }
     const dimensions = this.#treeWorldDimensions(schools, page);
@@ -1102,7 +1666,7 @@ class CharacterCreationOverlay {
       const state = rank ? "active" : available ? "available" : "blocked";
       if (!(spell.requires ?? []).length) {
         const line = this.#treeLineStyle(spell.practiceConnection, practice.color || school.color);
-        if (!line.hidden) paths.push(`<path class="vr-cc-tree-link spell-link ${state} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(practiceRecord, target, line)} d="${this.#treeConnectionPath(practiceRecord, target, line)}" />`);
+        if (!line.hidden) paths.push(this.#treePathMarkup(practiceRecord, target, line, state, "spell-link"));
       }
       for (const requiredValue of spell.requires ?? []) {
         const requirement = treeRequirement(requiredValue);
@@ -1117,11 +1681,11 @@ class CharacterCreationOverlay {
           }
           const proxySource = external.get(requirement.id);
           const line = this.#treeLineStyle(requirement.line, sourceEntry.school.color);
-          if (!line.hidden) paths.push(`<path class="vr-cc-tree-link spell-link cross-school ${state} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(proxySource, target, line)} d="${this.#treeConnectionPath(proxySource, target, line)}" />`);
+          if (!line.hidden) paths.push(this.#treePathMarkup(proxySource, target, line, state, "spell-link cross-school"));
           continue;
         }
         const line = this.#treeLineStyle(requirement.line, practice.color || school.color);
-        if (!line.hidden) paths.push(`<path class="vr-cc-tree-link spell-link ${state} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(source, target, line)} d="${this.#treeConnectionPath(source, target, line)}" />`);
+        if (!line.hidden) paths.push(this.#treePathMarkup(source, target, line, state, "spell-link"));
       }
     }
     const dimensions = this.#treeWorldDimensions([school], page);
@@ -1134,9 +1698,15 @@ class CharacterCreationOverlay {
   }
 
   #rootMarkup(root, investment = { total: 0, talent: 0, skill: 0 }) {
-    const selected = this.connectionTool.source?.id === root.id ? "connection-source" : "";
-    const drag = game.user.isGM ? `draggable="true" data-tree-drag="root:${escape(root.id)}"` : "";
-    return `<div class="vr-cc-root-node shape-${escape(root.shape ?? "hex")} ${selected}" style="left:${number(root.x)}px;top:${number(root.y)}px;--tree-color:${escape(root.color ?? "#d8b4fe")}" ${drag} data-tree-root="${escape(root.id)}" data-tree-node-id="${escape(root.id)}" title="${investment.talent} Talent Points and ${investment.skill} Skill Points invested"><span>Total Investment</span><b>${investment.total}</b><strong>${escape(root.name)}</strong></div>`;
+    const selected = `${this.connectionTool.source?.id === root.id ? "connection-source" : ""} ${this.treeFocus?.id === root.id ? "tree-focused" : ""}`;
+    const drag = this.isTreeEditor ? `draggable="true" data-tree-drag="root:${escape(root.id)}"` : "";
+    const rootAccess = this.#magicRootAccess();
+    const archetypeAccess = this.treePage === "magic" && rootAccess.archetype;
+    const purchasedAccess = this.treePage === "magic" && rootAccess.purchased;
+    const accessGranted = this.treePage !== "magic" || rootAccess.unlocked;
+    const accessClass = accessGranted ? "access-granted" : "access-required";
+    const accessLabel = this.treePage === "magic" ? (archetypeAccess ? "Archetype Access" : purchasedAccess ? "Purchased Access" : rootAccess.established ? "Existing Access" : `${MAGIC_ACCESS_COST} AP to Unlock`) : "Core Access";
+    return `<button type="button" class="vr-cc-root-node shape-${escape(root.shape ?? "hex")} ${selected} ${accessClass} ${investment.total > 0 ? "invested-node" : ""}" style="left:${number(root.x)}px;top:${number(root.y)}px;--tree-color:${escape(root.color ?? "#d8b4fe")}" ${drag} data-tree-root="${escape(root.id)}" data-tree-node-id="${escape(root.id)}" data-tree-select="${escape(root.id)}" data-tree-select-kind="root" title="${escape(`${accessLabel}; ${investment.talent} Talent Points and ${investment.skill} Skill Points invested`)}"><span>${accessLabel}</span><b>${investment.total}</b><strong>${escape(root.name)}</strong></button>`;
   }
 
   #schoolInvestment(school) {
@@ -1144,6 +1714,7 @@ class CharacterCreationOverlay {
     const ranks = new Map((this.state.talentTree?.leaves ?? []).map(entry => [entry.id, Math.max(0, number(entry.rank))]));
     let talent = 0;
     let skill = 0;
+    if (branches.has(schoolAccessBranchId(school.id)) && !this.#schoolAccess(school, "magic").granted) talent += 1;
     for (const practice of school.practices ?? []) {
       if (branches.has(practice.id)) talent += Math.max(1, number(practice.talentCost, 1));
       for (const spell of practice.spells ?? []) {
@@ -1230,11 +1801,25 @@ class CharacterCreationOverlay {
     return `data-tree-source="${escape(source?.node?.id ?? "")}" data-tree-target="${escape(target?.node?.id ?? "")}" data-source-anchor="${escape(line.sourceAnchor ?? "auto")}" data-target-anchor="${escape(line.targetAnchor ?? "auto")}" data-line-bend="${number(line.bend)}"`;
   }
 
+  #treePathMarkup(source, target, line, state, extraClass = "") {
+    const classes = String(extraClass ?? "").trim();
+    const path = this.#treeConnectionPath(source, target, line);
+    const base = `<path class="vr-cc-tree-link ${classes} ${state} pattern-${line.pattern}" style="${line.css}" ${this.#treeLineMetadata(source, target, line)} d="${path}" />`;
+    const pulse = state === "active" ? `<path class="vr-cc-tree-link-pulse ${classes}" style="${line.css}" d="${path}" aria-hidden="true" />` : "";
+    return `${base}${pulse}`;
+  }
+
   #schoolMarkup(school, showSpells = false) {
-    const drag = game.user.isGM ? `draggable="true" data-tree-drag="school:${escape(school.id)}"` : "";
-    const selected = this.connectionTool.source?.id === school.id ? "connection-source" : "";
+    const drag = this.isTreeEditor ? `draggable="true" data-tree-drag="school:${escape(school.id)}"` : "";
+    const selected = `${this.connectionTool.source?.id === school.id ? "connection-source" : ""} ${this.treeFocus?.id === school.id ? "tree-focused" : ""}`;
     const investment = this.#schoolInvestment(school);
-    return `<section class="vr-cc-school-group" style="--tree-color:${escape(school.color)}"><div class="vr-cc-school-node ${selected}" style="left:${number(school.x)}px;top:${number(school.y)}px" ${drag} data-tree-school="${escape(school.id)}" data-tree-node-id="${escape(school.id)}" title="${investment.talent} Talent Points and ${investment.skill} Skill Points invested"><span>School</span><b>${investment.total}</b><strong>${escape(school.name)}</strong></div>${(school.practices ?? []).map(practice => this.#practiceMarkup(school, practice, showSpells)).join("")}</section>`;
+    const access = this.#schoolAccess(school);
+    const aligned = this.treePage === "magic" && access.granted;
+    const active = aligned || access.purchased || access.established || investment.total > 0;
+    const purchased = aligned || access.purchased || access.established;
+    const statusLabel = aligned ? "Granted By Discipline" : access.purchased ? "Purchased School" : access.established ? "Existing Access" : investment.total > 0 ? "Active School" : this.treePage === "magic" ? "School · 1 TP" : "School";
+    const schoolCost = this.treePage === "magic" && !access.unlocked ? "1 TP" : "";
+    return `<section class="vr-cc-school-group" style="--tree-color:${escape(school.color)}"><button type="button" class="vr-cc-school-node ${selected} ${aligned ? "aligned-school" : ""} ${active ? "invested-school" : ""} ${purchased ? "purchased-school" : ""}" style="left:${number(school.x)}px;top:${number(school.y)}px" ${drag} data-tree-school="${escape(school.id)}" data-tree-node-id="${escape(school.id)}" data-tree-select="${escape(school.id)}" data-tree-select-kind="school" title="${escape(`${statusLabel}; ${investment.talent} Talent Points and ${investment.skill} Skill Points invested`)}"><span><span>School</span>${schoolCost ? `<small>${schoolCost}</small>` : ""}</span><b>${investment.total}</b><strong>${escape(school.name)}</strong></button>${(school.practices ?? []).map(practice => this.#practiceMarkup(school, practice, showSpells)).join("")}</section>`;
   }
 
   #practiceMarkup(school, practice, showSpells = false) {
@@ -1242,12 +1827,12 @@ class CharacterCreationOverlay {
     const draftPurchase = purchased && !(this.initialTalentTree?.branches ?? []).includes(practice.id);
     const requirementsMet = (practice.requires ?? []).every(value => (this.state.talentTree?.branches ?? []).includes(treeRequirement(value).id));
     const levelMet = this.state.startingLevel >= Math.max(1, number(practice.requiredLevel, 1));
-    const available = requirementsMet && levelMet;
-    const drag = game.user.isGM ? `draggable="true" data-tree-drag="practice:${escape(school.id)}:${escape(practice.id)}"` : "";
+    const available = this.#schoolAccess(school).unlocked && requirementsMet && levelMet;
+    const drag = this.isTreeEditor ? `draggable="true" data-tree-drag="practice:${escape(school.id)}:${escape(practice.id)}"` : "";
     const spells = showSpells ? (practice.spells ?? []).map(spell => this.#spellRow(school, practice, spell, purchased, practice.color || school.color)).join("") : "";
-    const selected = this.connectionTool.source?.id === practice.id ? "connection-source" : "";
+    const selected = `${this.connectionTool.source?.id === practice.id ? "connection-source" : ""} ${this.treeFocus?.id === practice.id ? "tree-focused" : ""}`;
     const status = purchased ? (showSpells ? "" : "Open Spells") : `${Math.max(1, number(practice.talentCost, 1))} TP`;
-    return `<div class="vr-cc-practice-cluster" style="--tree-color:${escape(practice.color || school.color)}"><button type="button" class="vr-cc-practice-node ${selected} ${draftPurchase ? "draft-change" : ""} ${purchased ? "purchased" : available ? "available" : "locked"}" style="left:${number(practice.x)}px;top:${number(practice.y)}px" ${drag} data-tree-practice-card="${escape(practice.id)}" data-tree-practice="${escape(practice.id)}" data-tree-node-id="${escape(practice.id)}" title="${draftPurchase ? "Right-click to undo this current-session purchase." : ""}" ${(!purchased && !available) && !game.user.isGM ? "disabled" : ""}><span>Practice</span><strong>${escape(practice.name)}</strong>${status ? `<small>${escape(status)}</small>` : ""}</button>${spells}</div>`;
+    return `<div class="vr-cc-practice-cluster" style="--tree-color:${escape(practice.color || school.color)}"><button type="button" class="vr-cc-practice-node ${selected} ${draftPurchase ? "draft-change" : ""} ${purchased ? "purchased" : available ? "available" : "locked"}" style="left:${number(practice.x)}px;top:${number(practice.y)}px" ${drag} data-tree-practice-card="${escape(practice.id)}" data-tree-practice="${escape(practice.id)}" data-tree-node-id="${escape(practice.id)}" data-tree-select="${escape(practice.id)}" data-tree-select-kind="practice" title="${draftPurchase ? "Right-click to undo this current-session purchase." : ""}" aria-disabled="${!purchased && !available}"><strong>${escape(practice.name)}</strong>${status ? `<small>${escape(status)}</small>` : ""}</button>${spells}</div>`;
   }
 
   #spellRow(school, practice, spell, practicePurchased, color) {
@@ -1262,9 +1847,9 @@ class CharacterCreationOverlay {
     const cost = rank ? Math.max(0, number(spell.rankCost, skillPointCostForLevel(this.state.startingLevel))) : Math.max(1, number(spell.talentCost, 1));
     const currency = rank ? "SP" : "TP";
     const prerequisiteText = (spell.requires ?? []).map(value => { const requirement = treeRequirement(value); return `${this.#treeCatalogEntry(requirement.id, "spell")?.spell?.name ?? requirement.id} level ${requirement.level}`; }).join(", ");
-    const drag = game.user.isGM ? `draggable="true" data-tree-drag="spell:${escape(school.id)}:${escape(practice.id)}:${escape(spell.id)}"` : "";
-    const selected = this.connectionTool.source?.id === spell.id ? "connection-source" : "";
-    return `<button type="button" class="vr-cc-spell-node ${selected} ${draftRank ? "draft-change" : ""} ${rank ? "ranked" : ""} ${available ? "available" : "locked"}" style="left:${number(spell.x)}px;top:${number(spell.y)}px;--tree-color:${escape(color)}" data-tree-rank="${escape(spell.id)}" data-tree-node-id="${escape(spell.id)}" ${drag} ${!available && !game.user.isGM ? "disabled" : ""} title="${escape(`${spell.name}; level ${rank}/${maximum}; ${cost} ${currency}${prerequisiteText ? `; requires ${prerequisiteText}` : ""}${draftRank ? "; right-click to undo one current-session level" : ""}`)}"><span class="vr-cc-spell-glyph"><i class="fa-solid ${spell.type === "ability" ? "fa-burst" : "fa-wand-sparkles"}"></i></span><strong>${escape(spell.name)}</strong><small>Lv ${rank}/${maximum} · ${rank >= maximum ? "MAX" : `${cost} ${currency}`}</small></button>`;
+    const drag = this.isTreeEditor ? `draggable="true" data-tree-drag="spell:${escape(school.id)}:${escape(practice.id)}:${escape(spell.id)}"` : "";
+    const selected = `${this.connectionTool.source?.id === spell.id ? "connection-source" : ""} ${this.treeFocus?.id === spell.id ? "tree-focused" : ""}`;
+    return `<button type="button" class="vr-cc-spell-node ${selected} ${draftRank ? "draft-change" : ""} ${rank ? "ranked" : ""} ${available ? "available" : "locked"}" style="left:${number(spell.x)}px;top:${number(spell.y)}px;--tree-color:${escape(color)}" data-tree-rank="${escape(spell.id)}" data-tree-node-id="${escape(spell.id)}" data-tree-select="${escape(spell.id)}" data-tree-select-kind="spell" ${drag} aria-disabled="${!available}" title="${escape(`${spell.name}; level ${rank}/${maximum}; ${cost} ${currency}${prerequisiteText ? `; requires ${prerequisiteText}` : ""}${draftRank ? "; right-click to undo one current-session level" : ""}`)}"><span class="vr-cc-spell-glyph"><i class="fa-solid ${spell.type === "ability" ? "fa-burst" : "fa-wand-sparkles"}"></i></span><strong>${escape(spell.name)}</strong><small>Lv ${rank}/${maximum} · ${rank >= maximum ? "MAX" : `${cost} ${currency}`}</small></button>`;
   }
 
   #talentCanvas() {
@@ -1335,16 +1920,64 @@ class CharacterCreationOverlay {
       </div>`;
   }
 
-  #creditsStep() {
-    const products = VEILRUNNER_STARTER_STORE;
-    return `<section class="vr-cc-storefront"><header><span>Starter Storefront</span><h2>Purchases</h2><p>${escape(String(this.state.credits ?? 0))} credits available. Inventory is created only when character generation is confirmed.</p></header>${products.length ? `<div class="vr-cc-store-grid"></div>` : `<div class="vr-cc-store-empty"><i class="fa-solid fa-store"></i><h3>Starter catalog not yet populated</h3><p>Approved products, prices, descriptions, and item definitions will appear here. No inventory has been invented.</p></div>`}</section>`;
+  #storefrontBrowser() {
+    const query = this.state.storefront?.query ?? DEFAULT_CATALOG_QUERY;
+    const records = queryCatalog(this.catalogRecords, query);
+    const page = paginateCatalog(records, this.state.storefront?.page);
+    this.state.storefront.page = page.currentPage;
+    return renderStorefrontBrowser({
+      query, page, facets: catalogFacets(this.catalogRecords),
+      selectedDefinitionId: this.state.storefront?.selectedDefinitionId
+    });
+  }
+
+  #storefrontCarryState() {
+    const items = Array.isArray(this.actor.items?.contents) ? this.actor.items.contents : Array.from(this.actor.items ?? []);
+    const currentWeight = items.reduce((total, item) => total + Math.max(0, number(item.system?.weight)) * Math.max(1, number(item.system?.quantity, 1)), 0);
+    const strength = Math.max(1, number(this.state.attributes?.physical?.strength ?? this.actor.system?.attributes?.physical?.strength, 1));
+    return { currentWeight, carryCapacity: 5 + (strength * 2) };
+  }
+
+  #storefrontModel() {
+    const cartLines = normalizeCart(this.state.storefront?.cart);
+    const purchasedLines = normalizeCart(this.state.storefront?.purchases);
+    const total = cartTotal(cartLines, this.catalogRecords);
+    const purchasedTotal = cartTotal(purchasedLines, this.catalogRecords);
+    const { currentWeight, carryCapacity } = this.#storefrontCarryState();
+    return {
+      mode: this.state.storefront?.rightPane, cartLines,
+      recordById: new Map(this.catalogRecords.map(record => [record.definitionId, record])),
+      selectedRecord: this.catalogRecords.find(record => record.definitionId === this.state.storefront?.selectedDefinitionId) ?? null,
+      itemCount: cartItemCount(cartLines), cartTotal: total,
+      remainingCredits: Math.max(0, number(this.state.credits) - purchasedTotal - total),
+      projectedWeight: currentWeight + cartWeight(purchasedLines, this.catalogRecords) + cartWeight(cartLines, this.catalogRecords), carryCapacity
+    };
+  }
+
+  #storefrontPanel() {
+    return renderStorefrontContext(this.#storefrontModel());
+  }
+
+  async #onStorefrontDrop(event) {
+    if (!event.target.closest?.(".vr-cc-storefront")) return;
+    event.preventDefault();
+    let data;
+    try { data = TextEditor.getDragEventData(event); } catch (_error) { return; }
+    if (data?.type !== "Item" || !data.uuid) return;
+    const item = await fromUuid(data.uuid);
+    const definitionId = item?.system?.definitionId;
+    if (!definitionId || !this.catalogProvider.entry(definitionId)) return ui.notifications.warn("That Item is not offered by this storefront.");
+    this.state.storefront.cart = addToCart(this.state.storefront.cart, definitionId);
+    this.state.storefront.selectedDefinitionId = definitionId;
+    this.state.storefront.rightPane = "details";
+    this.#draw();
   }
 
   #contactsStep() {
     const contacts = this.state.contacts ?? [];
     const selected = Math.min(Math.max(0, number(this.state.contactFocus)), Math.max(0, contacts.length - 1));
     const contact = contacts[selected];
-    return `<section class="vr-cc-contacts"><header><span>Starting Contacts</span><h2>Choose a card, then enter that contact's details.</h2></header>
+    return `<section class="vr-cc-contacts"><header><span>Starting Contacts</span></header>
       <div class="vr-cc-contact-cards">${contacts.map((entry, index) => `<button type="button" class="vr-cc-reference-card ${index === selected ? "active" : ""}" data-contact-choice="${index}"><span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-solid fa-address-book"></i></span><span class="vr-cc-choice-name">${escape(entry.name || entry.role || `Contact ${index + 1}`)}</span></button>`).join("")}
         <button type="button" class="vr-cc-reference-card vr-cc-contact-add" data-action="add-contact"><span class="vr-cc-choice-image" aria-hidden="true"><i class="fa-solid fa-plus"></i></span><span class="vr-cc-choice-name">Add Contact</span></button></div>
       ${contact ? `<article class="vr-cc-contact"><label><span>Name</span><input name="contacts.${selected}.name" value="${escape(contact.name)}" /></label><label><span>Role</span><input name="contacts.${selected}.role" value="${escape(contact.role)}" /></label><label><span>Disposition</span><input name="contacts.${selected}.disposition" value="${escape(contact.disposition)}" /></label><label><span>Notes</span><input name="contacts.${selected}.notes" value="${escape(contact.notes)}" /></label></article>` : `<p class="vr-cc-contact-empty">Select Add Contact to create your first contact card.</p>`}
@@ -1353,10 +1986,19 @@ class CharacterCreationOverlay {
 
   #bioStep() {
     return `<div class="vr-cc-bio-sections">
-      <section><h2>Identity</h2><div class="vr-cc-grid two">
+      <section><h2>Biography</h2><div class="vr-cc-grid two">
+        <div class="vr-cc-portrait-choice"><img src="${escape(this.state.portraitImage)}" alt="Current character portrait" /><div><span>Portrait</span><button type="button" class="vr-cc-btn" data-action="pick-portrait"><i class="fa-solid fa-image"></i>Choose image</button></div></div>
         ${this.#field("name", "Character Name")}${this.#field("pronouns", "Pronouns")}${this.#field("age", "Age")}${this.#field("size", "Size")}
         ${this.#textareaOnly("appearance", "Appearance", "Visual details, style, notable gear.")}${this.#textareaOnly("personality", "Personality", "Mannerisms, values, first impressions.")}${this.#textareaOnly("history", "History", "Important past events and current motives.")}
       </div></section>
+    </div>`;
+  }
+
+  #identityStep() {
+    return `<div class="vr-cc-identity-details">
+      ${this.#bioStep()}
+      <section class="vr-cc-identity-languages"><h2>Languages</h2>${this.#textareaOnly("languages", "Known Languages", "One language per line, or comma separated.")}</section>
+      <section class="vr-cc-identity-persona"><h2>Persona Index</h2>${this.#personaStep()}</section>
     </div>`;
   }
 
@@ -1392,6 +2034,11 @@ class CharacterCreationOverlay {
     let talent = 0;
     let skill = 0;
     for (const id of tree?.branches ?? []) {
+      if (String(id).startsWith("school:")) {
+        const schoolId = String(id).slice("school:".length);
+        if (talentTreePage("magic").some(school => school.id === schoolId) && this.#magicAccess().schoolId !== schoolId) talent += 1;
+        continue;
+      }
       const practice = this.#treeCatalogEntry(id, "practice")?.practice;
       if (practice) talent += Math.max(1, number(practice.talentCost, 1));
     }
@@ -1423,7 +2070,7 @@ class CharacterCreationOverlay {
       name: node.name ?? "", color: source?.school?.color ?? "#8b5cf6", shape: node.shape ?? (kind === "school" ? "pentagon" : kind === "practice" ? "diamond" : "diamond"), x: number(node.x, 500), y: number(node.y, 300),
       type: node.type ?? "action", category: node.category ?? (page === "magic" ? "magic" : "actions"), actions: node.type === "ability" ? 0 : number(node.actions, 1),
       traitsText: (node.traits ?? []).join(", "), mana: number(node.resourceCosts?.mana), stamina: number(node.resourceCosts?.stamina), health: number(node.resourceCosts?.health),
-      talentCost: number(node.talentCost, 1), rankCost: number(node.rankCost, 1), maxRank: number(node.maxRank, 20), requiredLevel: number(node.requiredLevel, 1),
+      talentCost: number(node.talentCost, 1), rankCost: number(node.rankCost, 1), maxRank: number(node.maxRank, Number.MAX_SAFE_INTEGER), requiredLevel: number(node.requiredLevel, 1),
       requiresText: treeRequirementsText(node.requires), img: node.img ?? "", description: node.description ?? "",
       effectScope: node.effects?.[0]?.scope ?? "actor", effectTarget: node.effects?.[0]?.target ?? "", effectValue: node.effects?.[0]?.value ?? "", effectDuration: node.effects?.[0]?.duration ?? ""
     };
@@ -1436,7 +2083,8 @@ class CharacterCreationOverlay {
     const practices = schools.flatMap(school => (school.practices ?? []).map(practice => ({ ...practice, schoolId: school.id, schoolName: school.name })));
     const traits = game.settings.get(game.system.id, "actionTraits") ?? [];
     const spellFields = node.nodeKind === "spell" ? `<label>Action Kind<select name="authorNode.type"><option value="action">Action</option><option value="ability" ${node.type === "ability" ? "selected" : ""}>Ability (0 AP)</option></select></label><label>Category<select name="authorNode.category">${["actions", "reactions", "magic", "tech"].map(value => `<option value="${value}" ${node.category === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Action Points<input type="number" name="authorNode.actions" value="${number(node.actions)}" min="0" ${node.type === "ability" ? "max=\"0\"" : ""} /></label><label>Traits<input name="authorNode.traitsText" value="${escape(node.traitsText)}" list="vr-action-traits" /></label><datalist id="vr-action-traits">${traits.filter(entry => !entry.retired).map(entry => `<option value="${escape(entry.label)}"></option>`).join("")}</datalist><label>Mana Cost<input type="number" name="authorNode.mana" value="${number(node.mana)}" min="0" /></label><label>Stamina Cost<input type="number" name="authorNode.stamina" value="${number(node.stamina)}" min="0" /></label><label>Health Cost<input type="number" name="authorNode.health" value="${number(node.health)}" min="0" /></label><label>First Purchase<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /> TP</label><label>SP per Later Level<input type="number" name="authorNode.rankCost" value="${number(node.rankCost, 1)}" min="0" /></label><label>Maximum Level<input type="number" name="authorNode.maxRank" value="${number(node.maxRank, 20)}" min="1" max="20" /></label><label>Artwork<input name="authorNode.img" value="${escape(node.img)}" /></label><fieldset class="wide"><legend>Actor or Area Effect</legend><label>Scope<select name="authorNode.effectScope"><option value="actor">Actor</option><option value="area" ${node.effectScope === "area" ? "selected" : ""}>Area</option></select></label><label>Target<input name="authorNode.effectTarget" value="${escape(node.effectTarget)}" /></label><label>Value<input name="authorNode.effectValue" value="${escape(node.effectValue)}" /></label><label>Duration<input name="authorNode.effectDuration" value="${escape(node.effectDuration)}" /></label></fieldset>` : "";
-    return `<div class="vr-cc-author-shade"><form class="vr-cc-author-panel"><header><div><span>Shared GM Authoring</span><h2>${node.editId ? "Edit" : "Create"} Tree Node</h2></div><button type="button" class="vr-cc-icon" data-action="cancel-tree-node"><i class="fa-solid fa-xmark"></i></button></header><div class="vr-cc-author-grid"><label>Node Type<select name="authorNode.nodeKind"><option value="school" ${node.nodeKind === "school" ? "selected" : ""}>School</option><option value="practice" ${node.nodeKind === "practice" ? "selected" : ""}>Practice</option><option value="spell" ${node.nodeKind === "spell" ? "selected" : ""}>${this.treePage === "magic" ? "Spell" : "Skill"}</option></select></label>${node.nodeKind !== "school" ? `<label>School<select name="authorNode.schoolId"><option value="">Select School</option>${schools.map(school => `<option value="${escape(school.id)}" ${node.schoolId === school.id ? "selected" : ""}>${escape(school.name)}</option>`).join("")}</select></label>` : ""}${node.nodeKind === "spell" ? `<label>Practice<select name="authorNode.practiceId"><option value="">Select Practice</option>${practices.filter(practice => !node.schoolId || practice.schoolId === node.schoolId).map(practice => `<option value="${escape(practice.id)}" ${node.practiceId === practice.id ? "selected" : ""}>${escape(practice.schoolName)} / ${escape(practice.name)}</option>`).join("")}</select></label>` : ""}<label>Title<input name="authorNode.name" value="${escape(node.name)}" required /></label>${node.nodeKind === "school" ? `<label>School Color<input name="authorNode.color" type="color" value="${escape(node.color)}" /></label>` : ""}<label>X<input name="authorNode.x" type="number" value="${number(node.x)}" /></label><label>Y<input name="authorNode.y" type="number" value="${number(node.y)}" /></label>${node.nodeKind === "practice" ? `<label>Talent Point Cost<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /></label>` : ""}${node.nodeKind !== "school" ? `<label>Required Character Level<input type="number" name="authorNode.requiredLevel" value="${number(node.requiredLevel, 1)}" min="1" /></label><label>${node.nodeKind === "spell" ? "Spell Prerequisites" : "Practice Prerequisite IDs"}<input name="authorNode.requiresText" value="${escape(node.requiresText)}" placeholder="${node.nodeKind === "spell" ? "firebolt:5, other-spell:3" : "practice-id, cross-school-id"}" /></label>` : ""}${spellFields}<label class="wide">Description<textarea name="authorNode.description">${escape(node.description)}</textarea></label></div><footer>${node.editId ? `<button type="button" class="vr-cc-btn danger" data-action="delete-tree-node"><i class="fa-solid fa-trash"></i><span>Delete Node</span></button>` : ""}<button type="button" class="vr-cc-btn primary" data-action="save-tree-node"><i class="fa-solid fa-floppy-disk"></i><span>Save Shared Node</span></button></footer></form></div>`;
+    const unboundedSpellFields = spellFields.replace(/ min="1" max="20"(?= \/><\/label><label>Artwork)/, ' min="1"');
+    return `<div class="vr-cc-author-shade"><form class="vr-cc-author-panel"><header><div><span>Shared GM Authoring</span><h2>${node.editId ? "Edit" : "Create"} Tree Node</h2></div><button type="button" class="vr-cc-icon" data-action="cancel-tree-node"><i class="fa-solid fa-xmark"></i></button></header><div class="vr-cc-author-grid"><label>Node Type<select name="authorNode.nodeKind"><option value="school" ${node.nodeKind === "school" ? "selected" : ""}>School</option><option value="practice" ${node.nodeKind === "practice" ? "selected" : ""}>Practice</option><option value="spell" ${node.nodeKind === "spell" ? "selected" : ""}>${this.treePage === "magic" ? "Spell" : "Skill"}</option></select></label>${node.nodeKind !== "school" ? `<label>School<select name="authorNode.schoolId"><option value="">Select School</option>${schools.map(school => `<option value="${escape(school.id)}" ${node.schoolId === school.id ? "selected" : ""}>${escape(school.name)}</option>`).join("")}</select></label>` : ""}${node.nodeKind === "spell" ? `<label>Practice<select name="authorNode.practiceId"><option value="">Select Practice</option>${practices.filter(practice => !node.schoolId || practice.schoolId === node.schoolId).map(practice => `<option value="${escape(practice.id)}" ${node.practiceId === practice.id ? "selected" : ""}>${escape(practice.schoolName)} / ${escape(practice.name)}</option>`).join("")}</select></label>` : ""}<label>Title<input name="authorNode.name" value="${escape(node.name)}" required /></label>${node.nodeKind === "school" ? `<label>School Color<input name="authorNode.color" type="color" value="${escape(node.color)}" /></label>` : ""}<label>X<input name="authorNode.x" type="number" value="${number(node.x)}" /></label><label>Y<input name="authorNode.y" type="number" value="${number(node.y)}" /></label>${node.nodeKind === "practice" ? `<label>Talent Point Cost<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /></label>` : ""}${node.nodeKind !== "school" ? `<label>Required Character Level<input type="number" name="authorNode.requiredLevel" value="${number(node.requiredLevel, 1)}" min="1" /></label><label>${node.nodeKind === "spell" ? "Spell Prerequisites" : "Practice Prerequisite IDs"}<input name="authorNode.requiresText" value="${escape(node.requiresText)}" placeholder="${node.nodeKind === "spell" ? "firebolt:5, other-spell:3" : "practice-id, cross-school-id"}" /></label>` : ""}${unboundedSpellFields}<label class="wide">Description<textarea name="authorNode.description">${escape(node.description)}</textarea></label></div><footer>${node.editId ? `<button type="button" class="vr-cc-btn danger" data-action="delete-tree-node"><i class="fa-solid fa-trash"></i><span>Delete Node</span></button>` : ""}<button type="button" class="vr-cc-btn primary" data-action="save-tree-node"><i class="fa-solid fa-floppy-disk"></i><span>Save Shared Node</span></button></footer></form></div>`;
   }
 
   async #saveAuthoredTreeNodeV2() {
@@ -1480,7 +2128,7 @@ class CharacterCreationOverlay {
         const type = source.type === "ability" ? "ability" : "action";
         const category = ["actions", "reactions", "magic", "tech"].includes(source.category) ? source.category : (page === "magic" ? "magic" : "actions");
         const previousRequirementLines = new Map((savedNode.requires ?? []).map(value => { const requirement = treeRequirement(value); return [requirement.id, requirement.line]; }));
-        Object.assign(savedNode, { name, x: number(source.x, number(practice.x) + 105), y: number(source.y, number(practice.y) + 138), type, category, actions: type === "ability" ? 0 : Math.max(1, number(source.actions, 1)), traits: [...new Set(traits)], img: String(source.img ?? ""), description: String(source.description ?? ""), talentCost: Math.max(1, number(source.talentCost, 1)), rankCost: Math.max(0, number(source.rankCost, 1)), maxRank: Math.min(20, Math.max(1, number(source.maxRank, 20))), requiredLevel: Math.max(1, number(source.requiredLevel, 1)), requires: treeRequirementsFromText(source.requiresText), resourceCosts: { mana: Math.max(0, number(source.mana)), stamina: Math.max(0, number(source.stamina)), health: Math.max(0, number(source.health)) }, effects: source.effectTarget ? [{ scope: source.effectScope === "area" ? "area" : "actor", target: String(source.effectTarget), value: String(source.effectValue ?? ""), duration: String(source.effectDuration ?? ""), notes: "" }] : [] });
+        Object.assign(savedNode, { name, x: number(source.x, number(practice.x) + 105), y: number(source.y, number(practice.y) + 138), type, category, actions: type === "ability" ? 0 : Math.max(1, number(source.actions, 1)), traits: [...new Set(traits)], img: String(source.img ?? ""), description: String(source.description ?? ""), talentCost: Math.max(1, number(source.talentCost, 1)), rankCost: Math.max(0, number(source.rankCost, 1)), maxRank: Math.max(1, number(source.maxRank, Number.MAX_SAFE_INTEGER)), requiredLevel: Math.max(1, number(source.requiredLevel, 1)), requires: treeRequirementsFromText(source.requiresText), resourceCosts: { mana: Math.max(0, number(source.mana)), stamina: Math.max(0, number(source.stamina)), health: Math.max(0, number(source.health)) }, effects: source.effectTarget ? [{ scope: source.effectScope === "area" ? "area" : "actor", target: String(source.effectTarget), value: String(source.effectValue ?? ""), duration: String(source.effectDuration ?? ""), notes: "" }] : [] });
         savedNode.requires = savedNode.requires.map(requirement => ({ ...requirement, line: previousRequirementLines.get(requirement.id) ?? requirement.line }));
         savedNode.shape = ["circle", "hex", "pentagon", "square", "diamond"].includes(source.shape) ? source.shape : (type === "ability" ? "hex" : "diamond");
         const itemRequires = savedNode.requires.map(value => { const requirement = treeRequirement(value); return `${requirement.id}:${requirement.level}`; });
@@ -1559,6 +2207,17 @@ class CharacterCreationOverlay {
   }
 
   #onTreeWheel(event) {
+    const disciplineTrack = event.target.closest?.("[data-discipline-scroll-row]");
+    if (disciplineTrack && disciplineTrack.scrollWidth > disciplineTrack.clientWidth) {
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (delta) {
+        event.preventDefault();
+        disciplineTrack.scrollLeft += delta * .5;
+        this.#syncDisciplineScrollButtons(disciplineTrack);
+      }
+      return;
+    }
+
     const board = event.target.closest?.(".vr-cc-tree-board");
     if (!board) return;
     event.preventDefault();
@@ -1579,12 +2238,58 @@ class CharacterCreationOverlay {
       frame.style.height = `${height * next}px`;
       board.scrollLeft = worldX * next - (event.clientX - rect.left);
       board.scrollTop = worldY * next - (event.clientY - rect.top);
-      const readout = this.root.querySelector(".vr-cc-tree-pools > small");
+      const readout = this.root.querySelector(".vr-cc-tree-viewport-controls output");
       if (readout) readout.textContent = `${Math.round(next * 100)}%`;
+      const range = this.root.querySelector('input[name="treeZoom"]');
+      if (range) range.value = String(next);
     }
   }
 
+  #personaValueFromPointer(track, clientX) {
+    const rect = track?.getBoundingClientRect?.();
+    if (!rect?.width) return 0;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return clampPersona(Math.round(((ratio * 200) - 100) / 10) * 10);
+  }
+
+  #updatePersonaFromTrack(track, clientX) {
+    const axisKey = track?.dataset.personaDragAxis;
+    if (!PERSONA_AXES.some(axis => axis.key === axisKey)) return;
+    this.state.personaIndex[axisKey] = this.#personaValueFromPointer(track, clientX);
+    this.state.personaTouched = true;
+    this.#refreshLivePersonaPips();
+  }
+
+  #onPersonaPointerStart(event) {
+    if (event.button !== 0) return false;
+    const track = event.target.closest?.("[data-persona-drag-axis]");
+    if (!track) return false;
+    this.personaDrag = { track, pointerId: event.pointerId };
+    track.classList.add("dragging");
+    track.setPointerCapture?.(event.pointerId);
+    this.#updatePersonaFromTrack(track, event.clientX);
+    event.preventDefault();
+    return true;
+  }
+
+  #onPersonaKeyDown(event) {
+    const track = event.target.closest?.("[data-persona-drag-axis]");
+    const axisKey = track?.dataset.personaDragAxis;
+    if (!PERSONA_AXES.some(axis => axis.key === axisKey)) return;
+    const adjustments = { ArrowLeft: -10, ArrowDown: -10, ArrowRight: 10, ArrowUp: 10 };
+    let value = clampPersona(this.state.personaIndex[axisKey]);
+    if (event.key in adjustments) value = clampPersona(value + adjustments[event.key]);
+    else if (event.key === "Home") value = -100;
+    else if (event.key === "End") value = 100;
+    else return;
+    event.preventDefault();
+    this.state.personaIndex[axisKey] = value;
+    this.state.personaTouched = true;
+    this.#refreshLivePersonaPips();
+  }
+
   #onTreePanStart(event) {
+    if (this.#onPersonaPointerStart(event)) return;
     if (event.button !== 0) return;
     const scroller = event.target.closest?.(".vr-cc-tree-board");
     if (!scroller) return;
@@ -1648,6 +2353,10 @@ class CharacterCreationOverlay {
   }
 
   #onTreePanMove(event) {
+    if (this.personaDrag) {
+      this.#updatePersonaFromTrack(this.personaDrag.track, event.clientX);
+      return;
+    }
     if (this.connectionDrag) {
       const drag = this.connectionDrag;
       const end = this.#treePointerPosition(event, drag.world);
@@ -1778,6 +2487,14 @@ class CharacterCreationOverlay {
   }
 
   async #onTreePanEnd(event) {
+    if (this.personaDrag) {
+      const { track, pointerId } = this.personaDrag;
+      if (event.type !== "pointercancel") this.#updatePersonaFromTrack(track, event.clientX);
+      track.classList.remove("dragging");
+      track.releasePointerCapture?.(pointerId);
+      this.personaDrag = null;
+      return;
+    }
     if (this.connectionDrag) {
       const drag = this.connectionDrag;
       const targetSocket = document.elementsFromPoint(event.clientX, event.clientY).find(item => item.matches?.("[data-tree-socket]"));
@@ -1949,12 +2666,12 @@ class CharacterCreationOverlay {
     event.preventDefault();
     const id = target.dataset.treeSchool ?? target.dataset.treePracticeCard ?? target.dataset.treeRank;
     const kind = target.dataset.treeSchool ? "school" : target.dataset.treePracticeCard ? "practice" : "spell";
-    if (kind === "practice" || kind === "spell") {
+    if (!this.isTreeEditor && (kind === "practice" || kind === "spell")) {
       const undone = await this.#undoCurrentTreePurchase(id, kind);
       if (undone) return;
       if (!game.user.isGM) return ui.notifications.warn("Only purchases or Spell levels added during this chargen or level-up session can be undone.");
     }
-    if (!game.user.isGM) return;
+    if (!this.isTreeEditor || !game.user.isGM) return;
     const source = this.#treeCatalogEntry(id, kind);
     if (source) this.#authorTreeNode(source);
   }
@@ -2027,6 +2744,38 @@ class CharacterCreationOverlay {
     }
     board.scrollLeft = viewport.left;
     board.scrollTop = viewport.top;
+  }
+
+  #centerTreeOnNode(id = "") {
+    const board = this.root.querySelector(".vr-cc-tree-board");
+    if (!board) return;
+    const root = talentTreeRoot(this.treePage);
+    const targetId = id || this.treeFocus?.id || this.openPracticeId || root?.id;
+    const target = [...board.querySelectorAll("[data-tree-node-id]")].find(element => element.dataset.treeNodeId === targetId)
+      ?? board.querySelector("[data-tree-root]")
+      ?? board.querySelector("[data-tree-node-id]");
+    if (!target) return;
+    const boardRect = board.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    board.scrollLeft += targetRect.left + targetRect.width / 2 - boardRect.left - board.clientWidth / 2;
+    board.scrollTop += targetRect.top + targetRect.height / 2 - boardRect.top - board.clientHeight / 2;
+    this.treeViewport[this.#treeViewportKey()] = { left: board.scrollLeft, top: board.scrollTop };
+    this.treeViewportInitialized[this.#treeViewportKey()] = true;
+    this.pendingTreeCenterId = "";
+  }
+
+  #fitTreeToView() {
+    const board = this.root.querySelector(".vr-cc-tree-board");
+    const nodes = [...(board?.querySelectorAll("[data-tree-node-id]") ?? [])];
+    if (!board || !nodes.length) return;
+    const xs = nodes.map(node => number(node.style.left));
+    const ys = nodes.map(node => number(node.style.top));
+    const width = Math.max(300, Math.max(...xs) - Math.min(...xs) + 420);
+    const height = Math.max(300, Math.max(...ys) - Math.min(...ys) + 420);
+    this.treeZoom = Math.max(.35, Math.min(1.8, Math.min(board.clientWidth / width, board.clientHeight / height)));
+    this.treeViewportInitialized[this.#treeViewportKey()] = false;
+    this.pendingTreeCenterId = this.treeFocus?.id || this.openPracticeId || talentTreeRoot(this.treePage)?.id || "";
+    this.#draw();
   }
 
   #redrawTreePreservingViewport(snapshot = this.#treeViewportSnapshot()) {
@@ -2134,7 +2883,7 @@ class CharacterCreationOverlay {
       const spell = findSpell(selected.id);
       if (spell) {
         const requirements = (spell.requires ?? []).map(treeRequirement).filter(requirement => requirement.id !== source.id);
-        if (!remove) requirements.push({ id: source.id, level: Math.max(1, Math.min(20, number(this.connectionTool.requiredLevel, 1))), line: style });
+        if (!remove) requirements.push({ id: source.id, level: Math.max(1, number(this.connectionTool.requiredLevel, 1)), line: style });
         spell.requires = requirements;
       }
     } else supported = false;
@@ -2159,30 +2908,66 @@ class CharacterCreationOverlay {
     return Math.max(0, number(source.available) + granted - (spent - this.#treeSpent(this.initialTalentTree)[pool]));
   }
 
+  #attributePointsAvailable() {
+    return Math.max(0, attributePointsForLevel(this.state.startingLevel) - this.#attributePointCost());
+  }
+
   #pushTreeUndo(label) {
     this.treeUndoStack.push({ label, tree: foundry.utils.deepClone(this.state.talentTree) });
     if (this.treeUndoStack.length > 50) this.treeUndoStack.shift();
   }
 
-  async #confirmTreePurchase(title, body) {
-    return foundry.applications.api.DialogV2.confirm({ window: { title }, content: `<p>${escape(body)}</p>`, modal: true, rejectClose: false });
+  async #purchaseMagicAccess() {
+    if (this.#magicRootAccess().unlocked) return false;
+    if (this.#attributePointsAvailable() < MAGIC_ACCESS_COST) {
+      ui.notifications.warn(`Not enough Attribute Points to unlock Magic (${MAGIC_ACCESS_COST} required).`);
+      return true;
+    }
+    this.#pushTreeUndo("Magic access purchase");
+    this.state.talentTree.branches ??= [];
+    this.state.talentTree.branches.push(MAGIC_ACCESS_BRANCH_ID);
+    this.#redrawTreePreservingViewport();
+    return true;
+  }
+
+  async #purchaseSchoolAccess(schoolId) {
+    const entry = this.#treeCatalogEntry(schoolId, "school");
+    if (!entry || entry.page !== "magic") return false;
+    const access = this.#schoolAccess(entry.school, "magic");
+    if (access.unlocked) return false;
+    if (!access.rootUnlocked) {
+      ui.notifications.warn(`Unlock Magic for ${MAGIC_ACCESS_COST} Attribute Points before purchasing a School.`);
+      return true;
+    }
+    if (this.#treeAvailable("talent") < 1) {
+      ui.notifications.warn("Not enough Talent Points to purchase access to this School.");
+      return true;
+    }
+    this.#pushTreeUndo(`access to the ${entry.school.name} School`);
+    this.state.talentTree.branches ??= [];
+    this.state.talentTree.branches.push(schoolAccessBranchId(entry.school.id));
+    this.#redrawTreePreservingViewport();
+    return true;
   }
 
   #personaStep() {
     const recommendation = this.#personaRecommendation();
     const sourceList = recommendation.sources.length
       ? recommendation.sources.map(source => `${source.label}: ${source.modifiers.join(", ")}`).join(" | ")
-      : "Choose a reference-backed species, origin, background, or discipline to build a recommendation.";
+      : "Choose a reference-backed species, home planet, background, or discipline to build a recommendation.";
     return `<div class="vr-cc-persona">
       <section class="vr-cc-persona-recommendation"><div><span>Recommended Persona Index</span><p>${escape(sourceList)}</p></div><button type="button" class="vr-cc-btn" data-action="apply-persona-recommendation">Apply recommendation</button></section>
-      ${PERSONA_AXES.map(axis => {
+      ${PERSONA_AXES.map((axis, axisIndex) => {
       const value = clampPersona(this.state.personaIndex[axis.key]);
-      const suggested = recommendation.values[axis.key];
-      return `<label class="vr-cc-axis">
-        <span class="vr-cc-axis-heading"><b>${escape(axis.left)}</b><strong>${value > 0 ? "+" : ""}${value}</strong><b>${escape(axis.right)}</b></span>
-        ${this.#personaPips(axis, value)}
-        <span class="vr-cc-axis-controls"><input name="personaIndex.${axis.key}" type="range" min="-100" max="100" value="${value}" /><input name="personaIndex.${axis.key}" type="number" min="-100" max="100" value="${value}" /><small>Recommendation: ${suggested > 0 ? "+" : ""}${suggested}</small></span>
-      </label>`;
+      const leftPips = Math.floor(Math.max(0, -value) / 10);
+      const rightPips = Math.floor(Math.max(0, value) / 10);
+      const signedValue = `${value > 0 ? "+" : ""}${value}`;
+      return `<div class="vr-cc-live-axis vr-cc-live-axis-${axisIndex}" data-persona-axis="${escape(axis.key)}">
+        <div class="vr-cc-live-pips vr-cc-persona-drag-track" data-persona-drag-axis="${escape(axis.key)}" style="--vr-persona-position:${(value + 100) / 2}%" role="slider" tabindex="0" aria-label="${escape(`${axis.left} to ${axis.right}`)}" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="${value}" aria-valuetext="${escape(`${signedValue}, toward ${value < 0 ? axis.left : value > 0 ? axis.right : "center"}`)}">
+          <span class="left">${Array.from({ length: 10 }, (_, index) => `<i class="${index >= 10 - leftPips ? "active" : ""}"></i>`).join("")}</span><b aria-hidden="true"></b><span class="right">${Array.from({ length: 10 }, (_, index) => `<i class="${index < rightPips ? "active" : ""}"></i>`).join("")}</span><em aria-hidden="true"></em>
+        </div>
+        <div class="vr-cc-live-axis-labels"><span>${escape(axis.left)}</span><strong>${signedValue}</strong><span>${escape(axis.right)}</span></div>
+      </div>`;
     }).join("")}</div>`;
   }
 
@@ -2193,7 +2978,10 @@ class CharacterCreationOverlay {
       const modifiers = referenceModifiers(reference);
       if (modifiers.length) sources.push({ label: reference.name, modifiers });
     }
-    const disciplineModifiers = VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? [];
+    const disciplineReference = this.#pathEntry("discipline", this.state.discipline, { profession: this.state.profession });
+    const disciplineModifiers = disciplineReference?.persona?.length
+      ? disciplineReference.persona
+      : VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? [];
     if (disciplineModifiers.length) sources.push({ label: this.state.discipline, modifiers: disciplineModifiers });
     const values = Object.fromEntries(PERSONA_AXES.map(axis => [axis.key, 0]));
     for (const source of sources) {
@@ -2204,16 +2992,19 @@ class CharacterCreationOverlay {
   }
 
   #reviewStep() {
+    const purchases = normalizeCart(this.state.storefront?.purchases);
+    const purchaseTotal = cartTotal(purchases, this.catalogRecords);
     const rows = [
       ["Starting Level", this.state.startingLevel || "Not selected"],
       ["Species", this.state.species],
-      ["Origin", this.state.origin],
+      ["Home Planet", this.state.origin],
       ["Background", this.state.background],
       ["Path", [this.state.archetype, this.state.profession, this.state.discipline].filter(Boolean).join(" / ")],
       ["Attribute Points", `${this.#attributePointCost()} / ${attributePointsForLevel(this.state.startingLevel)}`],
       ["Talents & Skills", this.state.talentSkillPointsSpent],
       ["Tree Selections", this.state.talentSkillSelections?.join(", ")],
-      ["Purchase Budget Remaining", this.state.credits],
+      ["Storefront Purchases", `${purchases.length} selections · ${purchaseTotal} credits`],
+      ["Purchase Budget Remaining", Math.max(0, number(this.state.credits) - purchaseTotal)],
       ["Contacts", this.#cleanContacts().length],
       ["Languages", listFromText(this.state.languages).join(", ")],
       ["Name", this.state.name]
@@ -2223,8 +3014,22 @@ class CharacterCreationOverlay {
     `).join("")}</div></section>`;
   }
 
-  #summaryLine() {
-    return [this.state.species, this.state.origin, this.state.profession, this.state.discipline].filter(Boolean).join(" | ") || "Selections are saved when you confirm.";
+  #validation() {
+    const treeIssues = [];
+    const catalog = talentTreeCatalog();
+    for (const leaf of this.state.talentTree?.leaves ?? []) {
+      const entry = this.#treeCatalogEntry(leaf.id, "spell", catalog);
+      if (!entry?.spell) treeIssues.push(`A selected progression node (${leaf.id}) no longer exists.`);
+    }
+    for (const school of talentTreePage("magic")) {
+      if (this.#schoolHasTreeInvestment(school) && !this.#schoolAccess(school, "magic").unlocked) treeIssues.push(`Purchase access to the ${school.name} School for 1 Talent Point or choose a discipline that grants it.`);
+    }
+    return validateChargenBuild(this.state, {
+      attributeSpent: this.#attributePointCost(),
+      attributeBudget: attributePointsForLevel(this.state.startingLevel),
+      treeIssues,
+      mode: this.mode
+    });
   }
 
   #attributePointTotal() {
@@ -2242,11 +3047,36 @@ class CharacterCreationOverlay {
 
   #liveBuild() {
     const name = String(this.state.name ?? "").trim() || "Your Character";
-    const identity = [["Species", this.state.species], ["Origin", this.state.origin], ["Background", this.state.background], ["Discipline", this.state.discipline]]
+    const identity = [["Species", this.state.species], ["Home Planet", this.state.origin], ["Background", this.state.background], ["Discipline", this.state.discipline]]
       .filter(([, value]) => value).map(([title, value]) => ({ title: value, description: title }));
     const talents = this.state.talentTree?.leaves ?? [];
     const contacts = this.#cleanContacts();
     const personaValues = this.state.personaTouched ? this.state.personaIndex : this.#personaRecommendation().values;
+    const purchases = normalizeCart(this.state.storefront?.purchases);
+    const spent = cartTotal(purchases, this.catalogRecords);
+    const attributes = ATTRIBUTE_GROUPS.map(group => ({
+      label: group.label,
+      rows: group.attributes.map(attribute => ({
+        label: attribute.slice(0, 3).toUpperCase(),
+        value: number(foundry.utils.getProperty(this.state, `attributes.${group.key}.${attribute}`))
+      }))
+    }));
+    return renderLiveBuild({
+      name, nameValue: this.state.name, portrait: this.state.portraitImage, portraitCrop: this.state.portraitCrop, level: this.state.startingLevel || 1,
+      personaAxes: PERSONA_AXES, personaValues, collapsed: this.liveBuildCollapsed,
+      editableIdentity: this.mode !== "levelUp" && (this.actor.isOwner || game.user.isGM),
+      credits: { value: Math.max(0, number(this.state.credits) - spent), remaining: true },
+      sections: [
+        { key: "identity", label: "Identity", presentation: "cards", entries: identity },
+        { key: "attributes", label: "Attributes", presentation: "attributes", groups: attributes },
+        { key: "talents", label: "Talents & Skills", compactBadges: true, limit: 5, entries: talents.map(entry => ({ title: `${entry.id} · Rank ${entry.rank}`, description: "Purchased talent or skill.", icon: "fa-solid fa-wand-sparkles" })) },
+        { key: "perks", label: "Perks", compactBadges: true, limit: 5, entries: this.state.qualitiesTaken.map(entry => ({ title: entry.name, description: entry.description, img: entry.img, icon: "fa-solid fa-star" })) },
+        { key: "flaws", label: "Flaws", compactBadges: true, limit: 5, entries: this.state.flawsTaken.map(entry => ({ title: entry.name, description: entry.description, img: entry.img, icon: "fa-solid fa-triangle-exclamation" })) },
+        { key: "contacts", label: "Contacts", compactBadges: true, limit: 4, entries: contacts.map(entry => ({ title: entry.name || entry.role || "Contact", description: entry.notes || entry.disposition || entry.role, img: entry.img, icon: "fa-solid fa-user-group" })) },
+        { key: "purchases", label: "Purchases", presentation: "purchases", entries: purchases.map(line => { const record = this.catalogRecords.find(entry => entry.definitionId === line.definitionId); return { title: record?.name ?? line.definitionId, description: `${record?.price ?? 0} credits each`, img: record?.img, grade: record?.grade, rarity: record?.rarityName, rarityColor: record?.rarityColor, quantity: line.quantity }; }) }
+      ]
+    });
+    /* Legacy markup retained below temporarily for comparison during the migration. */
     return `<header class="vr-cc-live-header"><img src="${escape(this.actor.img || this.actor.system?.portraitImage || "icons/svg/mystery-man.svg")}" alt="${escape(name)} portrait" /><div><span>Live Build</span><h2>${escape(name)}</h2></div><button type="button" class="vr-cc-icon" data-action="cancel" title="Close"><i class="fa-solid fa-xmark"></i></button></header>
       <div class="vr-cc-live-scroll">
         <section class="vr-cc-live-section"><h3>Persona Index</h3>${PERSONA_AXES.map(axis => {
@@ -2260,6 +3090,7 @@ class CharacterCreationOverlay {
         ${this.#liveBuildCards("Flaws", this.state.flawsTaken, entry => ({ title: entry.name, description: entry.description }))}
         ${this.#liveBuildCards("Talents and Skills", talents, entry => ({ title: `${entry.id} · Rank ${entry.rank}`, description: "Purchased talent or skill." }))}
         ${this.#liveBuildCards("Contacts", contacts, entry => ({ title: entry.name || entry.role || "Contact", description: entry.notes || entry.disposition || entry.role }))}
+        ${this.#liveBuildCards("Storefront", normalizeCart(this.state.storefront?.purchases).map(line => { const record = this.catalogRecords.find(entry => entry.definitionId === line.definitionId); return { title: `${record?.name ?? line.definitionId} ×${line.quantity}`, description: `${record?.price ?? 0} credits each` }; }))}
         <section class="vr-cc-live-section"><h3>Attribute Modifiers</h3><p>No authored attribute modifiers are currently attached to the selected reference cards.</p></section>
       </div>`;
   }
@@ -2272,12 +3103,13 @@ class CharacterCreationOverlay {
         total += this.#attributeValueCost(value);
       }
     }
+    if ((this.state.talentTree?.branches ?? []).includes(MAGIC_ACCESS_BRANCH_ID) && !this.#magicAccess().rootUnlocked) total += MAGIC_ACCESS_COST;
     return total;
   }
 
   #attributeValueCost(value) {
     const safeValue = Math.max(1, Math.floor(number(value, 1)));
-    return ((safeValue * (safeValue + 1)) / 2) - 1;
+    return (safeValue * (safeValue - 1)) / 2;
   }
 
   #clampAttributeValuesToBudget() {
@@ -2312,13 +3144,199 @@ class CharacterCreationOverlay {
       return;
     }
     const connectionNode = event.target.closest?.("[data-tree-root], [data-tree-school], [data-tree-practice-card], [data-tree-rank]");
-    if (this.connectionTool.active && connectionNode && game.user.isGM) {
+    if (this.isTreeEditor && this.connectionTool.active && connectionNode && game.user.isGM) {
       await this.#onConnectionNodeClick(connectionNode, event.target.closest?.("[data-tree-socket]")?.dataset.treeSocket);
+      return;
+    }
+    const treeSelection = event.target.closest?.("[data-tree-select]");
+    if (treeSelection) {
+      this.treeFocus = { id: treeSelection.dataset.treeSelect, kind: treeSelection.dataset.treeSelectKind ?? "" };
+      this.#redrawTreePreservingViewport();
+      return;
+    }
+    const qualityCard = event.target.closest?.("[data-quality-id]");
+    if (qualityCard && !event.target.closest?.("button")) {
+      const record = this.#qualityFlawRecords().find(entry => entry.id === qualityCard.dataset.qualityId);
+      if (record) { this.state.qualityFlawFocus = record; this.#refreshInfoPanel(); }
       return;
     }
     const button = event.target.closest("button");
     if (!button) return;
     const action = button.dataset.action;
+    if (action === "open-tree-editor") {
+      openTalentTreeEditor({ page: this.treePage, nodeId: this.treeFocus?.id ?? "", actor: this.actor });
+      return;
+    }
+    if (action === "tree-search-result") {
+      const record = this.#treeCatalogRecords().find(candidate => candidate.id === button.dataset.treeSearchId);
+      if (!record) return;
+      this.treeSearch = "";
+      this.treeFocus = { id: record.id, kind: record.kind };
+      this.openPracticeId = record.kind === "spell" ? record.practice.id : record.kind === "practice" ? record.practice.id : null;
+      this.treeViewportInitialized[this.#treeViewportKey()] = false;
+      this.pendingTreeCenterId = record.id;
+      this.#draw();
+      return;
+    }
+    if (action === "toggle-purchased-only") {
+      this.treePurchasedOnly = !this.treePurchasedOnly;
+      this.treeViewportInitialized[this.#treeViewportKey()] = false;
+      this.#draw();
+      return;
+    }
+    if (action === "center-tree") {
+      this.#centerTreeOnNode(this.openPracticeId || talentTreeRoot(this.treePage)?.id);
+      return;
+    }
+    if (action === "center-selected-tree-node") {
+      this.#centerTreeOnNode(this.treeFocus?.id);
+      return;
+    }
+    if (action === "fit-tree-view") {
+      this.#fitTreeToView();
+      return;
+    }
+    if (action === "open-practice-view") {
+      this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
+      this.openPracticeId = button.dataset.practiceId;
+      this.treeViewportInitialized[this.#treeViewportKey()] = false;
+      this.pendingTreeCenterId = button.dataset.practiceId;
+      this.#draw();
+      return;
+    }
+    if (action === "show-tree-school") {
+      this.openPracticeId = null;
+      this.treeFocus = { id: button.dataset.treeSchoolId, kind: "school" };
+      this.treeViewportInitialized[this.#treeViewportKey()] = false;
+      this.pendingTreeCenterId = button.dataset.treeSchoolId;
+      this.#draw();
+      return;
+    }
+    if (button.dataset.phase !== undefined) {
+      const group = STEP_GROUPS.filter(candidate => candidate.keys.some(key => this.#steps.some(step => step.key === key)))[number(button.dataset.phase)];
+      const target = group?.keys.map(key => this.#steps.findIndex(step => step.key === key)).find(index => index >= 0);
+      if (target >= 0) { this.state.detailSelection = null; this.step = target; this.#draw(); }
+      return;
+    }
+    if (action === "toggle-live-section") {
+      const key = button.dataset.liveSection;
+      if (this.liveBuildCollapsed.has(key)) this.liveBuildCollapsed.delete(key); else this.liveBuildCollapsed.add(key);
+      this.#refreshLiveBuild();
+      return;
+    }
+    if (action === "selection-mode") {
+      const path = button.dataset.selectionPath;
+      if (path === "discipline") this.selectionModes.discipline = ["all", "guided"].includes(button.dataset.selectionMode) ? button.dataset.selectionMode : "guided";
+      this.state.detailSelection = null;
+      this.#draw();
+      return;
+    }
+    if (action === "scroll-discipline-row") {
+      const track = button.closest(".vr-cc-selection-row")?.querySelector("[data-discipline-scroll-row]");
+      if (!track) return;
+      const direction = number(button.dataset.scrollDirection, 1);
+      track.scrollBy({ left: direction * track.clientWidth, behavior: "smooth" });
+      return;
+    }
+    if (action === "path-stage") {
+      const stage = button.dataset.pathStage;
+      if (this.selectionModes.discipline === "all" && ["archetype", "profession", "discipline"].includes(stage)) {
+        this.disciplineSort = stage;
+        this.state.detailSelection = null;
+        this.#draw();
+        return;
+      }
+      if (stage === "archetype" || (stage === "profession" && this.state.archetype) || (stage === "discipline" && this.state.profession)) {
+        this.pathStage = stage;
+        this.state.detailSelection = null;
+        this.#draw();
+      }
+      return;
+    }
+    if (action === "inspector-tab") {
+      this.inspectorTab = ["overview", "abilities", "lore"].includes(button.dataset.inspectorTab) ? button.dataset.inspectorTab : "overview";
+      this.#draw();
+      return;
+    }
+    if (button.dataset.storefrontCategory) {
+      this.state.storefront.query.category = button.dataset.storefrontCategory;
+      this.state.storefront.query.subtype = "all";
+      this.state.storefront.page = 1;
+      this.state.storefront.scrollTop = 0;
+      const list = this.root.querySelector("[data-storefront-scroll]"); if (list) list.scrollTop = 0;
+      this.#draw();
+      return;
+    }
+    if (button.dataset.storefrontSubtype) {
+      this.state.storefront.query.subtype = button.dataset.storefrontSubtype;
+      this.state.storefront.page = 1;
+      this.state.storefront.scrollTop = 0;
+      const list = this.root.querySelector("[data-storefront-scroll]"); if (list) list.scrollTop = 0;
+      this.#draw();
+      return;
+    }
+    if (button.dataset.storefrontPage) {
+      this.state.storefront.page = Math.max(1, number(button.dataset.storefrontPage, 1));
+      this.state.storefront.scrollTop = 0;
+      const list = this.root.querySelector("[data-storefront-scroll]"); if (list) list.scrollTop = 0;
+      this.#draw();
+      return;
+    }
+    if (action === "storefront-clear-cart") {
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Clear Storefront Cart" }, content: "<p>Remove every item from the starting loadout cart?</p>", modal: true
+      });
+      if (confirmed) { this.state.storefront.cart = []; this.#draw(); }
+      return;
+    }
+    if (action === "storefront-purchase-cart") {
+      const cart = normalizeCart(this.state.storefront.cart);
+      if (!cart.length) return;
+      const purchases = mergeCarts(this.state.storefront.purchases, cart);
+      const { currentWeight, carryCapacity } = this.#storefrontCarryState();
+      const validation = await validateStorefrontTransaction({
+        provider: this.catalogProvider, index: this.catalogIndex, lines: purchases,
+        credits: this.state.credits, carryWeight: currentWeight, carryCapacity
+      });
+      if (!validation.valid) {
+        ui.notifications.warn(validation.errors[0] ?? "Storefront purchase validation failed.");
+        return;
+      }
+      this.state.storefront.purchases = purchases;
+      this.state.storefront.cart = [];
+      ui.notifications.info("Cart purchased and added to the Live Build.");
+      this.#draw();
+      return;
+    }
+    if (action === "storefront-show-cart" || action === "storefront-show-details") {
+      this.state.storefront.rightPane = action === "storefront-show-details" ? "details" : "cart";
+      this.#draw();
+      return;
+    }
+    if (button.dataset.storefrontSelect) {
+      this.state.storefront.selectedDefinitionId = button.dataset.storefrontSelect;
+      this.state.storefront.rightPane = "details";
+      this.#draw();
+      return;
+    }
+    if (button.dataset.storefrontAdd) {
+      this.state.storefront.cart = addToCart(this.state.storefront.cart, button.dataset.storefrontAdd);
+      this.state.storefront.selectedDefinitionId = button.dataset.storefrontAdd;
+      this.state.storefront.rightPane = "details";
+      this.#draw();
+      return;
+    }
+    if (button.dataset.storefrontRemove) {
+      this.state.storefront.cart = removeFromCart(this.state.storefront.cart, button.dataset.storefrontRemove);
+      this.#draw();
+      return;
+    }
+    if (button.dataset.storefrontAdjust) {
+      const line = normalizeCart(this.state.storefront.cart).find(entry => entry.definitionId === button.dataset.storefrontAdjust);
+      if (line) this.state.storefront.cart = setCartQuantity(this.state.storefront.cart, line.definitionId, Math.max(1, line.quantity + number(button.dataset.direction)));
+      this.#draw();
+      return;
+    }
     if (action === "toggle-tree-connect") {
       this.connectionTool.active = !this.connectionTool.active;
       if (this.connectionTool.active) this.nodeMoveMode = false;
@@ -2407,6 +3425,8 @@ class CharacterCreationOverlay {
       this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
       this.treePage = button.dataset.treePage === "magic" ? "magic" : "skills";
       this.openPracticeId = null;
+      this.treeFocus = null;
+      this.treeSearch = "";
       this.selectedTreeNodes.clear();
       this.treeRingTool.active = false;
       this.connectionTool.source = null;
@@ -2416,7 +3436,9 @@ class CharacterCreationOverlay {
     }
     if (action === "close-practice-canvas") {
       this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
+      const practiceId = this.openPracticeId;
       this.openPracticeId = null;
+      if (practiceId) this.treeFocus = { id: practiceId, kind: "practice" };
       this.selectedTreeNodes.clear();
       this.treeRingTool.active = false;
       this.#draw();
@@ -2427,7 +3449,7 @@ class CharacterCreationOverlay {
       return;
     }
     if (action === "tree-zoom-in" || action === "tree-zoom-out") {
-      this.treeZoom = Math.max(.65, Math.min(1.75, this.treeZoom + (action === "tree-zoom-in" ? .1 : -.1)));
+      this.treeZoom = Math.max(.35, Math.min(1.8, this.treeZoom + (action === "tree-zoom-in" ? .1 : -.1)));
       this.#draw();
       return;
     }
@@ -2478,8 +3500,42 @@ class CharacterCreationOverlay {
       return;
     }
     if (button.dataset.inspectTitle) {
-      const panel = this.root.querySelector(".vr-cc-info");
-      if (panel) panel.innerHTML = `<div class="vr-cc-info-heading"><span>Selection</span><h2>${escape(button.dataset.inspectTitle)}</h2></div><div class="vr-cc-reference"><p>${escape(button.dataset.inspectDescription)}</p></div>`;
+      this.state.detailSelection = { stepKey: this.#steps[this.step]?.key, kind: "Selection", name: button.dataset.inspectTitle, description: button.dataset.inspectDescription };
+      this.#draw();
+      return;
+    }
+    if (action === "pick-portrait") {
+      try {
+        const FilePickerClass = getFilePickerClass();
+        if (!FilePickerClass) throw new Error("FilePicker is not available.");
+        const currentPortrait = this.state.portraitImage;
+        const picker = new FilePickerClass({ type: "image", current: currentPortrait, callback: async path => {
+          this.root.classList.add("portrait-editor-open");
+          try {
+            const editor = this.portraitEditor ?? this.actor.sheet;
+            if (typeof editor?.editPortraitCrop !== "function") {
+              throw new Error("The Hero portrait editor is not available.");
+            }
+            const crop = await editor.editPortraitCrop(path, {
+              useExistingCrop: path === currentPortrait,
+              existingCrop: this.state.portraitCrop
+            });
+            this.state.portraitImage = path;
+            if (crop) this.state.portraitCrop = crop;
+            this.#draw();
+          } catch (error) {
+            console.error("Veilrunner | Failed to edit character creation portrait", error);
+            ui.notifications.error("Unable to open the portrait editor.");
+          } finally {
+            this.root.classList.remove("portrait-editor-open");
+            this.root.focus();
+          }
+        } });
+        await renderFilePicker(picker);
+      } catch (error) {
+        console.error("Veilrunner | Failed to open character creation portrait picker", error);
+        ui.notifications.error("Unable to open the image picker.");
+      }
       return;
     }
     if (Object.hasOwn(button.dataset, "step")) {
@@ -2492,13 +3548,27 @@ class CharacterCreationOverlay {
       }
       if (steps[this.step]?.key === "level" && nextStep > this.step) await this.#applyStartingLevel();
       this.animateNavigation = this.#stepGroupLabel(steps[this.step]) !== this.#stepGroupLabel(steps[nextStep]);
+      this.state.detailSelection = null;
       this.step = nextStep;
       this.#draw();
       return;
     }
     if (button.dataset.pathChoice) {
       if (this.pathTransitioning) return;
+      if (button.dataset.pathArchetype && button.dataset.pathProfession) {
+        this.state.archetype = button.dataset.pathArchetype;
+        this.state.profession = button.dataset.pathProfession;
+        this.pathStage = "discipline";
+      }
       this.#choosePath(button.dataset.pathChoice, button.dataset.value ?? "");
+      return;
+    }
+    if (Object.hasOwn(button.dataset, "treeMagicAccess")) {
+      await this.#purchaseMagicAccess();
+      return;
+    }
+    if (button.dataset.treeSchoolAccess) {
+      await this.#purchaseSchoolAccess(button.dataset.treeSchoolAccess);
       return;
     }
     if (button.dataset.treePractice) {
@@ -2514,11 +3584,11 @@ class CharacterCreationOverlay {
         }
         return;
       }
+      if (entry?.page === "magic" && !this.#schoolAccess(entry.school, "magic").unlocked) return ui.notifications.warn(`Purchase access to the ${entry.school.name} School for 1 Talent Point first.`);
       const requirementsMet = (entry?.practice?.requires ?? []).every(value => (this.state.talentTree.branches ?? []).includes(treeRequirement(value).id));
       if (!requirementsMet) return ui.notifications.warn("Purchase every prerequisite Practice first.");
       const talentCost = Math.max(1, number(entry?.practice?.talentCost, 1));
       if (!entry || this.#treeAvailable("talent") < talentCost) return ui.notifications.warn("Not enough Talent Points to purchase this Practice.");
-      if (!await this.#confirmTreePurchase("Purchase Practice", `Purchase ${entry.practice.name} for ${talentCost} Talent Point${talentCost === 1 ? "" : "s"}? This unlocks access but grants no Spell or Skill levels.`)) return;
       this.#pushTreeUndo(`purchase of ${entry.practice.name}`);
       this.state.talentTree.branches.push(entry.practice.id);
       this.treeViewport[this.#treeViewportKey()] = this.#treeViewportSnapshot();
@@ -2539,7 +3609,6 @@ class CharacterCreationOverlay {
       if (!entry) {
         const talentCost = Math.max(1, number(spell.talentCost, 1));
         if (this.#treeAvailable("talent") < talentCost) return ui.notifications.warn(`Not enough Talent Points to purchase this Spell (${talentCost} required).`);
-        if (!await this.#confirmTreePurchase(`Purchase ${this.treePage === "magic" ? "Spell" : "Skill"}`, `Purchase ${spell.name} at level 1 for ${talentCost} Talent Point${talentCost === 1 ? "" : "s"}?`)) return;
         this.#pushTreeUndo(`purchase of ${spell.name}`);
         this.state.talentTree.leaves.push({ id: spell.id, rank: 1 });
       } else {
@@ -2556,7 +3625,7 @@ class CharacterCreationOverlay {
       return;
     }
     if (action === "cancel") {
-      this.close({ renderSheet: true });
+      this.close({ renderSheet: !this.isTreeEditor });
       return;
     }
     if (action === "previous" || action === "next") {
@@ -2569,6 +3638,7 @@ class CharacterCreationOverlay {
       if (action === "next" && steps[this.step]?.key === "level") await this.#applyStartingLevel();
       const nextStep = Math.max(0, Math.min(steps.length - 1, this.step + (action === "next" ? 1 : -1)));
       this.animateNavigation = this.#stepGroupLabel(steps[this.step]) !== this.#stepGroupLabel(steps[nextStep]);
+      this.state.detailSelection = null;
       this.step = nextStep;
       this.#draw();
       return;
@@ -2591,7 +3661,42 @@ class CharacterCreationOverlay {
       const kind = button.dataset.qfKind === "flaw" ? "flaw" : "quality";
       const tier = QUALITY_FLAW_TIERS.includes(button.dataset.qfTier) ? button.dataset.qfTier : "Minor";
       const pillar = QUALITY_FLAW_PILLARS.includes(button.dataset.qfPillar) ? button.dataset.qfPillar : "Physical";
-      this.state.qualityFlawDialog = { kind, tier, name: "", pillar, points: Math.max(1, number(button.dataset.qfPoints, 1)), description: "" };
+      this.state.qualityFlawDialog = { kind, tier, name: "", pillar, points: tierCost(tier), description: "" };
+      this.#draw();
+      return;
+    }
+    if (action === "set-qf-mode") {
+      this.state.qualityFlawMode = ["all", "perks", "flaws", "selected"].includes(button.dataset.qfMode) ? button.dataset.qfMode : "all";
+      this.state.qualityFlawVisibleCount = 80;
+      this.state.qualityFlawFocus = null;
+      this.#draw();
+      return;
+    }
+    if (action === "toggle-qf-available") {
+      this.state.qualityFlawAvailableOnly = !this.state.qualityFlawAvailableOnly;
+      this.state.qualityFlawVisibleCount = 80;
+      this.state.qualityFlawFocus = null;
+      this.#draw();
+      return;
+    }
+    if (action === "select-quality") {
+      const record = this.#qualityFlawRecords().find(entry => entry.id === button.dataset.qualityId);
+      if (!record || record.selected) return;
+      const evaluation = evaluateQualitySelection(record, this.#qualityFlawBuild());
+      if (!evaluation.canSelect) return ui.notifications.warn(evaluation.selectionBlockingDetails[0] ?? "That selection is unavailable.");
+      const entries = record.kind === "flaw" ? this.state.flawsTaken : this.state.qualitiesTaken;
+      entries.push(qualitySelectionSnapshot(record));
+      this.state.qualityFlawFocus = { ...record, selected: true, selectedKind: record.kind, selectedIndex: entries.length - 1 };
+      this.#draw();
+      return;
+    }
+    if (action === "remove-selected-quality") {
+      const selectedKind = button.dataset.selectedKind === "flaw" ? "flaw" : "perk";
+      const selectedIndex = Number(button.dataset.selectedIndex);
+      const entries = selectedKind === "flaw" ? this.state.flawsTaken : this.state.qualitiesTaken;
+      if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= entries.length) return;
+      entries.splice(selectedIndex, 1);
+      this.state.qualityFlawFocus = null;
       this.#draw();
       return;
     }
@@ -2623,13 +3728,12 @@ class CharacterCreationOverlay {
       const source = this.state.qualityFlawDialog;
       if (!source) return;
       const kind = source.kind === "flaw" ? "flaw" : "quality";
-      const entry = { name: String(source.name ?? "").trim(), pillar: QUALITY_FLAW_PILLARS.includes(source.pillar) ? source.pillar : "Physical", tier: QUALITY_FLAW_TIERS.includes(source.tier) ? source.tier : "Minor", points: Math.max(1, number(source.points, 1)), description: String(source.description ?? "").trim() };
+      const tier = QUALITY_FLAW_TIERS.includes(source.tier) ? source.tier : "Minor";
+      const entry = { definitionId: "", sourceUuid: "", name: String(source.name ?? "").trim(), pillar: QUALITY_FLAW_PILLARS.includes(source.pillar) ? source.pillar : "Physical", tier, points: tierCost(tier), description: String(source.description ?? "").trim(), mechanics: "", requirements: "", tags: [] };
       if (!entry.name) return ui.notifications.warn(`Enter a ${kind === "quality" ? "perk" : "flaw"} name first.`);
-      const audit = this.#qualityFlawAudit();
       const entries = kind === "quality" ? this.state.qualitiesTaken : this.state.flawsTaken;
-      if (kind === "quality" && audit.qualityPoints + entry.points > 10) return ui.notifications.warn("Perks cannot exceed 10 points.");
-      if (entry.tier === "Minor" && audit.minorPoints + entry.points > 8) return ui.notifications.warn("Minor entries cannot exceed 8 total points.");
-      if (audit.exceedsPillar(entries, entry)) return ui.notifications.warn("A pillar cannot exceed 10 points.");
+      const evaluation = evaluateQualitySelection({ ...entry, kind: kind === "quality" ? "perk" : "flaw" }, this.#qualityFlawBuild());
+      if (!evaluation.canSelect) return ui.notifications.warn(evaluation.selectionBlockingDetails[0] ?? "That selection is unavailable.");
       entries.push(entry);
       this.state.qualityFlawDialog = null;
       this.#draw();
@@ -2645,11 +3749,16 @@ class CharacterCreationOverlay {
       const path = button.dataset.referenceChoicePath;
       const value = button.dataset.referenceChoiceValue ?? "";
       this.state[path] = this.state[path] === value ? "" : value;
+      this.state.references ??= {};
+      this.state.references[path] = this.state[path] ? button.dataset.referenceChoiceUuid ?? "" : "";
+      const reference = this.#selectedReference(path);
+      this.state.detailSelection = reference ? { stepKey: path, kind: path, name: reference.name, description: reference.description, img: reference.img } : null;
       this.#draw();
       return;
     }
     if (button.dataset.levelChoice) {
       this.state.startingLevel = number(button.dataset.levelChoice, 1);
+      this.state.detailSelection = null;
       this.#draw();
       return;
     }
@@ -2657,9 +3766,15 @@ class CharacterCreationOverlay {
       const path = button.dataset.attributeAdjust;
       const direction = number(button.dataset.direction);
       const value = Math.max(0, number(foundry.utils.getProperty(this.state, path)));
-      const nextCost = value + 1;
+      const nextCost = value;
       if (direction > 0 && this.#attributePointCost() + nextCost > attributePointsForLevel(this.state.startingLevel)) return;
+      this.activeAttributePath = path;
       this.#setStateValue(path, Math.max(1, value + direction));
+      this.#draw();
+      return;
+    }
+    if (button.dataset.attributeSelect) {
+      this.activeAttributePath = button.dataset.attributeSelect;
       this.#draw();
       return;
     }
@@ -2674,6 +3789,16 @@ class CharacterCreationOverlay {
   }
 
   #choosePath(path, value) {
+    if (this.pathTransitioning === "apply") this.pathTransitioning = false;
+    else if (!this.pathTransitioning && path !== "discipline") {
+      const browser = this.root.querySelector(".vr-cc-selection-browser");
+      if (browser) {
+        this.pathTransitioning = true;
+        browser.classList.add("leaving");
+        window.setTimeout(() => { this.pathTransitioning = "apply"; this.#choosePath(path, value); }, 160);
+        return;
+      }
+    }
     this.#saveVisibleInputs();
     if (path === "archetype") {
       const nextArchetype = this.state.archetype === value ? "" : value;
@@ -2683,26 +3808,34 @@ class CharacterCreationOverlay {
           this.state.archetype = nextArchetype;
           this.state.profession = "";
           this.state.discipline = "";
+          this.pathStage = nextArchetype ? "profession" : "archetype";
         });
         return;
       }
       this.state.archetype = nextArchetype;
       this.state.profession = "";
       this.state.discipline = "";
+      this.pathStage = nextArchetype ? "profession" : "archetype";
     } else if (path === "profession") {
       const nextProfession = this.state.profession === value ? "" : value;
       if (this.state.discipline && nextProfession !== this.state.profession) {
         this.#fadePathGroups(["discipline"], () => {
           this.state.profession = nextProfession;
           this.state.discipline = "";
+          this.pathStage = nextProfession ? "discipline" : "profession";
         });
         return;
       }
       this.state.profession = nextProfession;
       this.state.discipline = "";
+      this.pathStage = nextProfession ? "discipline" : "profession";
     } else if (path === "discipline") {
       this.state.discipline = this.state.discipline === value ? "" : value;
+      this.pathStage = "discipline";
+      this.inspectorTab = "overview";
+      this.state.detailSelection = this.#disciplineDetailSelection();
     }
+    this.#syncPathReferences();
     this.#draw();
   }
 
@@ -2716,6 +3849,7 @@ class CharacterCreationOverlay {
       return;
     }
     applyState();
+    this.#syncPathReferences();
     this.#draw();
   }
 
@@ -2730,7 +3864,48 @@ class CharacterCreationOverlay {
   #onInput(event) {
     const input = event.target;
     if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement)) return;
-    this.#setStateValue(input.name, input.type === "number" || input.type === "range" ? number(input.value) : input.value);
+    if (input.name === "treeSearch") {
+      this.treeSearch = input.value;
+      const caret = input.selectionStart ?? String(input.value).length;
+      this.#redrawTreePreservingViewport();
+      const replacement = this.root.querySelector('input[name="treeSearch"]');
+      replacement?.focus();
+      replacement?.setSelectionRange?.(caret, caret);
+      return;
+    }
+    if (input.name === "treeZoom") {
+      this.treeZoom = Math.max(.35, Math.min(1.8, number(input.value, 1)));
+      const world = this.root.querySelector(".vr-cc-tree-world");
+      const frame = this.root.querySelector(".vr-cc-tree-world-frame");
+      if (world && frame) {
+        world.style.setProperty("--tree-zoom", this.treeZoom);
+        frame.style.width = `${number(world.dataset.worldWidth, 10000) * this.treeZoom}px`;
+        frame.style.height = `${number(world.dataset.worldHeight, 6000) * this.treeZoom}px`;
+      }
+      const output = input.closest(".vr-cc-tree-viewport-controls")?.querySelector("output");
+      if (output) output.textContent = `${Math.round(this.treeZoom * 100)}%`;
+      return;
+    }
+    if (input.dataset.storefrontQuantity) {
+      this.state.storefront.cart = setCartQuantity(this.state.storefront.cart, input.dataset.storefrontQuantity, input.value);
+      if (event.type === "change") this.#draw();
+      return;
+    }
+    if (input.name?.startsWith("storefront.query.")) {
+      this.#setStateValue(input.name, input.value);
+      this.state.storefront.page = 1;
+      this.state.storefront.scrollTop = 0;
+      const list = this.root.querySelector("[data-storefront-scroll]"); if (list) list.scrollTop = 0;
+      const caret = input.selectionStart ?? String(input.value).length;
+      const inputName = input.name;
+      this.#draw();
+      const replacement = this.root.querySelector(`[name="${inputName}"]`);
+      replacement?.focus();
+      try { replacement?.setSelectionRange?.(caret, caret); } catch (_error) { /* Numeric inputs do not expose selection ranges. */ }
+      return;
+    }
+    this.#setStateValue(input.name, input.type === "checkbox" ? input.checked : input.type === "number" || input.type === "range" ? number(input.value) : input.value);
+    if (Object.hasOwn(input.dataset, "liveHeroName")) return;
     if (input.name.startsWith("treeRingTool.")) {
       const output = input.parentElement?.querySelector("output");
       if (output) output.textContent = input.name.endsWith("radius") ? `${number(input.value)} px` : `${number(input.value)}°`;
@@ -2752,6 +3927,16 @@ class CharacterCreationOverlay {
       }
       return;
     }
+    if (["qualityFlawPillarFilter", "qualityFlawTierFilter", "qualityFlawTagFilter"].includes(input.name)) {
+      this.state.qualityFlawVisibleCount = 80;
+      this.state.qualityFlawFocus = null;
+      if (event.type === "change") this.#draw();
+      return;
+    }
+    if (["qualityFlawDialog.kind", "qualityFlawDialog.tier", "qualityFlawDialog.pillar"].includes(input.name) && event.type === "change") {
+      this.#draw();
+      return;
+    }
     if (input.name.startsWith("attributes.")) {
       if (event.type === "change") {
         this.#clampAttributeValuesToBudget();
@@ -2770,7 +3955,6 @@ class CharacterCreationOverlay {
       this.state.personaTouched = true;
       for (const field of this.root.querySelectorAll(`[name="${input.name}"]`)) field.value = value;
       this.#refreshLivePersonaPips();
-      this.#refreshInfoPanel();
       return;
     }
     if (["archetype", "profession"].includes(input.name)) {
@@ -2787,8 +3971,9 @@ class CharacterCreationOverlay {
 
   #saveVisibleInputs() {
     for (const input of this.root.querySelectorAll("input, textarea, select")) {
+      if (input.name === "treeSearch" || input.name === "treeZoom") continue;
       if (input.name === "startingLevel" && !String(input.value ?? "").trim()) continue;
-      this.#setStateValue(input.name, input.type === "number" || input.type === "range" ? number(input.value) : input.value);
+      this.#setStateValue(input.name, input.type === "checkbox" ? input.checked : input.type === "number" || input.type === "range" ? number(input.value) : input.value);
     }
     this.#clampAttributeValuesToBudget();
   }
@@ -2814,9 +3999,18 @@ class CharacterCreationOverlay {
   async #confirm() {
     this.#saveVisibleInputs();
     if (this.mode === "levelUp") return this.#confirmLevelUp();
+    if (normalizeCart(this.state.storefront?.cart).length) {
+      ui.notifications.warn("Purchase or clear the remaining storefront cart before confirming character generation.");
+      return;
+    }
+    const validation = this.#validation();
+    if (!validation.valid) {
+      ui.notifications.warn(validation.messages[0] ?? "Resolve character generation validation before confirming.");
+      return;
+    }
     const qualityFlawAudit = this.#qualityFlawAudit();
-    if (qualityFlawAudit.qualityPoints > 10 || qualityFlawAudit.minorPoints > 8 || qualityFlawAudit.flawPoints < 20) {
-      ui.notifications.warn("Meet the Perk & Flaw Quota before confirming: perks max 10, minor max 8, flaws minimum 20.");
+    if (!qualityFlawAudit.valid) {
+      ui.notifications.warn(`Meet the Perk & Flaw requirements before confirming: perks max ${qualityFlawAudit.perkCapacity}, Minor Flaws max ${QUALITY_LIMITS.minorFlawMaximum}, each pillar max ${QUALITY_LIMITS.pillarMaximum}, flaws minimum ${QUALITY_LIMITS.flawMinimum}.`);
       return;
     }
     const name = String(this.state.name ?? "").trim() || this.actor.name;
@@ -2829,8 +4023,21 @@ class CharacterCreationOverlay {
     const treeSpent = this.#treeSpent();
     const talentSpent = Math.min(talentBudget, treeSpent.talent);
     const skillSpent = Math.min(skillBudget, treeSpent.skill);
+    const { currentWeight, carryCapacity } = this.#storefrontCarryState();
+    const storefrontCommit = await buildStorefrontCommit({
+      provider: this.catalogProvider, index: this.catalogIndex,
+      lines: this.state.storefront?.purchases, credits: this.state.credits, carryWeight: currentWeight, carryCapacity
+    });
+    if (!storefrontCommit.valid) {
+      ui.notifications.warn(storefrontCommit.errors[0] ?? "Storefront purchase validation failed.");
+      return;
+    }
     const update = {
       name,
+      img: this.state.portraitImage,
+      "prototypeToken.texture.src": this.state.portraitImage,
+      "system.portraitImage": this.state.portraitImage,
+      "system.portraitCrop": foundry.utils.deepClone(this.state.portraitCrop),
       "system.level": 1,
       "system.experience.max": xpForLevel(1),
       "system.species": this.state.species,
@@ -2843,7 +4050,7 @@ class CharacterCreationOverlay {
       "system.pronouns": this.state.pronouns,
       "system.age": this.state.age,
       "system.size": this.state.size,
-      "system.credits": Math.max(0, number(this.state.credits)),
+      "system.credits": storefrontCommit.remaining,
       "system.knownLanguages": listFromText(this.state.languages),
       "system.contacts": contacts,
       "system.qualitiesTaken": this.state.qualitiesTaken,
@@ -2873,7 +4080,9 @@ class CharacterCreationOverlay {
       "system.characterGeneration.talentPointsSpent": talentSpent,
       "system.characterGeneration.skillPointsSpent": skillSpent,
       "system.characterGeneration.spellPointsSpent": 0,
-      "system.characterGeneration.creditsSpent": Math.max(0, number(this.state.creditsSpent)),
+      "system.characterGeneration.creditsSpent": storefrontCommit.total,
+      "system.characterGeneration.storefront": { providerId: this.catalogProvider.id, cart: [], purchases: normalizeCart(this.state.storefront?.purchases), total: storefrontCommit.total },
+      "system.characterGeneration.references": foundry.utils.deepClone(this.state.references ?? {}),
       "system.characterGeneration.notes": [
         this.state.talentSkillNotes && `Talents & Skills:\n${this.state.talentSkillNotes}`,
         this.state.talentSkillSelections?.length && `Tree Selections:\n${this.state.talentSkillSelections.join(", ")}`,
@@ -2881,6 +4090,7 @@ class CharacterCreationOverlay {
       ].filter(Boolean).join("\n\n")
     };
     await this.actor.update(update);
+    if (storefrontCommit.documents.length) await this.actor.createEmbeddedDocuments("Item", storefrontCommit.documents);
     await this.#grantTreeItems();
     ui.notifications.info(`${name} character generation complete.`);
     this.close({ renderSheet: true });
@@ -2913,6 +4123,10 @@ class CharacterCreationOverlay {
     const xp = Math.max(0, number(this.actor.system?.experience?.value));
     const max = xpForLevel(currentLevel);
     if (xp < max) return ui.notifications.warn("This character does not have enough XP to level up.");
+    const qualityFlawAudit = auditQualityBuild({ ...this.#qualityFlawBuild(), level: nextLevel });
+    if (!qualityFlawAudit.valid) {
+      return ui.notifications.warn(`Resolve Perk & Flaw requirements before confirming: perks max ${qualityFlawAudit.perkCapacity}, Minor Flaws max ${QUALITY_LIMITS.minorFlawMaximum}, pillars max ${QUALITY_LIMITS.pillarMaximum}, flaws minimum ${QUALITY_LIMITS.flawMinimum}.`);
+    }
     const pool = (key, budget, spent) => ({ total: Math.max(number(this.actor.system?.[key]?.total), budget), available: Math.max(0, Math.max(number(this.actor.system?.[key]?.total), budget) - spent) });
     const attributes = pool("attributePoints", attributePointsForLevel(nextLevel), this.#attributePointCost());
     const treeDelta = this.#treeSpent();

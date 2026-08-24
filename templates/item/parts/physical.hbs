@@ -1,7 +1,7 @@
 <div class="vr-physical-item">
   <nav class="vr-item-tabs" aria-label="{{localize 'VEILRUNNER.PhysicalItem.Tabs.label'}}">
     <button type="button" class="{{#if physicalTabSummary}}active{{/if}}" data-action="setPhysicalTab" data-tab="summary">{{localize 'VEILRUNNER.PhysicalItem.Tabs.summary'}}</button>
-    <button type="button" class="{{#if physicalTabDetails}}active{{/if}}" data-action="setPhysicalTab" data-tab="details">{{localize 'VEILRUNNER.PhysicalItem.Tabs.details'}}</button>
+    <button type="button" class="{{#if physicalTabDetails}}active{{/if}}" data-action="setPhysicalTab" data-tab="details">Traits &amp; Slots</button>
     <button type="button" class="{{#if physicalTabRules}}active{{/if}}" data-action="setPhysicalTab" data-tab="rules">{{localize 'VEILRUNNER.PhysicalItem.Tabs.rules'}}</button>
   </nav>
 
@@ -14,15 +14,23 @@
         <label>{{localize 'VEILRUNNER.PhysicalItem.weight'}}<input type="number" name="system.weight" value="{{system.weight}}" min="0" step="0.01" /></label>
         <label>{{localize 'VEILRUNNER.PhysicalItem.price'}}<input type="number" name="system.price" value="{{system.price}}" min="0" /></label>
         <label>{{localize 'VEILRUNNER.PhysicalItem.currency'}}<input type="text" name="system.currency" value="{{system.currency}}" /></label>
+        <label>{{localize 'VEILRUNNER.PhysicalItem.grade'}}<input type="number" name="system.grade" value="{{system.grade}}" min="1" step="1" /></label>
         <label>{{localize 'VEILRUNNER.PhysicalItem.rarity'}}
           <select class="vr-rarity-select" name="system.rarity">
             {{#each itemRarities as |rarity|}}<option value="{{rarity.slug}}" style="color: {{rarity.color}};" {{#if (eq ../system.rarity rarity.slug)}}selected{{/if}}>Tier {{rarity.tier}} — {{rarity.name}}</option>{{/each}}
           </select>
         </label>
+        {{#if isCompatibilityHost}}<label class="wide">Allowed Definition IDs <input type="text" name="{{#if isPhysicalWeapon}}system.firearm.compatibility{{else}}system.compatibility{{/if}}.allowDefinitionIdsText" value="{{compatibilityAllowDefinitionIdsText}}" placeholder="veilrunner.ammunition.example" /></label><label class="wide">Blocked Definition IDs <input type="text" name="{{#if isPhysicalWeapon}}system.firearm.compatibility{{else}}system.compatibility{{/if}}.blockDefinitionIdsText" value="{{compatibilityBlockDefinitionIdsText}}" placeholder="veilrunner.ammunition.example" /></label>{{/if}}
         <label class="vr-check"><input type="checkbox" name="system.identified" {{checked system.identified}} />{{localize 'VEILRUNNER.PhysicalItem.identified'}}</label>
+        <label class="vr-check"><input type="checkbox" name="system.favorite" {{checked system.favorite}} />HUD Favorite</label>
         <label>{{localize 'VEILRUNNER.PhysicalItem.containerId'}}<input type="text" name="system.containerId" value="{{system.containerId}}" placeholder="Embedded Item ID" /></label>
       </div>
-    </section>
+  <details class="vr-item-advanced-contracts">
+    <summary>Granted HUD Actions</summary>
+    <p>Optional data-driven actions supplied while this item is equipped.</p>
+    <textarea name="system.hudActionsJson" rows="7">{{physicalHudActionsJson}}</textarea>
+  </details>
+</section>
 
     {{#if isPhysicalWeapon}}
       <section class="vr-item-panel"><h3>{{localize 'VEILRUNNER.WeaponItem.heading'}}</h3><div class="vr-item-field-grid">
@@ -47,7 +55,7 @@
           <label>{{localize 'VEILRUNNER.Firearm.ammoTypes'}}<input type="text" name="system.firearm.compatibility.ammoTypesText" value="{{compatibilityAmmoTypesText}}" /></label>
           <label>{{localize 'VEILRUNNER.Firearm.allow'}}<input type="text" name="system.firearm.compatibility.allowText" value="{{compatibilityAllowText}}" /></label>
           <label>{{localize 'VEILRUNNER.Firearm.block'}}<input type="text" name="system.firearm.compatibility.blockText" value="{{compatibilityBlockText}}" /></label>
-        </div></section>
+        </div><details class="vr-item-advanced-contracts"><summary>HUD Fire Modes</summary><p>Optional data-driven firing modes. An empty list derives Single Shot from the weapon.</p><textarea name="system.firearm.fireModesJson" rows="7">{{firearmModesJson}}</textarea></details><details class="vr-item-advanced-contracts"><summary>HUD Firearm Options</summary><p>Optional toggle options with authored AP, ammunition, attack, damage, and trait adjustments.</p><textarea name="system.firearm.optionsJson" rows="7">{{firearmOptionsJson}}</textarea></details></section>
       {{/if}}
     {{/if}}
 
@@ -123,7 +131,7 @@
     {{#if isPhysicalTreasure}}
       <section class="vr-item-panel"><h3>{{localize 'VEILRUNNER.InventoryMainCategory.treasure'}}</h3><div class="vr-item-field-grid">
         <label>{{localize 'VEILRUNNER.Treasure.FIELDS.category.label'}}<select name="system.category">{{#each (array "weapon" "ammo" "armor" "consumable" "tech" "keyItem" "junk") as |category|}}<option value="{{category}}" {{#if (eq ../system.category category)}}selected{{/if}}>{{localize (concat "VEILRUNNER.InventoryCategory." category)}}</option>{{/each}}</select></label>
-        {{#if (eq system.category "weapon")}}<label>{{localize 'VEILRUNNER.Treasure.FIELDS.weaponType.label'}}<select name="system.weaponType"><option value="">{{localize 'VEILRUNNER.WeaponFilter.allWeapons'}}</option>{{#each (array "shortBlades" "longBlades" "heavyBlades" "melee" "staves" "blunt" "pistols" "smgs" "shotguns" "assaultRifles" "heavyRifles" "sniperRifles" "launchers" "heavyCannons" "lmgs" "wands" "scepters" "greatStaves" "flexible" "thrown" "bows") as |weaponType|}}<option value="{{weaponType}}" {{#if (eq ../system.weaponType weaponType)}}selected{{/if}}>{{localize (concat "VEILRUNNER.WeaponFilter." weaponType)}}</option>{{/each}}</select></label>{{/if}}
+        {{#if (eq system.category "weapon")}}<label>{{localize 'VEILRUNNER.Treasure.FIELDS.weaponType.label'}}<select name="system.weaponType"><option value="">{{localize 'VEILRUNNER.WeaponFilter.allWeapons'}}</option>{{#each weaponTypeGroups as |group|}}<optgroup label="{{localize (concat 'VEILRUNNER.WeaponFilter.' group.key)}}">{{#each group.types as |weaponType|}}<option value="{{weaponType}}" {{#if (eq ../../system.weaponType weaponType)}}selected{{/if}}>{{localize (concat "VEILRUNNER.WeaponFilter." weaponType)}}</option>{{/each}}</optgroup>{{/each}}</select></label>{{/if}}
       </div></section>
     {{/if}}
 
@@ -138,7 +146,7 @@
 
   {{#if physicalTabDetails}}
     <section class="vr-item-panel">
-      <h3>{{localize 'VEILRUNNER.PhysicalItem.Tabs.details'}}</h3>
+      <h3>Traits</h3>
       <div class="vr-trait-builder">
         <div class="vr-item-section-heading"><h4>{{localize 'VEILRUNNER.PhysicalItem.traits'}}</h4><div><input type="text" data-physical-trait-input list="vr-physical-traits-{{item.id}}" placeholder="{{localize 'VEILRUNNER.PhysicalItem.traitPlaceholder'}}" /><datalist id="vr-physical-traits-{{item.id}}">{{#each physicalTraitCatalog as |entry|}}<option value="{{entry.trait}}"></option>{{/each}}</datalist><button type="button" class="vr-item-icon-btn" data-action="addPhysicalTrait" title="{{localize 'VEILRUNNER.Add'}}"><i class="fa-solid fa-plus"></i></button></div></div>
         <input type="hidden" name="system.traitsText" value="{{physicalTraitsText}}" />
@@ -151,9 +159,6 @@
         </div>
       </div>
       {{#if isPhysicalAccessory}}<label>{{localize 'VEILRUNNER.AccessoryItem.FIELDS.bonuses.label'}}<textarea name="system.bonusesText" rows="4">{{system.bonusesText}}</textarea></label>{{/if}}
-      <label class="vr-item-editor-label">{{localize 'VEILRUNNER.PhysicalItem.description'}}</label>
-      {{editor system.description.value target="system.description.value" engine="prosemirror" button=true editable=editable}}
-      {{#if isGM}}<label class="vr-item-editor-label">{{localize 'VEILRUNNER.GMNotes'}}</label>{{editor system.description.gm target="system.description.gm" engine="prosemirror" button=true editable=editable}}{{/if}}
     </section>
     <section class="vr-item-panel">
       <h3>{{localize 'VEILRUNNER.PhysicalItem.slotRestrictions'}}</h3>

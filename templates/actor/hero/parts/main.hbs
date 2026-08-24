@@ -194,7 +194,9 @@
         <div class="party-member-list">
           {{#each partyMembers as |member|}}
             <article class="party-member pan-{{member.panState}}">
-              <img src="{{member.img}}" alt="{{member.name}}" />
+              <span class="party-member-portrait">
+                <img src="{{member.img}}" alt="{{member.name}}" />
+              </span>
               <div class="party-member-data">
                 <div class="party-member-title">
                   <strong class="party-member-name" data-actor-id="{{member.id}}" title="{{member.name}}">{{member.displayName}}</strong>
@@ -569,17 +571,20 @@
                         <div class="detail-field persona-index-editor">
                           <span>{{localize 'VEILRUNNER.PersonaIndex'}}</span>
                           {{#each personaAxes as |axis|}}
-                            <label class="persona-axis-field">
+                            <label class="persona-axis-field persona-axis-{{axis.index}}" data-persona-axis="{{axis.key}}">
                               <span class="persona-axis-labels">
                                 <span>{{localize axis.leftLabel}}</span>
                                 <input class="persona-axis-value-input" type="number" value="{{axis.value}}" min="-100" max="100" step="1" inputmode="numeric" data-persona-path="{{axis.path}}" aria-label="{{localize 'VEILRUNNER.PersonaIndex'}}" />
                                 <span>{{localize axis.rightLabel}}</span>
                               </span>
+                              <span class="persona-axis-pips" style="--persona-position: {{axis.percent}}%;" aria-label="{{localize axis.leftLabel}} to {{localize axis.rightLabel}}: {{axis.value}}">
+                                <span class="persona-pip-side left">{{#each axis.leftPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                <b aria-hidden="true"></b>
+                                <span class="persona-pip-side right">{{#each axis.rightPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                <em aria-hidden="true"></em>
+                              </span>
                               <span class="persona-axis-controls">
                                 <input class="persona-axis-range" type="range" name="{{axis.path}}" value="{{axis.value}}" min="-100" max="100" step="1" />
-                              </span>
-                              <span class="persona-axis-descriptors" aria-hidden="true">
-                                <span></span><span></span><span></span>
                               </span>
                             </label>
                           {{/each}}
@@ -708,18 +713,17 @@
                           <strong>{{localize 'VEILRUNNER.PersonaIndex'}}</strong>
                           <div class="persona-axis-list">
                             {{#each personaAxes as |axis|}}
-                              <div class="persona-axis-readout">
+                              <div class="persona-axis-readout persona-axis-{{axis.index}}" data-persona-axis="{{axis.key}}">
                                 <div class="persona-axis-labels">
                                   <span>{{localize axis.leftLabel}}</span>
-                                  <strong>{{axis.value}}</strong>
+                                  <strong>{{axis.signedValue}}</strong>
                                   <span>{{localize axis.rightLabel}}</span>
                                 </div>
-                                <div class="persona-axis-track" style="--persona-position: {{axis.percent}}%;">
-                                  <span class="persona-axis-midpoint"></span>
-                                  <span class="persona-axis-marker"></span>
-                                </div>
-                                <div class="persona-axis-descriptors" aria-hidden="true">
-                                  <span></span><span></span><span></span>
+                                <div class="persona-axis-pips" style="--persona-position: {{axis.percent}}%;" aria-label="{{localize axis.leftLabel}} to {{localize axis.rightLabel}}: {{axis.value}}">
+                                  <span class="persona-pip-side left">{{#each axis.leftPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                  <b aria-hidden="true"></b>
+                                  <span class="persona-pip-side right">{{#each axis.rightPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                  <em aria-hidden="true"></em>
                                 </div>
                               </div>
                             {{/each}}
@@ -1036,6 +1040,11 @@
               <span class="ui-toggle-check {{#if system.networkLinked}}is-active{{/if}}" aria-hidden="true"></span>
             </button>
             <p>{{localize 'VEILRUNNER.NearbyNetworkHint'}}</p>
+            <details class="vr-hud-asset-authoring">
+              <summary>Controlled Combat Assets</summary>
+              <p>Link pets, spirits, drones, summons, or vehicles by Actor UUID and kind.</p>
+              <textarea name="system.assetLinksJson" rows="8">{{assetLinksJson}}</textarea>
+            </details>
           </div>
           {{/if}}
 

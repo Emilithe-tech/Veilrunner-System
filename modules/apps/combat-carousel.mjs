@@ -854,7 +854,8 @@ export function registerCombatCarousel() {
     refreshPhaseTurnTrackerHighlights,
     moveCombatRound: moveRound,
     moveCombatPhase: movePhase,
-    moveCombatTurn: moveTurn
+    moveCombatTurn: moveTurn,
+    getActivePhaseCombatants: activePhaseCombatants
   };
 
   Hooks.once("ready", () => {

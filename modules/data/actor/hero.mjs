@@ -20,6 +20,7 @@ import {
   clampResourcePools
 } from "../fields.mjs";
 import { xpForLevel } from "../xp.mjs";
+import { normalizeQualitySelections } from "../../apps/chargen/quality-rules.mjs";
 
 const { StringField, NumberField, ArrayField, SchemaField } = foundry.data.fields;
 
@@ -110,6 +111,10 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
       }), { initial: [] }),
       credits: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
       quickEquip: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      assetLinks: new ArrayField(new SchemaField({
+        actorUuid: new StringField({ required: true, blank: false, initial: "" }),
+        kind: new StringField({ required: true, blank: false, initial: "pet", choices: { pet: "Pet", spirit: "Spirit", drone: "Drone", summon: "Summon", vehicle: "Vehicle" } })
+      }), { initial: [] }),
       skillCategories: new ArrayField(skillCategorySchema(), { initial: [] }),
       knownLanguages: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
       contacts: new ArrayField(contactSchema(), { initial: [] }),
@@ -138,7 +143,11 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
   }
 
   static migrateData(source) {
+    const hasQualitiesTaken = Object.hasOwn(source, "qualitiesTaken");
+    const hasFlawsTaken = Object.hasOwn(source, "flawsTaken");
     source = super.migrateData(source);
+    if (hasQualitiesTaken) source.qualitiesTaken = normalizeQualitySelections(source.qualitiesTaken);
+    if (hasFlawsTaken) source.flawsTaken = normalizeQualitySelections(source.flawsTaken);
     const mental = source.attributes?.mental;
     if (mental && mental.wisdom === undefined && mental.willpower !== undefined) {
       mental.wisdom = mental.willpower;
@@ -178,6 +187,7 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
         source.equipmentAssignments = [...assignments].map(([itemId, slots]) => ({ itemId, slots }));
       }
     }
+    if (source.assetLinks !== undefined && !Array.isArray(source.assetLinks)) source.assetLinks = [];
     // Data-model migrations also receive partial update payloads. Do not add
     // missing point pools here: the schema supplies initial values for a new
     // actor, while adding them to a UI-style update overwrites saved data.

@@ -1,7 +1,9 @@
 import { actionTreeSchema } from "./action-tree.mjs";
 import { isItemEquipped } from "../../rules/item-rules.mjs";
+import { evaluateActionAvailability } from "../../apps/action-hud/availability.mjs";
+import { hasItemIntent, itemIdentityFields, migrateItemIdentityData } from "./identity.mjs";
 
-const { StringField, NumberField, BooleanField, HTMLField, ArrayField } = foundry.data.fields;
+const { StringField, NumberField, BooleanField, HTMLField, ArrayField, SchemaField } = foundry.data.fields;
 
 /** Action data. */
 export default class ActionData extends foundry.abstract.TypeDataModel {
@@ -9,6 +11,7 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
 
   static defineSchema() {
     return {
+      ...itemIdentityFields(),
       activationKind: new StringField({ required: true, blank: false, initial: "action", choices: { action: "Action", ability: "Ability" } }),
       actionType: new StringField({
         required: true,
@@ -29,7 +32,8 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
           actions: "VEILRUNNER.ActionCategory.actions",
           reactions: "VEILRUNNER.ActionCategory.reactions",
           magic: "VEILRUNNER.ActionCategory.magic",
-          tech: "VEILRUNNER.ActionCategory.tech"
+          tech: "VEILRUNNER.ActionCategory.tech",
+          weapon: "Weapon", digital: "Digital", normal: "Normal", consumables: "Consumables", gadgets: "Gadgets", "item-actions": "Item Actions", vehicles: "Vehicles", pets: "Pets", spirits: "Spirits"
         }
       }),
       favorite: new BooleanField({ required: true, initial: false }),
@@ -45,25 +49,53 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
       selector: new StringField({ required: true, blank: true, initial: "action" }),
       requiredItemTypes: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
       requiredItemTraits: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      requiredDefinitionIds: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      requiredItemIntents: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      requiresTarget: new BooleanField({ required: true, initial: false }),
+      summary: new StringField({ required: true, blank: true, initial: "" }),
+      requiredEffects: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      requiredTargetEffects: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      composer: new ArrayField(new SchemaField({
+        key: new StringField({ required: true, blank: false, initial: "option" }),
+        label: new StringField({ required: true, blank: true, initial: "" }),
+        choices: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+        required: new BooleanField({ required: true, initial: false })
+      }), { initial: [] }),
       description: new HTMLField({ required: false, blank: true, initial: "" }),
       ...actionTreeSchema()
     };
   }
 
+  static migrateData(source) {
+    return migrateItemIdentityData(super.migrateData(source));
+  }
+
   /** Roll action. */
-  async roll(actor) {
+  async roll(actor, options = {}) {
     const item = this.parent;
+    if (!options.skipAvailability) {
+      const availability = evaluateActionAvailability({ actor, action: options.composer ? { ...item, composerSelections: options.composer } : item, target: [...(game.user?.targets ?? [])][0]?.actor ?? null });
+      if (!availability.available) return ui.notifications.warn(availability.reason);
+    }
     const name = foundry.utils.escapeHTML(item.name);
     const equippedItems = actor.items.filter(document => isItemEquipped(actor, document));
     const requiredTypes = item.system?.requiredItemTypes ?? [];
     const requiredTraits = item.system?.requiredItemTraits ?? [];
+    const requiredDefinitionIds = item.system?.requiredDefinitionIds ?? [];
+    const requiredIntents = item.system?.requiredItemIntents ?? [];
     if (requiredTypes.length && !requiredTypes.some(type => equippedItems.some(document => document.type === type))) {
       return ui.notifications.warn(`${item.name} requires an equipped ${requiredTypes.join(" or ")}.`);
     }
     if (requiredTraits.length && !requiredTraits.every(trait => equippedItems.some(document => document.system?.traits?.includes(trait)))) {
       return ui.notifications.warn(`${item.name} requires equipped item traits: ${requiredTraits.join(", ")}.`);
     }
-    const costs = item.system?.resourceCosts ?? {};
+    if (requiredDefinitionIds.length && !requiredDefinitionIds.every(definitionId => equippedItems.some(document => document.system?.definitionId === definitionId))) {
+      return ui.notifications.warn(`${item.name} requires equipped definitions: ${requiredDefinitionIds.join(", ")}.`);
+    }
+    if (requiredIntents.length && !requiredIntents.every(intent => equippedItems.some(document => hasItemIntent(document, intent)))) {
+      return ui.notifications.warn(`${item.name} requires equipped item capabilities: ${requiredIntents.join(", ")}.`);
+    }
+    const costs = options.skipResourceCommit ? {} : item.system?.resourceCosts ?? {};
     const updates = {};
     for (const key of ["mana", "stamina", "health"]) {
       const cost = Math.max(0, Number(costs[key]) || 0);
@@ -98,9 +130,9 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
     if (formula) {
       const context = actor.getItemRuleContext?.({
         selectors: [selector, "action", `action:${item.id}`],
-        options: ["action:roll", `action:${item.id}`, `action:category:${item.system?.category ?? "actions"}`, ...(item.system?.traits ?? []).map(trait => `trait:${trait}`)]
+        options: ["action:roll", `action:${item.id}`, `action:category:${item.system?.category ?? "actions"}`, ...(item.system?.traits ?? []).map(trait => `trait:${trait}`), ...Object.entries(options.composer ?? {}).map(([key, value]) => `action:${item.id}:choice:${key}:${value}`)]
       });
-      const modifier = context?.modifiers?.total ?? 0;
+      const modifier = (context?.modifiers?.total ?? 0) + (selector === "attack" ? Number(options.mapPenalty ?? 0) : 0);
       roll = await new Roll(`${formula}${modifier ? ` + ${modifier}` : ""}`, context?.rollData ?? actor.getRollData()).evaluate();
     }
     if (roll) return roll.toMessage({

@@ -14,6 +14,7 @@ export function registerHandlebarsHelpers() {
   Handlebars.registerHelper("concat", (...args) => args.slice(0, -1).join(""));
 
   Handlebars.registerHelper("eq", (a, b) => a === b);
+  Handlebars.registerHelper("gt", (a, b) => Number(a) > Number(b));
 
   Handlebars.registerHelper("includes", (values, value) => Array.isArray(values) && values.includes(value));
 
