@@ -7,6 +7,7 @@ import { recordRecentAction } from "./preferences.mjs";
 import { executeFirearmAction } from "../../items/firearms.mjs";
 import { systemId } from "./constants.mjs";
 import { resolveHudActionConfiguration } from "./resolver.mjs";
+import { captureHudUndoState, storeHudUndoState } from "./undo.mjs";
 
 function findAction(actor, actionOrId) {
   if (actionOrId && typeof actionOrId === "object") return actionOrId;
@@ -33,7 +34,7 @@ async function executeSource(actor, action, { selections, mapPenalty }) {
     return { macroResult: await macro.execute({ actor, token: actor.getActiveTokens?.()[0] ?? null }) };
   }
   const item = action.source?.documentName === "Item" ? action.source : actor.items?.get?.(action.id);
-  if (item?.system?.roll) return item.system.roll(actor, { composer: selections, mapPenalty, skipHudExecution: true, skipResourceCommit: true, skipAvailability: true });
+  if (item?.system?.roll) return item.system.roll(actor, { composer: selections, resolvedAction: action, mapPenalty, skipHudExecution: true, skipResourceCommit: true, skipAvailability: true });
   if (typeof action.source?.execute === "function") return action.source.execute({ actor, selections, mapPenalty });
   globalThis.ui?.notifications?.warn?.(`${action.name} has no executable rule definition.`);
   return false;
@@ -58,9 +59,10 @@ export async function executeHudAction(actor, actionOrId, { selections = null, t
     return { success: false, reason: availability.reason, availability };
   }
   const mapPenalty = action.attack ? currentMapPenalty(actor, action.traits) : 0;
+  const undoSnapshot = captureHudUndoState(actor, action);
   let output;
   try {
-    output = await executeSource(actor, action, { selections, mapPenalty });
+    output = await executeSource(actor, action, { selections: resolvedSelections, mapPenalty });
   } catch (error) {
     console.error(`Veilrunner | ${action.name} execution failed`, error);
     globalThis.ui?.notifications?.error?.(`${action.name} could not be completed.`);
@@ -77,6 +79,11 @@ export async function executeHudAction(actor, actionOrId, { selections = null, t
   }
   if (action.attack) await recordSuccessfulAttack(actor);
   await recordRecentAction(actor, action.id, action.resolvedSelections);
+  try {
+    await storeHudUndoState(actor, undoSnapshot);
+  } catch (error) {
+    console.warn("Veilrunner | The action completed, but its undo state could not be recorded", error);
+  }
   globalThis.game?.veilrunner?.refreshActionHud?.(["self", "workspace", "economy", "target"]);
   return { success: true, output, mapPenalty, action };
 }

@@ -3,6 +3,7 @@ import { WEAPON_TYPE_GROUPS } from "../../../data/item/physical.mjs";
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
 const title = value => String(value ?? "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[-_]+/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
 const money = value => Math.max(0, Number(value) || 0).toLocaleString();
+const credits = value => `${money(value)}c`;
 const weight = value => `${Math.round((Math.max(0, Number(value) || 0) + Number.EPSILON) * 100) / 100} kg`;
 
 export const STOREFRONT_CATEGORIES = Object.freeze([
@@ -71,7 +72,7 @@ function itemRow(record, selected) {
   return `<article class="vr-store-item-row ${selected ? "selected" : ""}" style="--vr-item-rarity:${escape(record.rarityColor || "#e2e8f0")}" data-definition-id="${escape(record.definitionId)}">
     <button type="button" class="vr-store-row-select" data-storefront-select="${escape(record.definitionId)}" aria-label="Inspect ${escape(record.name)}"><img src="${escape(record.img || "icons/svg/item-bag.svg")}" alt="" /><span class="vr-store-row-identity"><strong>${escape(record.name)}</strong><small>${escape(subtypeLabel(record.subtype || record.type))}</small>${traits.length ? `<span class="vr-store-traits">${traits.map(trait => `<em>${escape(trait)}</em>`).join("")}</span>` : ""}</span></button>
     <div class="vr-store-row-badges">${rarityBadge(record)}${gradeBadge(record)}</div>${itemStats(record)}
-    <div class="vr-store-row-commerce"><span><i class="fa-solid fa-coins" aria-hidden="true"></i><b>${money(record.price)}</b></span><span><i class="fa-solid fa-weight-hanging" aria-hidden="true"></i>${weight(record.weight)}</span></div>
+    <div class="vr-store-row-commerce"><span><i class="fa-solid fa-coins" aria-hidden="true"></i><b>${credits(record.price)}</b></span><span><i class="fa-solid fa-weight-hanging" aria-hidden="true"></i>${weight(record.weight)}</span></div>
     <div class="vr-store-row-actions"><button type="button" data-storefront-select="${escape(record.definitionId)}" class="vr-store-inspect">Inspect</button><button type="button" data-storefront-add="${escape(record.definitionId)}" class="vr-store-add"><i class="fa-solid fa-plus" aria-hidden="true"></i>Add</button></div>
   </article>`;
 }
@@ -90,14 +91,14 @@ export function renderStorefrontBrowser({ query, facets, page, selectedDefinitio
 }
 
 function summary(model) {
-  return `<footer class="vr-store-summary"><div><span><i class="fa-solid fa-cart-shopping"></i> Cart <b>${model.itemCount}</b></span><small>${model.itemCount} item${model.itemCount === 1 ? "" : "s"}</small></div><dl><div><dt>Credits Remaining</dt><dd><i class="fa-solid fa-coins"></i>${money(model.remainingCredits)}</dd></div><div><dt>Total Carry Weight</dt><dd>${weight(model.projectedWeight)} / ${weight(model.carryCapacity)}</dd></div></dl><button type="button" data-action="storefront-show-cart">View Cart <i class="fa-solid fa-arrow-right"></i></button></footer>`;
+  return `<footer class="vr-store-summary"><div><span><i class="fa-solid fa-cart-shopping"></i> Cart <b>${model.itemCount}</b></span><small>${model.itemCount} item${model.itemCount === 1 ? "" : "s"}</small></div><dl><div><dt>Credits Remaining</dt><dd><i class="fa-solid fa-coins"></i>${credits(model.remainingCredits)}</dd></div><div><dt>Total Carry Weight</dt><dd>${weight(model.projectedWeight)} / ${weight(model.carryCapacity)}</dd></div></dl><button type="button" data-action="storefront-show-cart">View Cart <i class="fa-solid fa-arrow-right"></i></button></footer>`;
 }
 
 function details(model) {
   const record = model.selectedRecord;
   if (!record) return `<div class="vr-store-detail-empty"><i class="fa-solid fa-circle-info"></i><p>Select an item to inspect its details.</p></div>`;
   const fields = [
-    ["Price", `${money(record.price)} ${record.currency}`], ["Weight", weight(record.weight)], ["Damage", record.damage],
+    ["Price", credits(record.price)], ["Weight", weight(record.weight)], ["Damage", record.damage],
     ["Range", record.range ? `${record.range} m` : ""], ["Magazine", record.magazine || ""], ["Fire Modes", record.fireModes?.join(", ")],
     ["Reload", record.reload], ["Traits", record.traits?.join(", ")], ["Actions", record.actions], ["Build Compatibility", record.buildCompatibility?.join(", ")]
   ].filter(([, value]) => value !== "" && value !== null && value !== undefined);
@@ -109,9 +110,9 @@ function details(model) {
 function cart(model) {
   const lines = model.cartLines.map(line => {
     const record = model.recordById.get(line.definitionId);
-    return `<article class="vr-store-cart-line"><img src="${escape(record?.img || "icons/svg/item-bag.svg")}" alt="" /><div><strong>${escape(record?.name || line.definitionId)}</strong><small>${money(record?.price)} credits · ${weight(record?.weight)}</small></div><div class="vr-store-cart-quantity"><button type="button" data-storefront-adjust="${escape(line.definitionId)}" data-direction="-1" aria-label="Decrease quantity">−</button><input type="number" min="1" step="1" data-storefront-quantity="${escape(line.definitionId)}" value="${line.quantity}" aria-label="Quantity for ${escape(record?.name || line.definitionId)}" /><button type="button" data-storefront-adjust="${escape(line.definitionId)}" data-direction="1" aria-label="Increase quantity">+</button></div><button type="button" data-storefront-remove="${escape(line.definitionId)}" class="vr-store-cart-remove" aria-label="Remove ${escape(record?.name || line.definitionId)}"><i class="fa-solid fa-trash"></i></button></article>`;
+    return `<article class="vr-store-cart-line"><img src="${escape(record?.img || "icons/svg/item-bag.svg")}" alt="" /><div><strong>${escape(record?.name || line.definitionId)}</strong><small>${credits(record?.price)} · ${weight(record?.weight)}</small></div><div class="vr-store-cart-quantity"><button type="button" data-storefront-adjust="${escape(line.definitionId)}" data-direction="-1" aria-label="Decrease quantity">−</button><input type="number" min="1" step="1" data-storefront-quantity="${escape(line.definitionId)}" value="${line.quantity}" aria-label="Quantity for ${escape(record?.name || line.definitionId)}" /><button type="button" data-storefront-adjust="${escape(line.definitionId)}" data-direction="1" aria-label="Increase quantity">+</button></div><button type="button" data-storefront-remove="${escape(line.definitionId)}" class="vr-store-cart-remove" aria-label="Remove ${escape(record?.name || line.definitionId)}"><i class="fa-solid fa-trash"></i></button></article>`;
   }).join("");
-  return `<div class="vr-store-cart"><header><div><span>Cart</span><h2>${model.itemCount} item${model.itemCount === 1 ? "" : "s"}</h2></div>${model.itemCount ? `<button type="button" data-action="storefront-clear-cart"><i class="fa-solid fa-trash-can"></i>Clear Cart</button>` : ""}</header><div class="vr-store-cart-lines">${lines || `<div class="vr-store-detail-empty"><i class="fa-solid fa-cart-shopping"></i><p>Add catalog items to build a starting loadout.</p></div>`}</div><dl class="vr-store-cart-totals"><div><dt>Total Cost</dt><dd>${money(model.cartTotal)} credits</dd></div><div><dt>Credits Remaining</dt><dd>${money(model.remainingCredits)}</dd></div><div><dt>Total Carry Weight</dt><dd>${weight(model.projectedWeight)} / ${weight(model.carryCapacity)}</dd></div></dl><footer class="vr-store-cart-checkout"><button type="button" data-action="storefront-purchase-cart" ${model.itemCount ? "" : "disabled"}><i class="fa-solid fa-cart-shopping"></i>Purchase</button></footer></div>`;
+  return `<div class="vr-store-cart"><header><div><span>Cart</span><h2>${model.itemCount} item${model.itemCount === 1 ? "" : "s"}</h2></div>${model.itemCount ? `<button type="button" data-action="storefront-clear-cart"><i class="fa-solid fa-trash-can"></i>Clear Cart</button>` : ""}</header><div class="vr-store-cart-lines">${lines || `<div class="vr-store-detail-empty"><i class="fa-solid fa-cart-shopping"></i><p>Add catalog items to build a starting loadout.</p></div>`}</div><dl class="vr-store-cart-totals"><div><dt>Total Cost</dt><dd>${credits(model.cartTotal)}</dd></div><div><dt>Credits Remaining</dt><dd>${credits(model.remainingCredits)}</dd></div><div><dt>Total Carry Weight</dt><dd>${weight(model.projectedWeight)} / ${weight(model.carryCapacity)}</dd></div></dl><footer class="vr-store-cart-checkout"><button type="button" data-action="storefront-purchase-cart" ${model.itemCount ? "" : "disabled"}><i class="fa-solid fa-cart-shopping"></i>Purchase</button></footer></div>`;
 }
 
 export function renderStorefrontContext(model) {

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ARCHETYPE_OPTIONS, ARCHETYPE_SUMMARIES, fallbackPathRecords } from "../modules/data/path-options.mjs";
-import { VEILRUNNER_PROFESSIONS } from "../modules/data/professions.mjs";
+import { VEILRUNNER_PERSONA_INDEX_MODIFIERS, VEILRUNNER_PROFESSIONS } from "../modules/data/professions.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePath = path.join(root, "packs", "professions.db");
@@ -72,7 +72,7 @@ const disciplines = pathRecords.flatMap(record => record.disciplines.map(name =>
       primaryAttributes: source?.system?.primaryAttributes ?? authored?.primaryAttributes ?? [],
       bonusAttributes: source?.system?.bonusAttributes ?? authored?.bonusAttributes ?? [],
       bonusSkill: source?.system?.bonusSkill ?? authored?.bonusSkill ?? "",
-      persona: source?.system?.persona ?? authored?.persona ?? [],
+      persona: VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${record.profession}:${name}`] ?? source?.system?.persona ?? authored?.persona ?? [],
       tags: source?.system?.tags ?? authored?.tags ?? [],
       abilities: sourceFlags.abilities ?? authored?.abilities ?? [],
       pageImage: art, source: sourceFlags.source ?? "",

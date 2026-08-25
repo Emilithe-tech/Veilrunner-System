@@ -38,8 +38,8 @@ export function defaultIntentsForItem(type, system = {}) {
   if (type === "armor" || type === "shield") defaults.add("armor");
   if (type === "consumable") defaults.add("consumable");
   if (type === "container") defaults.add("container");
-  if (type === "action" || type === "ability") defaults.add("action-provider");
-  if (type === "action" && (system.actionType === "reaction" || system.category === "reactions")) defaults.add("reaction-provider");
+  if (["action", "ability", "spell", "skill"].includes(type)) defaults.add("action-provider");
+  if (["action", "spell", "skill"].includes(type) && (system.actionType === "reaction" || system.category === "reactions")) defaults.add("reaction-provider");
   if (["species", "origin", "background", "archetype", "profession", "discipline", "quality", "perk", "flaw"].includes(type)) defaults.add("chargen-selectable");
   return [...defaults];
 }

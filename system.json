@@ -211,6 +211,16 @@
           "description"
         ]
       },
+      "spell": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "skill": {
+        "htmlFields": [
+          "description"
+        ]
+      },
       "accessory": {
         "htmlFields": [
           "description.value",

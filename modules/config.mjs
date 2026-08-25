@@ -8,6 +8,8 @@ import PartyData from "./data/actor/party.mjs";
 import LootData from "./data/actor/loot.mjs";
 import HazardData from "./data/actor/hazard.mjs";
 import ActionData from "./data/item/action.mjs";
+import SpellData from "./data/item/spell.mjs";
+import SkillData from "./data/item/skill.mjs";
 import AccessoryData from "./data/item/accessory.mjs";
 import AbilityData from "./data/item/ability.mjs";
 import ArmorData from "./data/item/armor.mjs";
@@ -52,6 +54,8 @@ export function registerConfig() {
 
   Object.assign(CONFIG.Item.dataModels, {
     action: ActionData,
+    spell: SpellData,
+    skill: SkillData,
     accessory: AccessoryData,
     ability: AbilityData,
     armor: ArmorData,

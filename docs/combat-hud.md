@@ -13,6 +13,7 @@ Action processing is split across these modules:
 - `resolver.mjs`: validates composer choices and resolves rank, enhancement, resource, and AP projections.
 - `execution.mjs`: shared system entry point; commits resources and combat economy only after the underlying action succeeds.
 - `economy.mjs`: combatant-scoped AP, RX, movement placeholder, attack count, and MAP.
+- `undo.mjs`: owner-authorized, turn-scoped action and movement restoration history.
 - `visibility.mjs`, `pan.mjs`, and `target-intel.mjs`: effect disclosure, PAN fidelity, qualitative health, and encounter-scoped party intel.
 
 ## Data Contracts
@@ -24,6 +25,7 @@ Action and Ability Items support structured requirements and effect consumption.
 Persistent state:
 
 - Combatant flag `flags.Veilrunner.actionHud.economy`: cycle key, AP, RX, movement, successful attack count.
+- Combatant flag `flags.Veilrunner.actionHud.undoHistory`: current-turn restoration records, cleared with the economy cycle.
 - Combatant flag `flags.Veilrunner.actionHud.pan.state`: Stable, Degraded, Jammed, or Link Lost override.
 - Combat flag `flags.Veilrunner.actionHud.intel.<party>.<target>`: encounter intel modules.
 - User flag `flags.Veilrunner.actionHud.preferences.<actor>`: pins, recents, remembered choices, filters, selected asset, and accessibility preferences.
@@ -33,6 +35,7 @@ Persistent state:
 
 - Automatic combat lifecycle and controlled-combatant selection with owner/GM fallback.
 - Responsive fixed anchors, vertical party rail, stable target panel, replacement workspace modes, and persistent economy rail.
+- The party list can be collapsed, and its lower edge follows the self card's top edge. Composer mode joins the self card, target card, and economy footer without inter-panel gaps.
 - The transparent overlay is locked to the viewport bottom, dynamically reserves Foundry's visible right-sidebar width, and confines the economy footer to the center workspace column.
 - Self and target cards use vertical equipment-art portrait frames above their details. Portraits are centered at full frame height with contained scaling and clipped overflow; the empty target preserves the same footprint.
 - Normal deck, deterministic capability domains, libraries/search, fixed-order pins, recents, context actions, macros, saves, weapon selector, composers, and asset context.
@@ -40,7 +43,9 @@ Persistent state:
 - Real equipment switching, generated firearm fire/reload/load/unload operations, ammunition state, and empty-weapon context.
 - Equipped-weapon interactions resolve against the unfiltered action projection, so saved domain and search filters cannot redirect executable firearms to their Item sheets. Firearms expose a dedicated composer with a Single Shot compatibility mode, optional authored modes/options, exact formula/cost/ammunition/range/MAP data, and no fabricated hit, critical, or expected-damage values.
 - Shared Action/Ability/firearm execution, post-success AP/RX expenditure, and cumulative trait-adjusted MAP.
+- Equipping and unequipping each cost 1 AP during an active combat turn. Weapon swaps charge each completed unequip and equip separately, and equipment changes participate in turn Undo history.
 - Data-first rank/enhancement/augment configuration and pre-execution resource projection.
+- Spell composers omit modifiers the active spell cannot use. The rightmost Undo control walks backward through every successful action and recorded movement made by that player in the current turn. Hovering or focusing the control opens the newest-first history; selecting an entry rewinds through it and restores actor/target systems, embedded Items and effects, combat economy, movement, and HUD preferences. Chat messages and dice rolls remain as the audit trail.
 - Conservative effect visibility, qualitative target health, subsystem intel, PAN fidelity, and reduced-motion support.
 - Item/hero authoring seams for advanced action contracts, granted item actions, and controlled assets.
 

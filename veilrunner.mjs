@@ -13,6 +13,9 @@ import { registerActionHud } from "./modules/apps/action-hud/controller.mjs";
 import { registerItemCreateDialogGroups } from "./modules/apps/item-create-dialog.mjs";
 import { registerSettings } from "./modules/settings.mjs";
 import { migrateOfficialCompendiumDefinitions } from "./modules/data/item/identity.mjs";
+import { migrateTalentTreeItemsToCompendia } from "./modules/apps/chargen/talent-tree-items.mjs";
+import { migrateActionItemsToCompactFormat } from "./modules/data/item/action-migration.mjs";
+import { registerActorActionSync } from "./modules/data/item/actor-action-sync.mjs";
 
 const PARTY_SHEET_PARTIALS = [
   "systems/veilrunner/templates/actor/party/parts/party.hbs",
@@ -72,6 +75,7 @@ Hooks.once("init", async () => {
   registerCombatCarousel();
   registerActionHud();
   registerItemCreateDialogGroups();
+  registerActorActionSync();
 
   const { DocumentSheetConfig } = foundry.applications.apps;
   const sid = game.system.id;
@@ -90,7 +94,7 @@ Hooks.once("init", async () => {
 
   DocumentSheetConfig.registerSheet(foundry.documents.Item, sid, VeilrunnerItemSheet, {
     types: [
-      "action", "accessory", "ability", "armor", "archetype", "profession", "discipline", "treasure", "species", "origin", "background",
+      "action", "spell", "skill", "accessory", "ability", "armor", "archetype", "profession", "discipline", "treasure", "species", "origin", "background",
       "quality", "perk", "flaw", "weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"
     ],
     makeDefault: true,
@@ -98,4 +102,14 @@ Hooks.once("init", async () => {
   });
 });
 
-Hooks.once("ready", () => migrateOfficialCompendiumDefinitions().catch(error => console.error("Veilrunner | Item identity migration failed", error)));
+Hooks.once("ready", async () => {
+  try {
+    await migrateOfficialCompendiumDefinitions();
+    const actionMigration = await migrateActionItemsToCompactFormat();
+    if (actionMigration.world || actionMigration.actors || actionMigration.packs) console.info("Veilrunner | Actions migrated to compact authoring format.", actionMigration);
+    const result = await migrateTalentTreeItemsToCompendia();
+    if (!result.missingPacks.length && (result.migrated || result.actors)) console.info("Veilrunner | Talent-tree Items migrated to compendia.", result);
+  } catch (error) {
+    console.error("Veilrunner | Item migration failed", error);
+  }
+});

@@ -1,12 +1,40 @@
 <footer class="vr-hud-economy-rail vr-hud-panel" aria-label="Combat economy">
-  <section><span>AP</span><strong>{{#if economy}}{{economy.actions}} / {{economy.limits.actions}}{{else}}—{{/if}}</strong><i class="fa-solid fa-hexagon"></i></section>
-  <section><span>RX</span><strong>{{#if economy}}{{economy.reactions}} / {{economy.limits.reactions}}{{else}}—{{/if}}</strong><i class="fa-solid fa-shield-halved"></i></section>
-  <section><span>Move</span><strong>{{#if economy.movement}}{{economy.movement}}{{else}}—{{/if}}</strong><i class="fa-solid fa-boot"></i></section>
-  <button type="button" data-action="setWorkspace" data-workspace="saves"><span>Saves</span><strong>3</strong><i class="fa-solid fa-snowflake"></i></button>
-  <section><span>Sustain</span><strong>—</strong><i class="fa-solid fa-hourglass"></i></section>
-  <section><span>Status</span><strong>{{target.conditions.length}}</strong><i class="fa-solid fa-wave-square"></i></section>
+  <section class="vr-hud-economy-tracker">
+    <i class="fa-solid fa-hexagon" aria-hidden="true"></i>
+    <span>Actions ({{#if economy}}{{economy.actions}}/{{economy.limits.actions}}{{else}}—{{/if}})</span>
+    <div class="vr-hud-economy-hexes">{{#each economy.actionHexes as |hex|}}<i class="fa-solid fa-hexagon {{#unless hex.filled}}empty{{/unless}}" aria-hidden="true"></i>{{/each}}</div>
+  </section>
+  <section class="vr-hud-economy-tracker">
+    <i class="fa-solid fa-reply fa-reaction" aria-hidden="true"></i>
+    <span>Reactions ({{#if economy}}{{economy.reactions}}/{{economy.limits.reactions}}{{else}}—{{/if}})</span>
+    <div class="vr-hud-economy-hexes">{{#each economy.reactionHexes as |hex|}}<i class="fa-solid fa-hexagon {{#unless hex.filled}}empty{{/unless}}" aria-hidden="true"></i>{{/each}}</div>
+  </section>
+  <section class="vr-hud-movement-tracker">
+    <i class="fa-solid fa-boot" aria-hidden="true"></i>
+    <span class="vr-hud-movement-label">Movement</span>
+    <strong class="vr-hud-movement-value">{{#if economy}}{{economy.movement}}/{{economy.movementTrack.maximumMeters}} m{{else}}—{{/if}}</strong>
+    <div class="vr-hud-movement-boxes" aria-label="{{#if economy}}{{economy.movement}} of {{economy.movementTrack.maximumMeters}} metres remaining{{else}}Movement unavailable{{/if}}">
+      {{#each economy.movementTrack.boxes as |box|}}<span class="vr-hud-movement-box {{box.color}} {{#unless box.filled}}empty{{/unless}} {{#if box.compressed}}compressed{{/if}}" title="{{box.meters}} m movement box">{{#if box.compressed}}{{#if box.value}}{{box.value}}{{/if}}{{/if}}</span>{{/each}}
+    </div>
+  </section>
+  <button class="vr-hud-saves" type="button" data-action="setWorkspace" data-workspace="saves"><span>Saves</span><strong>3</strong><i class="fa-solid fa-snowflake" aria-hidden="true"></i></button>
+  <section><span>Sustain</span><strong>—</strong><i class="fa-solid fa-hourglass" aria-hidden="true"></i></section>
+  <section><span>Status</span><strong>{{target.conditions.length}}</strong><i class="fa-solid fa-wave-square" aria-hidden="true"></i></section>
   <section class="vr-hud-macro-strip" aria-label="Assigned macros">
     <span class="vr-hud-macro-label">Macros</span>
     <div>{{#each macros as |macro|}}<button type="button" data-action="useAction" data-action-id="{{macro.id}}" title="Slot {{macro.slot}}: {{macro.name}}" aria-label="Macro slot {{macro.slot}}: {{macro.name}}"><small>{{macro.slot}}</small><img src="{{macro.img}}" alt="" /></button>{{else}}<em>No Macros Assigned</em>{{/each}}</div>
+  </section>
+  <section class="vr-hud-undo {{#unless economy.undo.available}}is-disabled{{/unless}}">
+    <button class="vr-hud-undo-trigger" type="button" data-action="undoLastAction" aria-haspopup="menu" {{#unless economy.undo.available}}disabled{{/unless}} title="{{#if economy.undo.available}}Undo {{economy.undo.actionName}}; hover for action history{{else}}No action to undo{{/if}}"><span>Undo</span><strong>{{#if economy.undo.available}}{{economy.undo.count}}{{else}}—{{/if}}</strong><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></button>
+    {{#if economy.undo.available}}
+      <div class="vr-hud-undo-history" role="menu" aria-label="Action history">
+        <p>Undo through</p>
+        {{#each economy.undo.entries as |entry|}}
+          <button type="button" role="menuitem" data-action="undoToHistory" data-history-index="{{entry.index}}" title="Restore everything to before {{entry.actionName}}">
+            <i class="{{entry.icon}}" aria-hidden="true"></i><span>{{entry.actionName}}</span><small>{{entry.typeLabel}}</small>
+          </button>
+        {{/each}}
+      </div>
+    {{/if}}
   </section>
 </footer>

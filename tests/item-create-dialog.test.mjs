@@ -20,7 +20,7 @@ assert.deepEqual(groups[0].options.map(option => option.label), [
 assert.deepEqual(groups[1].options.map(option => option.label), [
   "Accessory", "Archetype", "Background", "Discipline", "Flaw", "Origin", "Perk", "Profession", "Species"
 ]);
-assert.deepEqual(groups[2].options.map(option => option.label), ["Ability", "Action"]);
+assert.deepEqual(groups[2].options.map(option => option.label), ["Ability", "Action", "Skill", "Spell"]);
 
 const groupedTypes = groups.flatMap(group => group.options.map(option => option.value));
 assert.deepEqual(new Set(groupedTypes), new Set(registeredTypes.filter(type => type !== "quality")), "every public Item type appears once");

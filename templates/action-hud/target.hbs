@@ -2,7 +2,8 @@
   {{#if target.selected}}
     <div class="vr-hud-portrait-frame"><img class="vr-hud-portrait" src="{{target.img}}" alt="" /></div>
     <div class="vr-hud-target-body">
-      <header><strong>{{target.name}}</strong><span>{{#if target.networked}}Networked{{else}}Observable{{/if}}</span></header>
+      <header><strong>{{target.name}}</strong><span>{{#if target.multiple}}{{target.count}} Targets{{else if target.networked}}Networked{{else}}Observable{{/if}}</span></header>
+      {{#if target.multiple}}<div class="vr-hud-target-selection" aria-label="{{target.count}} targeted actors">{{#each target.selectedActors as |actor|}}<span class="{{#if actor.primary}}primary{{/if}}"><img src="{{actor.img}}" alt="" />{{actor.name}}</span>{{/each}}</div>{{/if}}
       <div class="vr-hud-target-resources">
         {{#each target.resources as |resource|}}
           {{#if resource.visible}}<span><b>{{resource.label}}</b>{{#if resource.exact}}<em>{{resource.value}} / {{resource.max}}</em>{{else}}<em>{{resource.state}}</em>{{/if}}</span>{{/if}}

@@ -59,6 +59,9 @@ registerConfig();
 assert.ok(CONFIG.Item.dataModels.quality, "quality is registered in CONFIG.Item.dataModels");
 assert.ok(CONFIG.Item.dataModels.perk, "perk is registered in CONFIG.Item.dataModels");
 assert.ok(CONFIG.Item.dataModels.flaw, "flaw is registered in CONFIG.Item.dataModels");
+assert.ok(CONFIG.Item.dataModels.spell, "spell is registered in CONFIG.Item.dataModels");
+assert.ok(CONFIG.Item.dataModels.skill, "skill is registered in CONFIG.Item.dataModels");
+assert.equal(CONFIG.Item.dataModels.spell.defineSchema().category.options.initial, "magic", "new Spell Items default to the magic category");
 const qualitySchema = CONFIG.Item.dataModels.quality.defineSchema();
 assert.ok(qualitySchema.kind && qualitySchema.tier && qualitySchema.pillar, "quality exposes catalog identity fields");
 assert.ok(qualitySchema.requirements.fields.requiredDefinitionIds, "quality exposes structured prerequisites");
@@ -98,6 +101,10 @@ const heroSheetSource = fs.readFileSync(new URL("../modules/sheets/hero-sheet.mj
 const itemSheetSource = fs.readFileSync(new URL("../modules/sheets/item-sheet.mjs", import.meta.url), "utf8");
 const settingsSource = fs.readFileSync(new URL("../modules/settings.mjs", import.meta.url), "utf8");
 assert.match(heroSheetSource, /#inventoryItemFromTarget\(actor, target\)/);
+assert.match(heroSheetSource, /root\.addEventListener\("contextmenu", event => this\.#onActionItemContextMenu\(event\)\)/, "Actions workspace binds a right-click menu");
+assert.match(heroSheetSource, /game\?\.user\?\.isGM[\s\S]*?fa-pen-to-square[\s\S]*?>Modify<[\s\S]*?fa-trash[\s\S]*?>Remove</, "only the GM receives Modify and Remove action controls");
+assert.match(heroSheetSource, /item\.sheet\?\.render\(true\)/, "Modify opens the actor-owned action Item sheet");
+assert.match(heroSheetSource, /window: \{ title: "Remove Action" \}[\s\S]*?await item\.delete\(\)/, "Remove confirms before deleting the actor-owned action");
 assert.doesNotMatch(heroSheetSource, /#inventoryItemFromTarget\(target\)/,
   "inventory actions pass the bound sheet actor into their static helper");
 assert.doesNotMatch(physicalTemplate, /name="system\.damage\.(?:dice|die)"/, "weapon sheet omits redundant damage dice fields");

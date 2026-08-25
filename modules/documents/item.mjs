@@ -18,7 +18,9 @@ export class VeilrunnerItem extends Item {
       magazine: "icons/svg/item-bag.svg",
       consumable: "icons/svg/potion.svg",
       container: "icons/svg/chest.svg",
-      equipment: "icons/svg/item-bag.svg"
+      equipment: "icons/svg/item-bag.svg",
+      spell: "icons/svg/light.svg",
+      skill: "icons/svg/book.svg"
     };
     if (defaultImages[this.type]) this.updateSource({ img: defaultImages[this.type] });
   }
@@ -26,7 +28,7 @@ export class VeilrunnerItem extends Item {
   /** Delegate roll. */
   async roll(...args) {
     if (typeof this.system?.roll !== "function") return null;
-    if (["action", "ability"].includes(this.type) && !args[0]?.skipHudExecution) {
+    if (["action", "ability", "spell", "skill"].includes(this.type) && !args[0]?.skipHudExecution) {
       const { executeHudAction } = await import("../apps/action-hud/execution.mjs");
       return executeHudAction(this.actor, this.id, { selections: args[0]?.composer ?? null });
     }

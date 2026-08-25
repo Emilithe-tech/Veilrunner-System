@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { sortPathEntries } from "../modules/data/path-options.mjs";
+import { VEILRUNNER_PERSONA_INDEX_MODIFIERS } from "../modules/data/professions.mjs";
 
 const root = new URL("../", import.meta.url);
 const manifest = JSON.parse(fs.readFileSync(new URL("system.json", root), "utf8"));
@@ -44,12 +45,22 @@ for (const source of legacy) {
   assert.ok(discipline, `migrated Discipline ${source.name}`);
   assert.equal(profession.system.summary, source.flags?.veilrunner?.professionSummary ?? "", `${source.system.profession} summary migrated`);
   assert.equal(discipline.system.summary, source.flags?.veilrunner?.disciplineSummary ?? "", `${source.name} summary migrated`);
-  for (const field of ["quote", "primaryWeapon", "primaryAttributes", "bonusAttributes", "bonusSkill", "persona", "sourcePage"]) {
+  for (const field of ["quote", "primaryWeapon", "primaryAttributes", "bonusAttributes", "bonusSkill", "sourcePage"]) {
     assert.deepEqual(discipline.system[field], source.system[field], `${source.name} ${field} migrated`);
   }
+  assert.deepEqual(
+    discipline.system.persona,
+    VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${source.system.profession}:${source.system.discipline}`] ?? source.system.persona,
+    `${source.name} Persona Index adjustments migrated`
+  );
   assert.deepEqual(discipline.system.abilities, source.flags?.veilrunner?.abilities ?? [], `${source.name} abilities migrated`);
   assert.equal(discipline.system.source, source.flags?.veilrunner?.source ?? "", `${source.name} source migrated`);
   assert.equal(discipline.system.pageImage, normalizedArt(source.system.pageImage), `${source.name} artwork migrated`);
+}
+
+for (const discipline of disciplines.filter(entry => entry.system.summary || entry.system.description)) {
+  assert.ok(discipline.system.persona.length, `${discipline.name} has Persona Index adjustments`);
+  assert.ok(discipline.system.persona.every(value => /^\+\d+\s+\S/.test(value)), `${discipline.name} shows numeric Persona Index adjustments`);
 }
 
 console.log(`path compendia checks passed (${archetypes.length} archetypes, ${professions.length} professions, ${disciplines.length} disciplines)`);

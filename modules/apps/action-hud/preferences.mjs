@@ -10,11 +10,31 @@ function uniqueStrings(values, limit = 60) {
   return [...new Set((Array.isArray(values) ? values : []).map(value => String(value ?? "").trim()).filter(Boolean))].slice(0, limit);
 }
 
+function safeSelections(source = {}) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return {};
+  return Object.fromEntries(Object.entries(source).slice(0, 40).map(([key, value]) => [String(key).slice(0, 80), String(value ?? "").slice(0, 240)]));
+}
+
+function normalizePrepared(entries = []) {
+  if (!Array.isArray(entries)) return [];
+  return entries.slice(0, 12).flatMap((entry, index) => {
+    const actionId = String(entry?.actionId ?? "").trim();
+    if (!actionId) return [];
+    const targets = (Array.isArray(entry.targets) ? entry.targets : []).slice(0, 20).flatMap(target => {
+      const uuid = String(target?.uuid ?? "").trim();
+      if (!uuid) return [];
+      return [{ uuid, name: String(target?.name ?? "Target").slice(0, 120), img: String(target?.img ?? "").slice(0, 500) }];
+    });
+    return [{ id: String(entry.id ?? `${actionId}-${index}`).slice(0, 120), combatId: String(entry.combatId ?? "").slice(0, 120), actionId, selections: safeSelections(entry.selections), targets }];
+  });
+}
+
 export function defaultHudPreferences() {
   return {
     pins: [],
     recent: [],
     recentWeapons: [],
+    prepared: [],
     remembered: {},
     filters: { domain: "", query: "", weaponFamily: "", weaponCategory: "", traits: [] },
     workspace: HUD_WORKSPACES.NORMAL,
@@ -33,6 +53,7 @@ export function normalizeHudPreferences(source = {}) {
     pins: uniqueStrings(source.pins, 24),
     recent: uniqueStrings(source.recent, 24),
     recentWeapons: uniqueStrings(source.recentWeapons, 12),
+    prepared: normalizePrepared(source.prepared),
     remembered: source.remembered && typeof source.remembered === "object" ? source.remembered : {},
     filters: {
       ...defaults.filters,
@@ -61,6 +82,16 @@ export async function setHudPreferences(actor, changes = {}, user = globalThis.g
   return all[key];
 }
 
+/** Replace one actor's HUD preferences exactly, for mechanical history restoration. */
+export async function replaceHudPreferences(actor, preferences = {}, user = globalThis.game?.user) {
+  const normalized = normalizeHudPreferences(preferences);
+  if (!actor || !user?.setFlag) return normalized;
+  const all = globalThis.foundry?.utils?.deepClone?.(user.getFlag(systemId(), FLAG) ?? {}) ?? { ...(user.getFlag(systemId(), FLAG) ?? {}) };
+  all[actorKey(actor)] = normalized;
+  await user.setFlag(systemId(), FLAG, all);
+  return normalized;
+}
+
 export async function recordRecentAction(actor, actionId, selections = null, user = globalThis.game?.user) {
   if (!actor || !actionId) return;
   const current = getHudPreferences(actor, user);
@@ -75,4 +106,22 @@ export async function togglePinnedAction(actor, actionId, user = globalThis.game
   const id = String(actionId ?? "");
   const pins = current.pins.includes(id) ? current.pins.filter(entry => entry !== id) : [...current.pins, id].slice(0, 12);
   return setHudPreferences(actor, { pins }, user);
+}
+
+export async function prepareHudAction(actor, actionId, selections = {}, targetTokens = [...(globalThis.game?.user?.targets ?? [])], user = globalThis.game?.user) {
+  const current = getHudPreferences(actor, user);
+  const combatId = String(globalThis.game?.combat?.id ?? "");
+  const randomId = globalThis.foundry?.utils?.randomID?.(16) ?? `${Date.now()}-${current.prepared.length}`;
+  const targets = targetTokens.map(token => {
+    const document = token?.document ?? token;
+    return { uuid: document?.uuid ?? token?.uuid ?? "", name: token?.actor?.name ?? document?.name ?? "Target", img: token?.actor?.system?.portraitImage || token?.actor?.img || document?.texture?.src || "" };
+  }).filter(target => target.uuid);
+  const entry = normalizePrepared([{ id: randomId, combatId, actionId, selections, targets }])[0];
+  if (!entry) return current;
+  return setHudPreferences(actor, { prepared: [...current.prepared.filter(prepared => prepared.combatId === combatId), entry].slice(-12) }, user);
+}
+
+export async function removePreparedHudAction(actor, preparedId, user = globalThis.game?.user) {
+  const current = getHudPreferences(actor, user);
+  return setHudPreferences(actor, { prepared: current.prepared.filter(entry => entry.id !== preparedId) }, user);
 }

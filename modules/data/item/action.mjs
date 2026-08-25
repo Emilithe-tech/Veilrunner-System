@@ -2,16 +2,19 @@ import { actionTreeSchema } from "./action-tree.mjs";
 import { isItemEquipped } from "../../rules/item-rules.mjs";
 import { evaluateActionAvailability } from "../../apps/action-hud/availability.mjs";
 import { hasItemIntent, itemIdentityFields, migrateItemIdentityData } from "./identity.mjs";
+import { migrateActionSystemData } from "./action-formula.mjs";
 
 const { StringField, NumberField, BooleanField, HTMLField, ArrayField, SchemaField } = foundry.data.fields;
 
 /** Action data. */
 export default class ActionData extends foundry.abstract.TypeDataModel {
   static LOCALIZATION_PREFIXES = ["VEILRUNNER.Action"];
+  static DEFAULT_CATEGORY = "actions";
 
   static defineSchema() {
     return {
       ...itemIdentityFields(),
+      actionMode: new StringField({ required: true, blank: false, initial: "action", choices: { action: "Action", reaction: "Reaction", ability: "Ability", spell: "Spell", digital: "Digital" } }),
       activationKind: new StringField({ required: true, blank: false, initial: "action", choices: { action: "Action", ability: "Ability" } }),
       actionType: new StringField({
         required: true,
@@ -19,7 +22,6 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
         initial: "standard",
         choices: {
           standard: "VEILRUNNER.ActionType.standard",
-          bonus: "VEILRUNNER.ActionType.bonus",
           reaction: "VEILRUNNER.ActionType.reaction",
           free: "VEILRUNNER.ActionType.free"
         }
@@ -27,7 +29,7 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
       category: new StringField({
         required: true,
         blank: false,
-        initial: "actions",
+        initial: this.DEFAULT_CATEGORY,
         choices: {
           actions: "VEILRUNNER.ActionCategory.actions",
           reactions: "VEILRUNNER.ActionCategory.reactions",
@@ -44,6 +46,7 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
       damageDice: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
       damageDie: new NumberField({ required: true, integer: true, min: 2, initial: 6, nullable: false }),
       damageLevelInterval: new NumberField({ required: true, integer: true, min: 1, initial: 3, nullable: false }),
+      damageFormula: new StringField({ required: true, blank: true, initial: "" }),
       cost: new StringField({ required: true, blank: true, initial: "" }),
       rollFormula: new StringField({ required: true, blank: true, initial: "" }),
       selector: new StringField({ required: true, blank: true, initial: "action" }),
@@ -67,7 +70,7 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
   }
 
   static migrateData(source) {
-    return migrateItemIdentityData(super.migrateData(source));
+    return migrateActionSystemData(migrateItemIdentityData(super.migrateData(source)), { complete: false });
   }
 
   /** Roll action. */
@@ -77,7 +80,8 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
       const availability = evaluateActionAvailability({ actor, action: options.composer ? { ...item, composerSelections: options.composer } : item, target: [...(game.user?.targets ?? [])][0]?.actor ?? null });
       if (!availability.available) return ui.notifications.warn(availability.reason);
     }
-    const name = foundry.utils.escapeHTML(item.name);
+    const modifierNames = (options.resolvedAction?.selectedSpellModifiers ?? []).map(modifier => `${modifier.label}${modifier.count > 1 ? ` x${modifier.count}` : ""}`);
+    const name = foundry.utils.escapeHTML(`${item.name}${modifierNames.length ? ` — ${modifierNames.join(", ")}` : ""}`);
     const equippedItems = actor.items.filter(document => isItemEquipped(actor, document));
     const requiredTypes = item.system?.requiredItemTypes ?? [];
     const requiredTraits = item.system?.requiredItemTraits ?? [];
@@ -127,17 +131,29 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
     const selector = String(item.system?.selector || "action");
     const formula = String(item.system?.rollFormula || "").trim();
     let roll = null;
+    let rollData = actor.getRollData();
     if (formula) {
       const context = actor.getItemRuleContext?.({
         selectors: [selector, "action", `action:${item.id}`],
         options: ["action:roll", `action:${item.id}`, `action:category:${item.system?.category ?? "actions"}`, ...(item.system?.traits ?? []).map(trait => `trait:${trait}`), ...Object.entries(options.composer ?? {}).map(([key, value]) => `action:${item.id}:choice:${key}:${value}`)]
       });
       const modifier = (context?.modifiers?.total ?? 0) + (selector === "attack" ? Number(options.mapPenalty ?? 0) : 0);
-      roll = await new Roll(`${formula}${modifier ? ` + ${modifier}` : ""}`, context?.rollData ?? actor.getRollData()).evaluate();
+      rollData = context?.rollData ?? rollData;
+      roll = await new Roll(`${formula}${modifier ? ` + ${modifier}` : ""}`, rollData).evaluate();
     }
+    const damageFormula = String(options.resolvedAction?.damageFormula ?? "").trim();
+    const damage = damageFormula ? await new Roll(damageFormula, rollData).evaluate() : null;
+    if (roll && damage) await damage.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      flavor: `${name} | ${item.system?.damageType ? `${foundry.utils.escapeHTML(item.system.damageType)} ` : ""}Damage`
+    });
     if (roll) return roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor }),
       flavor: `${name}${applied.length ? ` — Effects applied to ${foundry.utils.escapeHTML([...new Set(applied)].join(", "))}` : ""}`
+    });
+    if (damage) return damage.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor }),
+      flavor: `${name} | ${item.system?.damageType ? `${foundry.utils.escapeHTML(item.system.damageType)} ` : ""}Damage`
     });
     return ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),

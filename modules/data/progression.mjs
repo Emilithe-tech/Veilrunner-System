@@ -28,6 +28,11 @@ export function skillPointsForLevel(level) {
   return 10 * normalizedLevel(level);
 }
 
+/** Starting credits: 1,000c at Level 1, plus 100c for each additional level. */
+export function creditsForLevel(level) {
+  return 1000 + ((normalizedLevel(level) - 1) * 100);
+}
+
 /** @deprecated Use the pool-specific helpers. */
 export function pointsForLevel(level) {
   return attributePointsForLevel(level);

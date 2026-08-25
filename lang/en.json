@@ -13,6 +13,8 @@
     },
     "Item": {
       "action": "Action",
+      "spell": "Spell",
+      "skill": "Skill",
       "accessory": "Accessory",
       "ability": "Ability",
       "armor": "Armor",

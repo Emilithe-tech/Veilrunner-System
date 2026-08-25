@@ -1,4 +1,4 @@
-import { equipPhysicalItem, unequipPhysicalItem } from "../../items/equipment.mjs";
+import { canSpendEquipmentActions, equipPhysicalItem, unequipPhysicalItem } from "../../items/equipment.mjs";
 import { equipmentBySlot, itemRequiredSlots } from "../../rules/item-rules.mjs";
 
 export async function switchEquippedWeapon(actor, weapon) {
@@ -6,6 +6,7 @@ export async function switchEquippedWeapon(actor, weapon) {
   const equipment = equipmentBySlot(actor);
   const conflicts = [...new Set(itemRequiredSlots(weapon).map(slot => equipment[slot]).filter(id => id && id !== weapon.id))]
     .map(id => actor.items.get(id)).filter(Boolean);
+  if (!canSpendEquipmentActions(actor, conflicts.length + 1)) return false;
   for (const conflict of conflicts) await unequipPhysicalItem(actor, conflict);
   return equipPhysicalItem(actor, weapon);
 }
@@ -22,4 +23,3 @@ export async function chooseWeapon(actor, weapons = Array.from(actor?.items ?? [
   });
   return weapons.find(weapon => weapon.id === id) ?? null;
 }
-

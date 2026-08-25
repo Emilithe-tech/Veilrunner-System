@@ -8,6 +8,7 @@ import { getHudPreferences } from "./preferences.mjs";
 import { getPanState, panFidelity, qualitativeHealth } from "./pan.mjs";
 import { visibleEffects } from "./visibility.mjs";
 import { projectedResourceCosts, resolveHudActionConfiguration } from "./resolver.mjs";
+import { getHudUndoHistory, getHudUndoRecord } from "./undo.mjs";
 
 const number = value => Math.max(0, Number(value) || 0);
 const pool = (resources, key) => resources?.[key] ?? (key === "shields" ? resources?.shield : null) ?? { value: 0, max: 0 };
@@ -58,11 +59,68 @@ function previewFor(actor, action, selections = {}) {
   return projectedResourceCosts(actor, resolveHudActionConfiguration(actor, action, selections));
 }
 
+export function projectMovementTrack(economy) {
+  const unitMeters = 2;
+  const movementLimit = Math.max(unitMeters, number(economy?.movementLimit) || 8);
+  const maximumMeters = movementLimit;
+  const remainingMeters = Math.min(maximumMeters, Math.max(0, number(economy?.movement)));
+  const maximumUnits = Math.ceil(maximumMeters / unitMeters);
+  const remainingUnits = Math.ceil(remainingMeters / unitMeters);
+  const unitsPerBox = maximumUnits > 18 ? 2 : 1;
+  const usedUnits = Math.max(0, maximumUnits - remainingUnits);
+  const color = maximumMeters <= 12 ? "blue" : maximumMeters <= 24 ? "orange" : "white";
+  const boxes = Array.from({ length: Math.ceil(maximumUnits / unitsPerBox) }, (_, index) => {
+    const firstUnit = index * unitsPerBox;
+    const capacity = Math.min(unitsPerBox, maximumUnits - firstUnit);
+    const used = Math.min(capacity, Math.max(0, usedUnits - firstUnit));
+    const value = capacity - used;
+    return {
+      value,
+      capacity,
+      filled: value > 0,
+      compressed: unitsPerBox > 1,
+      color,
+      meters: capacity * unitMeters
+    };
+  });
+  return { boxes, maximumMeters, remainingMeters, unitsPerBox, unitMeters };
+}
+
+function economyProjection(actor) {
+  const economy = getCombatEconomy(actor);
+  if (!economy) return null;
+  const undo = getHudUndoRecord(actor);
+  const undoHistory = getHudUndoHistory(actor);
+  const movementTrack = projectMovementTrack(economy);
+  const undoEntries = undoHistory.map((record, index) => ({
+    index,
+    actionName: record.actionName || "Action",
+    type: record.type === "movement" ? "movement" : "action",
+    typeLabel: record.type === "movement" ? "Movement" : "Action",
+    icon: record.type === "movement" ? "fa-solid fa-person-running" : "fa-solid fa-bolt"
+  })).reverse();
+  return {
+    ...economy,
+    movement: movementTrack.remainingMeters,
+    movementTrack,
+    undo: { available: Boolean(undo), actionName: undo?.actionName ?? "", count: undoHistory.length, entries: undoEntries },
+    actionHexes: Array.from({ length: economy.limits.actions }, (_, index) => ({ filled: index < economy.actions })),
+    reactionHexes: Array.from({ length: economy.limits.reactions }, (_, index) => ({ filled: index < economy.reactions }))
+  };
+}
+
 export function buildHudProjection(actor, state = {}) {
   const preferences = getHudPreferences(actor);
-  const targetToken = state.targetToken ?? [...(globalThis.game?.user?.targets ?? [])][0] ?? null;
+  const selectedTargetTokens = state.targetToken ? [state.targetToken] : [...(globalThis.game?.user?.targets ?? [])];
+  const targetToken = selectedTargetTokens[0] ?? null;
   const target = targetToken?.actor ?? null;
-  const targetPresentation = getTargetIntelPresentation(targetToken, { viewerActor: actor });
+  const targetPresentations = selectedTargetTokens.map(token => getTargetIntelPresentation(token, { viewerActor: actor }));
+  const targetPresentation = {
+    ...(targetPresentations[0] ?? getTargetIntelPresentation(null, { viewerActor: actor })),
+    count: targetPresentations.length,
+    multiple: targetPresentations.length > 1,
+    selectedActors: targetPresentations.map((entry, index) => ({ name: entry.name, img: entry.img, primary: index === 0 }))
+  };
   const assets = assetProjection(actor);
   const rawActions = discoverHudActions(actor, { user: globalThis.game?.user, targetToken, assets });
   const allActions = rawActions.map(action => projectAction(actor, action, target, targetPresentation, preferences.pins.includes(action.id)));
@@ -76,6 +134,17 @@ export function buildHudProjection(actor, state = {}) {
   const projectedRecent = recent.map(action => projectAction(actor, action, target, targetPresentation, false));
   const equipped = Array.from(actor.items ?? []).filter(item => isItemEquipped(actor, item) && ["weapon", "shield", "equipment", "accessory", "consumable"].includes(item.type)).slice(0, 2);
   const context = rawActions.filter(action => action.generated && ["reload", "load", "unload"].includes(action.operation)).map(action => projectAction(actor, action, target, targetPresentation, false)).slice(0, 2);
+  const currentTargetUuids = selectedTargetTokens.map(token => String(token?.document?.uuid ?? token?.uuid ?? "")).filter(Boolean).sort();
+  const prepared = preferences.prepared.flatMap(entry => {
+    if (entry.combatId && entry.combatId !== String(globalThis.game?.combat?.id ?? "")) return [];
+    const source = rawActions.find(action => action.id === entry.actionId);
+    if (!source) return [];
+    const resolved = resolveHudActionConfiguration(actor, source, entry.selections);
+    const projected = projectAction(actor, resolved, target, targetPresentation, preferences.pins.includes(source.id));
+    const plannedTargetUuids = entry.targets.map(planned => planned.uuid).sort();
+    const targetsMatch = plannedTargetUuids.length === currentTargetUuids.length && plannedTargetUuids.every((uuid, index) => uuid === currentTargetUuids[index]);
+    return [{ ...projected, preparedId: entry.id, selections: entry.selections, plannedTargets: entry.targets, plannedTargetCount: entry.targets.length, plannedTargetNames: entry.targets.map(planned => planned.name).join(", "), selectedTargetCount: currentTargetUuids.length, targetsMatch }];
+  });
   const composerAction = rawActions.find(action => action.id === state.composerActionId) ?? null;
   const resources = actor.system?.resources ?? {};
   const familyDefinitions = globalThis.game?.settings?.get?.(globalThis.game.system.id, "combatHudWeaponFamilies") ?? [];
@@ -94,7 +163,7 @@ export function buildHudProjection(actor, state = {}) {
   return {
     actor: { id: actor.id, uuid: actor.uuid, name: actor.name, img: actor.system?.portraitImage || actor.img, level: number(actor.system?.level) },
     resources: ["health", "armor", "shields", "barriers", "mana", "stamina"].map(key => resourceView(resources, key)),
-    economy: getCombatEconomy(actor),
+    economy: economyProjection(actor),
     panState: getPanState(actor),
     party: partyProjection(actor),
     target: targetPresentation,
@@ -103,6 +172,7 @@ export function buildHudProjection(actor, state = {}) {
     pinned: projectedPins,
     recent: projectedRecent,
     context,
+    prepared,
     macros: hotbarMacroActions(globalThis.game?.user).map(action => projectAction(actor, action, target, targetPresentation, false)),
     equipped: equipped.map(item => ({ id: item.id, name: item.name, img: item.img, type: item.type })),
     weapons: filteredWeapons,

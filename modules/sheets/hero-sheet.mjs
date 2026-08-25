@@ -13,6 +13,7 @@ import { resolveActorActions } from "../data/item/identity.mjs";
 import { applyItemWear } from "../items/durability.mjs";
 import { equipmentBySlot, itemRequiredSlots } from "../rules/item-rules.mjs";
 import { EQUIPMENT_SLOT_COLUMNS, PHYSICAL_ITEM_TYPES, WEAPON_TYPE_GROUPS, itemRarityData, normalizeWeaponType } from "../data/item/physical.mjs";
+import { legacyActionDamageFormula, resolveActionDamageFormula } from "../data/item/action-formula.mjs";
 
 const DETAILS_CATEGORIES = [
   { key: "party", icon: "fa-solid fa-users", label: "VEILRUNNER.Party" },
@@ -632,6 +633,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   #hookIds = [];
   #inventoryItemContextMenu = null;
   #inventoryItemContextDismiss = null;
+  #actionItemContextMenu = null;
+  #actionItemContextDismiss = null;
   #pendingNavAnimation = null;
   #pendingMainTabAnimation = "";
   #pendingDetailsTabAnimation = "";
@@ -692,6 +695,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   /** @override */
   async _onClose(options) {
     this.#closeInventoryItemContextMenu();
+    this.#closeActionItemContextMenu();
     this.#unbindPartyHooks();
     await super._onClose(options);
   }
@@ -823,8 +827,83 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   /** Select elements do not use the application's button action listener. */
   #bindActionWorkspaceControls() {
     const sort = this.element?.querySelector("select[data-action='setActionCardSort']");
-    if (!sort) return;
-    sort.addEventListener("change", event => VeilrunnerHeroSheet.#onSetActionCardSort.call(this, event, sort));
+    if (sort && !sort.dataset.veilrunnerActionSortBinding) {
+      sort.dataset.veilrunnerActionSortBinding = "true";
+      sort.addEventListener("change", event => VeilrunnerHeroSheet.#onSetActionCardSort.call(this, event, sort));
+    }
+    const root = this.element;
+    if (root && !root.dataset.veilrunnerActionContextBinding) {
+      root.dataset.veilrunnerActionContextBinding = "true";
+      root.addEventListener("contextmenu", event => this.#onActionItemContextMenu(event));
+    }
+  }
+
+  #onActionItemContextMenu(event) {
+    if (this.section !== "actions" || !globalThis.game?.user?.isGM) return;
+    const row = event.target.closest?.(".actions-card[data-item-id], .actions-list-row[data-item-id]");
+    const item = this.actor.items.get(row?.dataset.itemId);
+    if (!item || !["action", "ability", "spell", "skill"].includes(item.type)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.#openActionItemContextMenu(event, item);
+  }
+
+  #openActionItemContextMenu(event, item) {
+    this.#closeActionItemContextMenu();
+    const menu = document.createElement("menu");
+    menu.className = "vr-action-item-context-menu";
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+
+    const modify = document.createElement("button");
+    modify.type = "button";
+    modify.className = "modify";
+    modify.innerHTML = '<i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span>Modify</span>';
+    modify.addEventListener("click", () => {
+      this.#closeActionItemContextMenu();
+      item.sheet?.render(true);
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "remove";
+    remove.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i><span>Remove</span>';
+    remove.addEventListener("click", async () => {
+      this.#closeActionItemContextMenu();
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Remove Action" },
+        content: `<p>Remove <strong>${foundry.utils.escapeHTML(item.name)}</strong> from ${foundry.utils.escapeHTML(this.actor.name)}?</p>`,
+        modal: true
+      });
+      if (!confirmed || !globalThis.game?.user?.isGM || item.parent?.id !== this.actor.id) return;
+      try {
+        if (this.actionDetailsItemId === item.id) {
+          this.actionDetailsItemId = null;
+          this.actionDetailsDrawer = false;
+          this.#detailsOpen = false;
+        }
+        await item.delete();
+      } catch (error) {
+        console.error("Veilrunner | Failed to remove actor action", error);
+        ui.notifications.error(`Could not remove ${item.name}.`);
+      }
+    });
+
+    menu.append(modify, remove);
+    menu.addEventListener("contextmenu", innerEvent => innerEvent.preventDefault());
+    document.body.append(menu);
+    this.#actionItemContextMenu = menu;
+    this.#actionItemContextDismiss = dismissEvent => {
+      if (!menu.contains(dismissEvent.target)) this.#closeActionItemContextMenu();
+    };
+    document.addEventListener("pointerdown", this.#actionItemContextDismiss, true);
+  }
+
+  #closeActionItemContextMenu() {
+    this.#actionItemContextMenu?.remove();
+    this.#actionItemContextMenu = null;
+    if (this.#actionItemContextDismiss) document.removeEventListener("pointerdown", this.#actionItemContextDismiss, true);
+    this.#actionItemContextDismiss = null;
   }
 
   /** Enable Party-list scrolling only when the rendered member rows overflow its available space. */
@@ -1437,13 +1516,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     this.#hookIds.push(["updateActor", id]);
     const itemId = Hooks.on("updateItem", (item) => {
       if (!this.rendered) return;
-      if (item.parent?.type === "party") this.#debouncedRender();
+      if (item.parent?.id === this.actor.id || item.parent?.type === "party") this.#debouncedRender();
     });
     this.#hookIds.push(["updateItem", itemId]);
     for (const hook of ["createItem", "deleteItem"]) {
       const hookId = Hooks.on(hook, (item) => {
         if (!this.rendered) return;
-        if (item.parent?.type === "party") this.#debouncedRender();
+        if (item.parent?.id === this.actor.id || item.parent?.type === "party") this.#debouncedRender();
       });
       this.#hookIds.push([hook, hookId]);
     }
@@ -1681,7 +1760,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       },
       {
         label: "Movement",
-        value: "0 m",
+        value: "8 m",
         rule: "Movement will incorporate encumbrance, species, and perk/flaw modifiers."
       },
       { label: "Mana Capacity", value: Math.max(0, Number(system.resources?.mana?.max) || 0), rule: "Maximum Mana capacity." },
@@ -1710,20 +1789,17 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.subTabIndicatorOffset = context.subTabIndex * 100;
 
     const sortedItems = [...actor.items.contents].sort((a, b) => a.sort - b.sort);
-    context.actions = sortedItems.filter(i => i.type === "action");
+    context.actions = sortedItems.filter(i => ["action", "spell", "skill"].includes(i.type));
     context.favoriteActions = context.actions.filter(i => i.system?.favorite);
     context.standardActions = context.actions.filter(i => {
       const category = i.system?.category || "actions";
       return i.system?.activationKind !== "ability" && category === "actions" && i.system?.actionType !== "reaction";
     });
-    context.reactionActions = context.actions.filter(i => {
-      const category = i.system?.category || "actions";
-      return i.system?.activationKind !== "ability" && (category === "reactions" || (category === "actions" && i.system?.actionType === "reaction"));
-    });
+    context.reactionActions = context.actions.filter(i => i.system?.activationKind !== "ability" && (i.system?.category === "reactions" || i.system?.actionType === "reaction"));
     context.magicActions = context.actions.filter(i => i.system?.activationKind !== "ability" && i.system?.category === "magic");
-    context.techActions = context.actions.filter(i => i.system?.activationKind !== "ability" && i.system?.category === "tech");
-    context.abilities = sortedItems.filter(i => i.type === "ability" || (i.type === "action" && i.system?.activationKind === "ability"));
-    context.featuredAbilities = context.abilities.filter(i => i.system?.featured);
+    context.techActions = context.actions.filter(i => i.system?.activationKind !== "ability" && ["tech", "digital"].includes(i.system?.category));
+    context.abilities = sortedItems.filter(i => i.type === "ability" || (["action", "spell", "skill"].includes(i.type) && i.system?.activationKind === "ability"));
+    context.featuredAbilities = context.abilities.filter(i => i.system?.favorite || i.system?.featured);
     context.favoriteItems = [...context.favoriteActions, ...context.featuredAbilities]
       .sort((a, b) => a.sort - b.sort);
     const actionItems = this.subTabs.actions === "favorites" ? context.favoriteItems
@@ -1740,11 +1816,14 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       const damageType = ACTION_DAMAGE_TYPES.includes(item.system?.damageType) ? item.system.damageType : "";
       const maxLevel = Math.max(1, Number(item.system?.maxLevel) || 1);
       const currentLevel = Math.min(maxLevel, Math.max(1, Number(item.system?.currentLevel) || 1));
-      const damageDice = Math.max(0, Number(item.system?.damageDice) || 0);
-      const damageDie = Math.max(2, Number(item.system?.damageDie) || 6);
-      const damageLevelInterval = Math.max(1, Number(item.system?.damageLevelInterval) || 3);
-      const damageMultiplier = 1 + Math.floor((currentLevel - 1) / damageLevelInterval);
-      const damageValue = damageDice ? `${damageDice * damageMultiplier}d${damageDie}` : "";
+      const attributePath = String(item.system?.governingAttribute ?? "").replace(/^system\./, "");
+      const attributeKey = attributePath.split(".").filter(Boolean).at(-1) ?? "attribute";
+      const damageOutcome = resolveActionDamageFormula(legacyActionDamageFormula(item.system), {
+        level: currentLevel,
+        attributeValue: foundry.utils.getProperty(actor.system, attributePath),
+        attributeLabel: attributeKey.charAt(0).toUpperCase() + attributeKey.slice(1)
+      });
+      const damageValue = damageOutcome.available ? damageOutcome.formula : "";
       return {
         id: item.id,
         img: item.img,

@@ -2,15 +2,23 @@ import { buildHudProjection } from "./projection.mjs";
 import { HUD_WORKSPACES, EFFECT_DISCLOSURE, systemId } from "./constants.mjs";
 import { executeHudAction } from "./execution.mjs";
 import { combatantForActor, economyCycleKey, ensureCombatEconomy, getCombatEconomy, resetCombatEconomy } from "./economy.mjs";
-import { getHudPreferences, setHudPreferences, togglePinnedAction } from "./preferences.mjs";
+import { getHudPreferences, prepareHudAction, removePreparedHudAction, setHudPreferences, togglePinnedAction } from "./preferences.mjs";
 import { switchEquippedWeapon } from "./weapons.mjs";
 import { grantTargetIntel } from "./target-intel.mjs";
+import { recordHudMovementUndo, undoHudActionsThrough, undoLastHudAction } from "./undo.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+let gmSelectedCombatActorId = "";
 
 function controlledCombatActor() {
   const combat = globalThis.game?.combat;
   if (!combat) return null;
+  if (globalThis.game?.user?.isGM && gmSelectedCombatActorId) {
+    const selected = Array.from(combat.combatants ?? []).find(combatant => combatant.actor?.id === gmSelectedCombatActorId)?.actor;
+    if (selected) return selected;
+    gmSelectedCombatActorId = "";
+  }
   const controlled = (globalThis.canvas?.tokens?.controlled ?? []).map(token => token.actor).filter(actor => actor && combatantForActor(actor, combat) && (globalThis.game.user.isGM || actor.isOwner));
   if (controlled.length === 1) return controlled[0];
   const active = globalThis.game?.veilrunner?.getActivePhaseCombatants?.() ?? [combat.combatant].filter(Boolean);
@@ -21,7 +29,7 @@ function controlledCombatActor() {
 }
 
 function actionFromProjection(view, id) {
-  return [...view.allActions, ...view.pinned, ...view.recent, ...view.context].find(action => action.id === id)
+  return [...view.allActions, ...view.pinned, ...view.recent, ...view.context, ...view.prepared].find(action => action.id === id)
     ?? view.assets.flatMap(asset => asset.actions).find(action => action.id === id)
     ?? (view.composer?.action?.id === id ? view.composer.action : null);
 }
@@ -43,6 +51,35 @@ function sidebarIsCollapsed(sidebar) {
   return apiCollapsed === true || Boolean(sidebar?.classList?.contains("collapsed") || sidebar?.closest?.("#ui-right")?.classList?.contains("collapsed"));
 }
 
+let sidebarBoundsFrame = null;
+let sidebarBoundsSyncId = 0;
+
+function syncHudBoundsDuringSidebarTransition(hud) {
+  const syncId = ++sidebarBoundsSyncId;
+  if (sidebarBoundsFrame !== null) window.cancelAnimationFrame(sidebarBoundsFrame);
+  const content = document.querySelector("#sidebar-content");
+  hud?.element?.classList.add("is-syncing-sidebar");
+  const sync = () => {
+    if (syncId !== sidebarBoundsSyncId) return;
+    hud?.syncBounds();
+    sidebarBoundsFrame = window.requestAnimationFrame(sync);
+  };
+  const stop = () => {
+    if (syncId !== sidebarBoundsSyncId) return;
+    content?.removeEventListener("transitionend", onTransitionEnd);
+    if (sidebarBoundsFrame !== null) window.cancelAnimationFrame(sidebarBoundsFrame);
+    sidebarBoundsFrame = null;
+    hud?.syncBounds();
+    hud?.element?.classList.remove("is-syncing-sidebar");
+  };
+  const onTransitionEnd = event => {
+    if (event.target === content && ["margin-left", "margin-right"].includes(event.propertyName)) stop();
+  };
+  content?.addEventListener("transitionend", onTransitionEnd);
+  sync();
+  window.setTimeout(stop, 300);
+}
+
 export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "veilrunner-action-hud",
@@ -54,6 +91,10 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
       setWorkspace: VeilrunnerActionHud.onSetWorkspace,
       setDomain: VeilrunnerActionHud.onSetDomain,
       useAction: VeilrunnerActionHud.onUseAction,
+      prepareAction: VeilrunnerActionHud.onPrepareAction,
+      prepareComposer: VeilrunnerActionHud.onPrepareComposer,
+      executePrepared: VeilrunnerActionHud.onExecutePrepared,
+      removePrepared: VeilrunnerActionHud.onRemovePrepared,
       pinAction: VeilrunnerActionHud.onPinAction,
       openComposer: VeilrunnerActionHud.onOpenComposer,
       executeComposer: VeilrunnerActionHud.onExecuteComposer,
@@ -64,7 +105,11 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
       rollSave: VeilrunnerActionHud.onRollSave,
       selectAsset: VeilrunnerActionHud.onSelectAsset,
       grantIntel: VeilrunnerActionHud.onGrantIntel,
-      toggleMotion: VeilrunnerActionHud.onToggleMotion
+      toggleMotion: VeilrunnerActionHud.onToggleMotion,
+      toggleParty: VeilrunnerActionHud.onToggleParty,
+      adjustSpellModifier: VeilrunnerActionHud.onAdjustSpellModifier,
+      undoLastAction: VeilrunnerActionHud.onUndoLastAction,
+      undoToHistory: VeilrunnerActionHud.onUndoToHistory
     }
   };
 
@@ -77,13 +122,14 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
   };
 
   actor = null;
-  state = { workspace: HUD_WORKSPACES.NORMAL, domain: "", query: "", composerActionId: "", composerSelections: {}, selectedAssetUuid: "", requestedSave: null };
+  state = { workspace: HUD_WORKSPACES.NORMAL, domain: "", query: "", composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false, selectedAssetUuid: "", requestedSave: null, partyOpen: true };
   #searchTimer = null;
+  #composerTimer = null;
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     const view = buildHudProjection(this.actor, this.state);
-    return { ...context, ...view, isGM: Boolean(game.user?.isGM), hud: this.state, workspaceNormal: this.state.workspace === HUD_WORKSPACES.NORMAL, workspaceLibrary: this.state.workspace === HUD_WORKSPACES.LIBRARY, workspaceWeapons: this.state.workspace === HUD_WORKSPACES.WEAPONS, workspaceComposer: this.state.workspace === HUD_WORKSPACES.COMPOSER, workspaceAsset: this.state.workspace === HUD_WORKSPACES.ASSET, workspaceSaves: this.state.workspace === HUD_WORKSPACES.SAVES, requestedSave: this.state.requestedSave };
+    return { ...context, ...view, isGM: Boolean(game.user?.isGM), hud: this.state, partyOpen: this.state.partyOpen !== false, workspaceNormal: this.state.workspace === HUD_WORKSPACES.NORMAL, workspaceLibrary: this.state.workspace === HUD_WORKSPACES.LIBRARY, workspaceWeapons: this.state.workspace === HUD_WORKSPACES.WEAPONS, workspaceComposer: this.state.workspace === HUD_WORKSPACES.COMPOSER, workspaceAsset: this.state.workspace === HUD_WORKSPACES.ASSET, workspaceSaves: this.state.workspace === HUD_WORKSPACES.SAVES, composerPreparing: Boolean(this.state.composerPreparing), requestedSave: this.state.requestedSave };
   }
 
   _onRender(context, options) {
@@ -91,6 +137,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     this.syncBounds();
     window.requestAnimationFrame(() => this.syncBounds());
     this.element.dataset.panState = context.panState;
+    this.element.classList.toggle("composer-open", context.workspaceComposer);
     const panConfig = game.settings.get(systemId(), "combatHudPanConfig") ?? {};
     this.element.classList.toggle("reduce-motion", context.preferences.reducedMotion || context.preferences.reduceGlitch || panConfig.glitchEnabled === false);
     const search = this.element.querySelector("[data-hud-search]");
@@ -107,10 +154,25 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
       window.clearTimeout(this.#searchTimer);
       this.#searchTimer = window.setTimeout(() => { this.state.weaponQuery = event.target.value; this.render({ parts: ["workspace"] }); }, 120);
     });
-    this.element.querySelectorAll("[data-composer-input]").forEach(input => input.addEventListener("change", () => {
+    const updateComposer = input => {
+      if (input.matches("[data-spell-level]")) {
+        const min = Number(input.min) || 1;
+        const max = Math.max(min, Number(input.max) || min);
+        const level = Math.min(max, Math.max(min, Math.round(Number(input.value) || min)));
+        this.element.querySelectorAll("[data-spell-level]").forEach(control => { control.value = String(level); });
+      }
+      this.state.calculationOpen = Boolean(this.element.querySelector(".vr-hud-calculation")?.open);
       this.state.composerSelections = Object.fromEntries(new FormData(this.element.querySelector(".vr-hud-composer")));
-      this.render({ parts: ["workspace", "economy"] });
-    }));
+      window.clearTimeout(this.#composerTimer);
+      this.#composerTimer = window.setTimeout(() => this.render({ parts: ["workspace", "economy"] }), 60);
+    };
+    this.element.querySelectorAll("[data-composer-input]").forEach(input => {
+      input.addEventListener("change", () => updateComposer(input));
+      if (input.matches("[data-spell-level]")) input.addEventListener("input", () => updateComposer(input));
+    });
+    this.element.querySelector(".vr-hud-calculation")?.addEventListener("toggle", event => {
+      this.state.calculationOpen = event.currentTarget.open;
+    });
   }
 
   syncBounds() {
@@ -125,6 +187,14 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     const inset = Math.max(8, Math.ceil(window.innerWidth - boundary + 8));
     this.element.dataset.sidebarLayout = chatOpen ? "chat-expanded" : "compact";
     this.element.style.setProperty("--vr-hud-sidebar-inset", `${inset}px`);
+    const party = this.element.querySelector(".vr-hud-party");
+    const self = this.element.querySelector(".vr-hud-self");
+    if (party && self) {
+      const currentOffset = Number.parseFloat(this.element.style.getPropertyValue("--vr-hud-party-offset")) || 0;
+      const partyBottom = party.getBoundingClientRect().bottom;
+      const selfTop = self.getBoundingClientRect().top;
+      this.element.style.setProperty("--vr-hud-party-offset", `${Math.round(currentOffset + selfTop - partyBottom)}px`);
+    }
   }
 
   async showForCombat() {
@@ -134,7 +204,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     this.actor = actor;
     if (changed) {
       const prefs = getHudPreferences(actor);
-      this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, domain: prefs.filters.domain, query: prefs.filters.query, composerActionId: "", composerSelections: {}, selectedAssetUuid: prefs.selectedAssetUuid };
+      this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, domain: prefs.filters.domain, query: prefs.filters.query, composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false, selectedAssetUuid: prefs.selectedAssetUuid };
     }
     await ensureCombatEconomy(actor);
     return this.render({ force: true });
@@ -149,7 +219,11 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
 
   static onSetWorkspace(event, target) {
     this.state.workspace = target.dataset.workspace || HUD_WORKSPACES.NORMAL;
-    if (this.state.workspace !== HUD_WORKSPACES.COMPOSER) this.state.composerActionId = "";
+    if (this.state.workspace !== HUD_WORKSPACES.COMPOSER) {
+      this.state.composerActionId = "";
+      this.state.composerPreparing = false;
+      this.state.calculationOpen = false;
+    }
     this.render({ parts: ["workspace"] });
   }
 
@@ -165,15 +239,16 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     const view = buildHudProjection(this.actor, this.state);
     const action = actionFromProjection(view, target.dataset.actionId);
     if (!action) return;
-    if ((action.generated && action.operation === "fire") || action.composer?.length || action.enhancements?.length || action.augments?.length || action.rankScaling?.enabled) return this.openComposer(action);
+    if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "This action is invalid.");
+    if ((action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.rankScaling?.enabled) return this.openComposer(action);
     const actionActor = action.assetActorUuid ? view.assets.find(asset => asset.uuid === action.assetActorUuid)?.actor ?? this.actor : this.actor;
     await executeHudAction(actionActor, action);
     this.refresh(["self", "workspace", "economy", "target", "party"]);
   }
 
-  openComposer(action) {
+  openComposer(action, { preparing = false } = {}) {
     const remembered = getHudPreferences(this.actor).remembered?.[action.id] ?? {};
-    this.state = { ...this.state, workspace: HUD_WORKSPACES.COMPOSER, composerActionId: action.id, composerSelections: remembered };
+    this.state = { ...this.state, workspace: HUD_WORKSPACES.COMPOSER, composerActionId: action.id, composerSelections: remembered, composerPreparing: preparing, calculationOpen: false };
     this.render({ parts: ["workspace", "economy"] });
   }
 
@@ -183,12 +258,51 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     if (action) this.openComposer(action);
   }
 
+  static async onPrepareAction(event, target) {
+    const view = buildHudProjection(this.actor, this.state);
+    const action = actionFromProjection(view, target.dataset.actionId);
+    if (!action) return;
+    if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "This action cannot be prepared.");
+    const configurable = (action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.rankScaling?.enabled;
+    if (configurable) return this.openComposer(action, { preparing: true });
+    await prepareHudAction(this.actor, action.id);
+    globalThis.ui?.notifications?.info?.(`${action.name} is prepared for your turn.`);
+    this.refresh(["workspace", "target"]);
+  }
+
+  static async onPrepareComposer() {
+    const form = this.element.querySelector(".vr-hud-composer");
+    const selections = form ? Object.fromEntries(new FormData(form)) : this.state.composerSelections;
+    const view = buildHudProjection(this.actor, { ...this.state, composerSelections: selections });
+    const action = view.composer?.action;
+    if (!action) return;
+    if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "Finish configuring this action before preparing it.");
+    await prepareHudAction(this.actor, action.id, selections);
+    globalThis.ui?.notifications?.info?.(`${action.name} is prepared for your turn.`);
+    this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false };
+    this.refresh(["workspace", "target"]);
+  }
+
+  static async onExecutePrepared(event, target) {
+    const view = buildHudProjection(this.actor, this.state);
+    const prepared = view.prepared.find(entry => entry.preparedId === target.dataset.preparedId);
+    if (!prepared) return;
+    const result = await executeHudAction(this.actor, prepared, { selections: prepared.selections });
+    if (result.success) await removePreparedHudAction(this.actor, prepared.preparedId);
+    this.refresh(["self", "workspace", "economy", "target", "party"]);
+  }
+
+  static async onRemovePrepared(event, target) {
+    await removePreparedHudAction(this.actor, target.dataset.preparedId);
+    this.render({ parts: ["workspace"] });
+  }
+
   static async onExecuteComposer() {
     const form = this.element.querySelector(".vr-hud-composer");
     const selections = form ? Object.fromEntries(new FormData(form)) : this.state.composerSelections;
     const id = this.state.composerActionId;
     const result = await executeHudAction(this.actor, id, { selections });
-    if (result.success) this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, composerActionId: "", composerSelections: {} };
+    if (result.success) this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false };
     this.refresh(["self", "workspace", "economy", "target", "party"]);
   }
 
@@ -255,6 +369,39 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     this.refresh();
   }
 
+  static onToggleParty() {
+    this.state.partyOpen = this.state.partyOpen === false;
+    this.render({ parts: ["party"] });
+  }
+
+  static onAdjustSpellModifier(event, target) {
+    const modifier = target.closest("[data-spell-modifier]");
+    const count = modifier?.querySelector("[data-spell-modifier-count]");
+    const enabled = modifier?.querySelector("[data-spell-modifier-enabled]");
+    if (!count || !enabled) return;
+    const min = Number(count.min) || 0;
+    const max = Number(count.max) || 100;
+    const delta = Number(target.dataset.delta) || 0;
+    const next = Math.min(max, Math.max(min, (Number(count.value) || 0) + delta));
+    count.value = String(next);
+    enabled.checked = next > 0;
+    count.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  static async onUndoLastAction() {
+    const result = await undoLastHudAction(this.actor);
+    if (result.success) globalThis.ui?.notifications?.info?.(`${result.actionName} was undone.`);
+    else globalThis.ui?.notifications?.warn?.(result.reason);
+    this.refresh(["self", "workspace", "economy", "target", "party"]);
+  }
+
+  static async onUndoToHistory(event, target) {
+    const result = await undoHudActionsThrough(this.actor, target.dataset.historyIndex);
+    if (result.success) globalThis.ui?.notifications?.info?.(`Restored ${result.count} history ${result.count === 1 ? "entry" : "entries"} through ${result.actionName}.`);
+    else globalThis.ui?.notifications?.warn?.(result.reason);
+    this.refresh(["self", "workspace", "economy", "target", "party"]);
+  }
+
   requestSave(request = {}) {
     if (request.actorUuid && ![this.actor?.uuid, this.actor?.id].includes(request.actorUuid)) return false;
     this.state.requestedSave = { key: request.key, dc: request.dc ?? null, label: request.label ?? `${request.key} Save` };
@@ -293,7 +440,7 @@ export function registerActionHud() {
   const syncCombatChrome = active => document.body?.classList.toggle("vr-combat-hud-active", Boolean(active));
   Hooks.once("ready", () => { syncCombatChrome(game.combat); hud.showForCombat(); });
   Hooks.on("createCombat", () => { syncCombatChrome(true); hud.showForCombat(); });
-  Hooks.on("deleteCombat", () => { syncCombatChrome(false); hud.close({ animate: false }); });
+  Hooks.on("deleteCombat", () => { gmSelectedCombatActorId = ""; syncCombatChrome(false); hud.close({ animate: false }); });
   Hooks.on("updateCombat", async combat => {
     for (const combatant of game.veilrunner?.getActivePhaseCombatants?.() ?? [combat.combatant].filter(Boolean)) {
       const economy = getCombatEconomy(combatant.actor, combat);
@@ -301,21 +448,30 @@ export function registerActionHud() {
     }
     refresh();
   });
-  for (const hook of ["createCombatant", "updateCombatant", "deleteCombatant", "controlToken", "targetToken", "canvasReady"]) Hooks.on(hook, () => refresh());
+  for (const hook of ["createCombatant", "updateCombatant", "deleteCombatant", "targetToken", "canvasReady"]) Hooks.on(hook, () => refresh());
+  Hooks.on("controlToken", (token, controlled) => {
+    if (game.user.isGM && controlled && token?.actor && combatantForActor(token.actor, game.combat)) gmSelectedCombatActorId = token.actor.id;
+    refresh();
+  });
   Hooks.on("updateActor", actor => refresh(actor.id === hud.actor?.id ? ["self", "workspace", "economy", "party"] : ["party", "target", "workspace"]));
   for (const hook of ["createItem", "updateItem", "deleteItem", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"]) Hooks.on(hook, () => refresh(["self", "workspace", "target", "party", "economy"]));
-  Hooks.on("updateToken", () => refresh(["target", "workspace", "party"]));
+  Hooks.on("updateToken", () => refresh(["target", "workspace", "party", "economy"]));
+  Hooks.on("moveToken", async (token, movement, operation, user) => {
+    if (!operation?.isUndo) await recordHudMovementUndo(token, movement, user);
+    refresh(["economy"]);
+  });
+  Hooks.on("recordToken", () => refresh(["economy"]));
   Hooks.on("updateUser", (user, changes) => {
     const hotbarChanged = foundry.utils.hasProperty(changes, "hotbar") || Object.keys(changes ?? {}).some(key => key === "hotbar" || key.startsWith("hotbar."));
     if (user.id === game.user.id && hotbarChanged) refresh(["economy", "workspace"]);
   });
   window.addEventListener("keydown", event => {
     if (event.key !== "Escape" || !hud?.rendered || hud.state.workspace === HUD_WORKSPACES.NORMAL) return;
-    hud.state = { ...hud.state, workspace: HUD_WORKSPACES.NORMAL, composerActionId: "", composerSelections: {}, requestedSave: null };
+    hud.state = { ...hud.state, workspace: HUD_WORKSPACES.NORMAL, composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false, requestedSave: null };
     hud.render({ parts: ["workspace", "economy"] });
   });
   window.addEventListener("resize", () => hud?.syncBounds());
-  Hooks.on("collapseSidebar", () => window.requestAnimationFrame(() => hud?.syncBounds()));
+  Hooks.on("collapseSidebar", () => syncHudBoundsDuringSidebarTransition(hud));
   Hooks.on("changeSidebarTab", () => window.requestAnimationFrame(() => hud?.syncBounds()));
   Hooks.on("renderSidebarTab", () => window.requestAnimationFrame(() => hud?.syncBounds()));
 }

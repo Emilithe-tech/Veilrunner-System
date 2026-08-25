@@ -2,7 +2,7 @@
 const spell = (id, name, order, options = {}) => ({
   id, name, order, x: Number(options.x) || 0, y: Number(options.y) || 0,
   shape: ["circle", "hex", "pentagon", "square", "diamond"].includes(options.shape) ? options.shape : (options.type === "ability" ? "hex" : options.type === "trait" ? "circle" : "diamond"),
-  type: options.type === "ability" ? "ability" : "action",
+  type: ["ability", "reaction"].includes(options.type) ? options.type : "action",
   category: options.category ?? "magic", actions: options.type === "ability" ? 0 : (options.actions ?? 1),
   talentCost: options.talentCost ?? 1, rankCost: options.rankCost ?? 1, maxRank: options.maxRank ?? Number.MAX_SAFE_INTEGER,
   requiredLevel: options.requiredLevel ?? 1, requires: options.requires ?? [], traits: options.traits ?? [],

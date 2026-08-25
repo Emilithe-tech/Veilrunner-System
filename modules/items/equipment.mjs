@@ -1,5 +1,8 @@
 import { EQUIPMENT_SLOTS } from "../data/item/physical.mjs";
 import { equipmentBySlot, equippedSlotsForItem, itemRequiredSlots, resolveActorItemRules } from "../rules/item-rules.mjs";
+import { evaluateActionAvailability } from "../apps/action-hud/availability.mjs";
+import { spendActionEconomy } from "../apps/action-hud/economy.mjs";
+import { captureHudUndoState, storeHudUndoState } from "../apps/action-hud/undo.mjs";
 
 function systemFlagScope() {
   return game.system.id;
@@ -47,6 +50,40 @@ async function applyGrantRules(actor, sourceItem) {
   }
 }
 
+function equipmentAction(actor, actionCount = 1, name = "Change Equipment") {
+  return {
+    id: `equipment:${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    name,
+    actionType: "standard",
+    actionCount: Math.max(1, Math.floor(Number(actionCount) || 1)),
+    costs: {},
+    traits: []
+  };
+}
+
+export function canSpendEquipmentActions(actor, actionCount = 1, { notify = true } = {}) {
+  const availability = evaluateActionAvailability({ actor, action: equipmentAction(actor, actionCount) });
+  if (!availability.available && notify) ui.notifications.warn(availability.reason || "This equipment change is unavailable.");
+  return availability.available;
+}
+
+async function performEquipmentAction(actor, name, operation) {
+  const action = equipmentAction(actor, 1, name);
+  if (!canSpendEquipmentActions(actor, 1)) return false;
+  const undoSnapshot = captureHudUndoState(actor, action);
+  if (!await operation()) return false;
+  if (!await spendActionEconomy(actor, action)) {
+    ui.notifications.warn("The equipment changed, but its action point could not be spent.");
+    return false;
+  }
+  try {
+    await storeHudUndoState(actor, undoSnapshot);
+  } catch (error) {
+    console.warn("Veilrunner | The equipment changed, but its undo state could not be recorded", error);
+  }
+  return true;
+}
+
 export async function equipPhysicalItem(actor, item) {
   if (!actor?.isOwner) return ui.notifications.warn("You do not have permission to equip this item.");
   if (!item || item.parent?.id !== actor.id) return ui.notifications.warn("That item is not owned by this actor.");
@@ -61,6 +98,10 @@ export async function equipPhysicalItem(actor, item) {
     return ui.notifications.warn(`${item.name} cannot be equipped: ${labels.join(", ")}.`);
   }
 
+  const equippedSlots = equippedSlotsForItem(actor, item.id).sort();
+  const expectedSlots = [...required].sort();
+  if (equippedSlots.length === expectedSlots.length && equippedSlots.every((slot, index) => slot === expectedSlots[index])) return true;
+
   const updates = {};
   for (const slot of EQUIPMENT_SLOTS) {
     if (equipment[slot] === item.id && !required.includes(slot)) updates[`system.equipment.${slot}`] = "";
@@ -69,9 +110,11 @@ export async function equipPhysicalItem(actor, item) {
   const nextEquipment = { ...equipment };
   for (const [path, value] of Object.entries(updates)) nextEquipment[path.split(".").at(-1)] = value;
   updates["system.equipmentAssignments"] = equipmentAssignments(nextEquipment);
-  await actor.update(updates);
-  await applyGrantRules(actor, item);
-  return true;
+  return performEquipmentAction(actor, `Equip ${item.name}`, async () => {
+    await actor.update(updates);
+    await applyGrantRules(actor, item);
+    return true;
+  });
 }
 
 export async function unequipPhysicalItem(actor, itemOrSlot) {
@@ -80,15 +123,19 @@ export async function unequipPhysicalItem(actor, itemOrSlot) {
     ? actor.items.get(equipmentBySlot(actor)[itemOrSlot])
     : itemOrSlot;
   if (!item) return false;
+  const occupiedSlots = equippedSlotsForItem(actor, item.id);
+  if (!occupiedSlots.length) return false;
   const updates = {};
   const equipment = equipmentBySlot(actor);
-  for (const slot of equippedSlotsForItem(actor, item.id)) updates[`system.equipment.${slot}`] = "";
+  for (const slot of occupiedSlots) updates[`system.equipment.${slot}`] = "";
   const nextEquipment = { ...equipment };
   for (const path of Object.keys(updates)) nextEquipment[path.split(".").at(-1)] = "";
   updates["system.equipmentAssignments"] = equipmentAssignments(nextEquipment);
-  await actor.update(updates);
-  const granted = actor.items.filter(document => grantFlag(document, "grantedBy")?.startsWith(`${item.id}:`)
-    && grantFlag(document, "grantDuration") === "while-equipped");
-  if (granted.length) await actor.deleteEmbeddedDocuments("Item", granted.map(document => document.id));
-  return true;
+  return performEquipmentAction(actor, `Unequip ${item.name}`, async () => {
+    await actor.update(updates);
+    const granted = actor.items.filter(document => grantFlag(document, "grantedBy")?.startsWith(`${item.id}:`)
+      && grantFlag(document, "grantDuration") === "while-equipped");
+    if (granted.length) await actor.deleteEmbeddedDocuments("Item", granted.map(document => document.id));
+    return true;
+  });
 }

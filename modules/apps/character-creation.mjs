@@ -1,6 +1,6 @@
 import { VEILRUNNER_PERSONA_INDEX_MODIFIERS } from "../data/professions.mjs";
 import { ARCHETYPE_OPTIONS, ARCHETYPE_SUMMARIES, fallbackPathRecords, sortPathEntries } from "../data/path-options.mjs";
-import { attributePointsForLevel, attributePointsGainedAtLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
+import { attributePointsForLevel, attributePointsGainedAtLevel, creditsForLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
 import { xpForLevel } from "../data/xp.mjs";
 import { applyHeroLevelUp } from "../data/level-up.mjs";
 import { talentTreeCatalog, talentTreePage, talentTreeRoot, saveTalentTreeCatalog, skillPointCostForLevel } from "../data/talent-tree.mjs";
@@ -15,6 +15,7 @@ import { CatalogIndex, CatalogProvider, registerCatalogInvalidation } from "./ch
 import { addToCart, cartItemCount, cartTotal, cartWeight, mergeCarts, normalizeCart, removeFromCart, setCartQuantity } from "./chargen/storefront/cart.mjs";
 import { DEFAULT_CATALOG_QUERY, catalogFacets, paginateCatalog, queryCatalog } from "./chargen/storefront/query.mjs";
 import { buildStorefrontCommit, validateStorefrontTransaction } from "./chargen/storefront/transaction.mjs";
+import { deleteLegacyTalentTreeItems, syncActorTalentTreeItems, upsertTalentTreeItem, validateTalentTreeItemSources } from "./chargen/talent-tree-items.mjs";
 import { renderStorefrontBrowser, renderStorefrontContext } from "./chargen/storefront/view.mjs";
 import { QualityCatalogProvider, qualityCatalogFacets, queryQualityCatalog, registerQualityCatalogInvalidation } from "./chargen/quality-catalog.mjs";
 import {
@@ -184,6 +185,12 @@ function referenceModifiers(reference) {
   return Array.from(String(reference?.description ?? reference?.system?.description ?? "").matchAll(/([+-]\s*\d+)\s*(Criminal|Lawful|Ruthless|Empathy|Empathetic|Individual|Collectivist)\b/gi), match => `${match[1]} ${match[2]}`);
 }
 
+function disciplinePersonaModifiers(reference, profession, discipline) {
+  const authored = referenceModifiers(reference);
+  if (authored.some(value => /[+-]\s*\d+/.test(value))) return authored;
+  return VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${profession}:${discipline}`] ?? authored;
+}
+
 function personaModifierDeltas(modifiers) {
   const deltas = Object.fromEntries(PERSONA_AXES.map(axis => [axis.key, 0]));
   for (const modifier of modifiers ?? []) {
@@ -285,7 +292,6 @@ function defaultState(actor) {
     skillPointsSpent: number(system.characterGeneration?.skillPointsSpent),
     spellPointsSpent: number(system.characterGeneration?.spellPointsSpent),
     skillNotes: "",
-    credits: number(system.credits),
     creditsSpent: number(system.characterGeneration?.creditsSpent),
     storefront: {
       cart: [],
@@ -543,7 +549,7 @@ class CharacterCreationOverlay {
           ${current.key === "talents" ? this.#talentHeader(current, steps.length) : ""}
           <section class="vr-cc-panel">${this.#stepContent(current.key)}</section>
         </main>
-        ${current.key === "talents" ? this.#talentInspector() : current.key === "credits" ? this.#storefrontPanel() : current.key === "attributes" ? `<aside class="vr-cc-info vr-cc-details-pane vr-cc-attribute-details">${this.#infoPanelContent(current.key)}${this.#inspectorAdvance(current.key)}</aside>` : current.key === "level" ? `<aside class="vr-cc-info vr-cc-details-pane vr-cc-reference-details vr-cc-level-details">${this.#infoPanelContent(current.key)}${this.#inspectorAdvance(current.key)}</aside>` : renderDetailsPanel(this.state.detailSelection?.stepKey === current.key ? this.state.detailSelection : null, this.#infoPanelContent(current.key), this.inspectorTab, this.#inspectorAdvance(current.key))}
+        ${current.key === "talents" ? this.#talentInspector() : current.key === "credits" ? this.#storefrontPanel() : current.key === "attributes" ? `<aside class="vr-cc-info vr-cc-details-pane vr-cc-attribute-details">${this.#infoPanelContent(current.key)}${this.#inspectorAdvance(current.key)}</aside>` : current.key === "level" ? `<aside class="vr-cc-info vr-cc-details-pane vr-cc-reference-details vr-cc-level-details">${this.#infoPanelContent(current.key)}${this.#inspectorAdvance(current.key)}</aside>` : renderDetailsPanel(this.#detailSelectionForStep(current.key), this.#infoPanelContent(current.key), this.inspectorTab, this.#inspectorAdvance(current.key))}
       </div>
       ${this.#qualityFlawDialogMarkup()}`;
     this.renderedStepKey = current?.key ?? null;
@@ -843,7 +849,7 @@ class CharacterCreationOverlay {
   #professionReference(stage = "discipline") {
     const profession = stage === "archetype" ? null : this.#pathEntry("profession", this.state.profession, { archetype: this.state.archetype });
     const discipline = stage === "discipline" ? this.#pathEntry("discipline", this.state.discipline, { profession: this.state.profession }) : null;
-    const personaModifiers = discipline?.persona?.length ? discipline.persona : VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? [];
+    const personaModifiers = disciplinePersonaModifiers(discipline, this.state.profession, this.state.discipline);
     const archetypeSummary = this.#archetypeSummary(this.state.archetype);
     const grantedSchoolId = discipline ? magicTreeAccess(this.state.archetype, this.state.profession, this.state.discipline).schoolId : "";
     const grantedSchool = grantedSchoolId ? talentTreePage("magic").find(entry => entry.id === grantedSchoolId) : null;
@@ -875,7 +881,7 @@ class CharacterCreationOverlay {
     const discipline = this.#pathEntry("discipline", this.state.discipline, { profession: this.state.profession });
     const record = this.#pathRecords().find(entry => entry.profession === this.state.profession);
     if (!this.state.discipline) return null;
-    const persona = discipline?.persona?.length ? discipline.persona : VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? [];
+    const persona = disciplinePersonaModifiers(discipline, this.state.profession, this.state.discipline);
     const grantedSchoolId = magicTreeAccess(this.state.archetype || record?.archetype, this.state.profession, this.state.discipline).schoolId;
     const grantedSchool = grantedSchoolId ? talentTreePage("magic").find(entry => entry.id === grantedSchoolId) : null;
     return {
@@ -906,6 +912,18 @@ class CharacterCreationOverlay {
         persona
       }
     };
+  }
+
+  #detailSelectionForStep(key) {
+    if (this.state.detailSelection?.stepKey === key) return this.state.detailSelection;
+    if (["species", "origin", "background"].includes(key)) {
+      const reference = this.#selectedReference(key);
+      return reference ? { stepKey: key, kind: key, name: reference.name, description: reference.description, img: reference.img } : null;
+    }
+    if (key !== "profession" || !this.state.discipline) return null;
+    const mode = this.selectionModes.discipline === "all" ? "all" : "guided";
+    const stage = mode === "all" ? "discipline" : this.pathStage ?? (!this.state.archetype ? "archetype" : !this.state.profession ? "profession" : "discipline");
+    return stage === "discipline" ? this.#disciplineDetailSelection() : null;
   }
 
   #refreshLiveBuild() {
@@ -1343,7 +1361,8 @@ class CharacterCreationOverlay {
           <p>${escape(description)}</p>
           ${level ? `<div class="vr-cc-level-pools"><section><h3>Attribute Points (AP)</h3><strong>${Math.max(0, attributePointsForLevel(level) - this.#attributePointCost())} available</strong><p>Cumulative pool through Level ${level}: ${attributePointsForLevel(level)} AP; Level ${level} contributes ${attributePointsGainedAtLevel(level)} AP. The 1-point minimum is free; increase cost equals the new attribute level minus 1.</p></section>
           <section><h3>Talent Points (TP)</h3><strong>${talentPointsForLevel(level)} available</strong></section>
-          <section><h3>Skill Points (SP)</h3><strong>${skillPointsForLevel(level)} available</strong></section></div>` : ""}
+          <section><h3>Skill Points (SP)</h3><strong>${skillPointsForLevel(level)} available</strong></section>
+          <section><h3>Starting Credits</h3><strong>${creditsForLevel(level).toLocaleString()}c</strong><p>1,000c at Level 1, plus 100c for each additional starting level.</p></section></div>` : ""}
         </div>`;
     }
 
@@ -1410,7 +1429,7 @@ class CharacterCreationOverlay {
 
     if (key === "qualitiesFlaws") {
       const focus = this.#qualityFlawRecords().find(record => record.id === this.state.qualityFlawFocus?.id) ?? this.state.qualityFlawFocus;
-      if (!focus) return `<div class="vr-cc-info-heading"><span>Item Inspector</span><h2>Build Rules</h2></div>
+      if (!focus) return `<div class="vr-cc-info-heading"><h2>Build Rules</h2></div>
         <div class="vr-cc-reference vr-cc-qf-inspector vr-cc-qf-build-rules">
           <p class="warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>At least ${QUALITY_LIMITS.flawMinimum} flaw points are required.</span></p>
           <p class="warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Minor flaws cannot exceed ${QUALITY_LIMITS.minorFlawMaximum} points.</span></p>
@@ -1427,7 +1446,7 @@ class CharacterCreationOverlay {
         : evaluation.canSelect
           ? `<div class="vr-cc-qf-availability available"><i class="fa-solid fa-circle-check"></i><span>Available</span></div>`
           : `<div class="vr-cc-qf-availability blocked"><i class="fa-solid fa-triangle-exclamation"></i><span>Cannot select: ${escape(evaluation.selectionBlockingDetails.join(" "))}</span></div>`;
-      return `<div class="vr-cc-info-heading"><span>Item Inspector</span><h2>${escape(focus.name)}</h2></div>
+      return `<div class="vr-cc-info-heading vr-cc-qf-name-heading"><h2>${escape(focus.name)}</h2></div>
         <div class="vr-cc-reference vr-cc-qf-inspector ${focus.kind}">
           <div class="vr-cc-qf-inspector-badges"><span>${escape(focus.tier)} · ${tierCost(focus.tier)} ${focus.kind === "flaw" ? "FP" : "PP"}</span><span>${typeLabel}</span><span>${escape(focus.pillar)}</span></div>
           ${focus.description ? `<section><h3>Description</h3><p>${escape(focus.description)}</p></section>` : ""}
@@ -1579,7 +1598,7 @@ class CharacterCreationOverlay {
     }
     const effects = (node.effects ?? []).filter(effect => effect?.target || effect?.value || effect?.notes);
     const traits = (node.traits ?? []).filter(Boolean);
-    const typeLabel = record.kind === "root" ? "Talent Tree" : record.kind === "school" ? "School" : record.kind === "practice" ? "Practice" : node.type === "ability" ? "Ability" : this.treePage === "magic" ? "Spell" : "Skill";
+    const typeLabel = record.kind === "root" ? "Talent Tree" : record.kind === "school" ? "School" : record.kind === "practice" ? "Practice" : node.type === "ability" ? "Ability" : node.type === "reaction" ? `${this.treePage === "magic" ? "Spell" : "Skill"} Reaction` : this.treePage === "magic" ? "Spell" : "Skill";
     const accessFact = record.kind === "root" ? `<div><dt>Access</dt><dd>${magicRootAccess.archetype ? "Archetype Granted" : rootPurchased ? `Purchased · ${MAGIC_ACCESS_COST} AP` : rootAccessGranted ? "Existing Progression" : `Purchase Required · ${MAGIC_ACCESS_COST} AP`}</dd></div>` : record.kind === "school" ? `<div><dt>Access</dt><dd>${schoolAligned ? "Granted By Discipline" : recordSchoolAccess.purchased ? "Purchased · 1 TP" : recordSchoolAccess.established ? "Existing Progression" : "Purchase Required · 1 TP"}</dd></div>` : "";
     return `<aside class="vr-cc-info vr-cc-details-pane vr-cc-tree-inspector">
       <div class="vr-cc-tree-inspector-scroll"><div class="vr-cc-tree-inspector-hero">${node.img ? `<img src="${escape(node.img)}" alt="" />` : `<span><i class="fa-solid ${record.kind === "spell" ? node.type === "ability" ? "fa-burst" : "fa-wand-sparkles" : record.kind === "practice" ? "fa-diamond" : "fa-diagram-project"}"></i></span>`}<div><small>${escape(typeLabel)}</small><h2>${escape(node.name)}</h2><p>${escape([record.school?.name, record.practice?.name].filter(name => name && name !== node.name).join(" / "))}</p></div></div>
@@ -1949,13 +1968,17 @@ class CharacterCreationOverlay {
       recordById: new Map(this.catalogRecords.map(record => [record.definitionId, record])),
       selectedRecord: this.catalogRecords.find(record => record.definitionId === this.state.storefront?.selectedDefinitionId) ?? null,
       itemCount: cartItemCount(cartLines), cartTotal: total,
-      remainingCredits: Math.max(0, number(this.state.credits) - purchasedTotal - total),
+      remainingCredits: Math.max(0, this.#creditBudget() - purchasedTotal - total),
       projectedWeight: currentWeight + cartWeight(purchasedLines, this.catalogRecords) + cartWeight(cartLines, this.catalogRecords), carryCapacity
     };
   }
 
   #storefrontPanel() {
     return renderStorefrontContext(this.#storefrontModel());
+  }
+
+  #creditBudget() {
+    return creditsForLevel(this.state.startingLevel);
   }
 
   async #onStorefrontDrop(event) {
@@ -2082,7 +2105,7 @@ class CharacterCreationOverlay {
     const schools = talentTreePage(this.treePage);
     const practices = schools.flatMap(school => (school.practices ?? []).map(practice => ({ ...practice, schoolId: school.id, schoolName: school.name })));
     const traits = game.settings.get(game.system.id, "actionTraits") ?? [];
-    const spellFields = node.nodeKind === "spell" ? `<label>Action Kind<select name="authorNode.type"><option value="action">Action</option><option value="ability" ${node.type === "ability" ? "selected" : ""}>Ability (0 AP)</option></select></label><label>Category<select name="authorNode.category">${["actions", "reactions", "magic", "tech"].map(value => `<option value="${value}" ${node.category === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Action Points<input type="number" name="authorNode.actions" value="${number(node.actions)}" min="0" ${node.type === "ability" ? "max=\"0\"" : ""} /></label><label>Traits<input name="authorNode.traitsText" value="${escape(node.traitsText)}" list="vr-action-traits" /></label><datalist id="vr-action-traits">${traits.filter(entry => !entry.retired).map(entry => `<option value="${escape(entry.label)}"></option>`).join("")}</datalist><label>Mana Cost<input type="number" name="authorNode.mana" value="${number(node.mana)}" min="0" /></label><label>Stamina Cost<input type="number" name="authorNode.stamina" value="${number(node.stamina)}" min="0" /></label><label>Health Cost<input type="number" name="authorNode.health" value="${number(node.health)}" min="0" /></label><label>First Purchase<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /> TP</label><label>SP per Later Level<input type="number" name="authorNode.rankCost" value="${number(node.rankCost, 1)}" min="0" /></label><label>Maximum Level<input type="number" name="authorNode.maxRank" value="${number(node.maxRank, 20)}" min="1" max="20" /></label><label>Artwork<input name="authorNode.img" value="${escape(node.img)}" /></label><fieldset class="wide"><legend>Actor or Area Effect</legend><label>Scope<select name="authorNode.effectScope"><option value="actor">Actor</option><option value="area" ${node.effectScope === "area" ? "selected" : ""}>Area</option></select></label><label>Target<input name="authorNode.effectTarget" value="${escape(node.effectTarget)}" /></label><label>Value<input name="authorNode.effectValue" value="${escape(node.effectValue)}" /></label><label>Duration<input name="authorNode.effectDuration" value="${escape(node.effectDuration)}" /></label></fieldset>` : "";
+    const spellFields = node.nodeKind === "spell" ? `<label>Activation<select name="authorNode.type"><option value="action">Action</option><option value="reaction" ${node.type === "reaction" ? "selected" : ""}>Reaction</option><option value="ability" ${node.type === "ability" ? "selected" : ""}>Ability (0 AP)</option></select></label><label>Category<select name="authorNode.category">${["actions", "reactions", "magic", "tech"].map(value => `<option value="${value}" ${node.category === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label>Action Points<input type="number" name="authorNode.actions" value="${number(node.actions)}" min="0" ${node.type === "ability" ? "max=\"0\"" : ""} /></label><label>Traits<input name="authorNode.traitsText" value="${escape(node.traitsText)}" list="vr-action-traits" /></label><datalist id="vr-action-traits">${traits.filter(entry => !entry.retired).map(entry => `<option value="${escape(entry.label)}"></option>`).join("")}</datalist><label>Mana Cost<input type="number" name="authorNode.mana" value="${number(node.mana)}" min="0" /></label><label>Stamina Cost<input type="number" name="authorNode.stamina" value="${number(node.stamina)}" min="0" /></label><label>Health Cost<input type="number" name="authorNode.health" value="${number(node.health)}" min="0" /></label><label>First Purchase<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /> TP</label><label>SP per Later Level<input type="number" name="authorNode.rankCost" value="${number(node.rankCost, 1)}" min="0" /></label><label>Maximum Level<input type="number" name="authorNode.maxRank" value="${number(node.maxRank, 20)}" min="1" max="20" /></label><label>Artwork<input name="authorNode.img" value="${escape(node.img)}" /></label><fieldset class="wide"><legend>Actor or Area Effect</legend><label>Scope<select name="authorNode.effectScope"><option value="actor">Actor</option><option value="area" ${node.effectScope === "area" ? "selected" : ""}>Area</option></select></label><label>Target<input name="authorNode.effectTarget" value="${escape(node.effectTarget)}" /></label><label>Value<input name="authorNode.effectValue" value="${escape(node.effectValue)}" /></label><label>Duration<input name="authorNode.effectDuration" value="${escape(node.effectDuration)}" /></label></fieldset>` : "";
     const unboundedSpellFields = spellFields.replace(/ min="1" max="20"(?= \/><\/label><label>Artwork)/, ' min="1"');
     return `<div class="vr-cc-author-shade"><form class="vr-cc-author-panel"><header><div><span>Shared GM Authoring</span><h2>${node.editId ? "Edit" : "Create"} Tree Node</h2></div><button type="button" class="vr-cc-icon" data-action="cancel-tree-node"><i class="fa-solid fa-xmark"></i></button></header><div class="vr-cc-author-grid"><label>Node Type<select name="authorNode.nodeKind"><option value="school" ${node.nodeKind === "school" ? "selected" : ""}>School</option><option value="practice" ${node.nodeKind === "practice" ? "selected" : ""}>Practice</option><option value="spell" ${node.nodeKind === "spell" ? "selected" : ""}>${this.treePage === "magic" ? "Spell" : "Skill"}</option></select></label>${node.nodeKind !== "school" ? `<label>School<select name="authorNode.schoolId"><option value="">Select School</option>${schools.map(school => `<option value="${escape(school.id)}" ${node.schoolId === school.id ? "selected" : ""}>${escape(school.name)}</option>`).join("")}</select></label>` : ""}${node.nodeKind === "spell" ? `<label>Practice<select name="authorNode.practiceId"><option value="">Select Practice</option>${practices.filter(practice => !node.schoolId || practice.schoolId === node.schoolId).map(practice => `<option value="${escape(practice.id)}" ${node.practiceId === practice.id ? "selected" : ""}>${escape(practice.schoolName)} / ${escape(practice.name)}</option>`).join("")}</select></label>` : ""}<label>Title<input name="authorNode.name" value="${escape(node.name)}" required /></label>${node.nodeKind === "school" ? `<label>School Color<input name="authorNode.color" type="color" value="${escape(node.color)}" /></label>` : ""}<label>X<input name="authorNode.x" type="number" value="${number(node.x)}" /></label><label>Y<input name="authorNode.y" type="number" value="${number(node.y)}" /></label>${node.nodeKind === "practice" ? `<label>Talent Point Cost<input type="number" name="authorNode.talentCost" value="${number(node.talentCost, 1)}" min="1" /></label>` : ""}${node.nodeKind !== "school" ? `<label>Required Character Level<input type="number" name="authorNode.requiredLevel" value="${number(node.requiredLevel, 1)}" min="1" /></label><label>${node.nodeKind === "spell" ? "Spell Prerequisites" : "Practice Prerequisite IDs"}<input name="authorNode.requiresText" value="${escape(node.requiresText)}" placeholder="${node.nodeKind === "spell" ? "firebolt:5, other-spell:3" : "practice-id, cross-school-id"}" /></label>` : ""}${unboundedSpellFields}<label class="wide">Description<textarea name="authorNode.description">${escape(node.description)}</textarea></label></div><footer>${node.editId ? `<button type="button" class="vr-cc-btn danger" data-action="delete-tree-node"><i class="fa-solid fa-trash"></i><span>Delete Node</span></button>` : ""}<button type="button" class="vr-cc-btn primary" data-action="save-tree-node"><i class="fa-solid fa-floppy-disk"></i><span>Save Shared Node</span></button></footer></form></div>`;
   }
@@ -2100,6 +2123,7 @@ class CharacterCreationOverlay {
     const slug = value => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "node";
     const uniqueId = (base, used) => { let id = slug(base); let n = 2; while (used.has(id)) id = `${slug(base)}-${n++}`; return id; };
     let savedNode;
+    let legacyTreeItems = [];
     if (source.nodeKind === "school") {
       savedNode = schools.find(entry => entry.id === source.editId);
       if (!savedNode) { savedNode = { id: uniqueId(name, new Set(schools.map(entry => entry.id))), practices: [] }; schools.push(savedNode); }
@@ -2125,21 +2149,23 @@ class CharacterCreationOverlay {
         const registry = game.settings.get(game.system.id, "actionTraits") ?? [];
         const traitIds = new Map(registry.flatMap(entry => [[String(entry.id).toLowerCase(), entry.id], [String(entry.label).toLowerCase(), entry.id]]));
         const traits = listFromText(source.traitsText).map(value => traitIds.get(value.toLowerCase()) ?? slug(value));
-        const type = source.type === "ability" ? "ability" : "action";
+        const type = ["ability", "reaction"].includes(source.type) ? source.type : "action";
         const category = ["actions", "reactions", "magic", "tech"].includes(source.category) ? source.category : (page === "magic" ? "magic" : "actions");
         const previousRequirementLines = new Map((savedNode.requires ?? []).map(value => { const requirement = treeRequirement(value); return [requirement.id, requirement.line]; }));
         Object.assign(savedNode, { name, x: number(source.x, number(practice.x) + 105), y: number(source.y, number(practice.y) + 138), type, category, actions: type === "ability" ? 0 : Math.max(1, number(source.actions, 1)), traits: [...new Set(traits)], img: String(source.img ?? ""), description: String(source.description ?? ""), talentCost: Math.max(1, number(source.talentCost, 1)), rankCost: Math.max(0, number(source.rankCost, 1)), maxRank: Math.max(1, number(source.maxRank, Number.MAX_SAFE_INTEGER)), requiredLevel: Math.max(1, number(source.requiredLevel, 1)), requires: treeRequirementsFromText(source.requiresText), resourceCosts: { mana: Math.max(0, number(source.mana)), stamina: Math.max(0, number(source.stamina)), health: Math.max(0, number(source.health)) }, effects: source.effectTarget ? [{ scope: source.effectScope === "area" ? "area" : "actor", target: String(source.effectTarget), value: String(source.effectValue ?? ""), duration: String(source.effectDuration ?? ""), notes: "" }] : [] });
         savedNode.requires = savedNode.requires.map(requirement => ({ ...requirement, line: previousRequirementLines.get(requirement.id) ?? requirement.line }));
         savedNode.shape = ["circle", "hex", "pentagon", "square", "diamond"].includes(source.shape) ? source.shape : (type === "ability" ? "hex" : "diamond");
-        const itemRequires = savedNode.requires.map(value => { const requirement = treeRequirement(value); return `${requirement.id}:${requirement.level}`; });
-        const itemData = { name, type: "action", img: savedNode.img || "icons/svg/light.svg", system: { activationKind: type, category, actionType: category === "reactions" ? "reaction" : "standard", actions: savedNode.actions, currentLevel: 1, maxLevel: savedNode.maxRank, traits: savedNode.traits, resourceCosts: savedNode.resourceCosts, effects: savedNode.effects, tree: { enabled: true, page, school: school.name, practice: practice.name, x: savedNode.x, y: savedNode.y, requires: itemRequires, talentCost: savedNode.talentCost, rankCost: savedNode.rankCost, requiredLevel: savedNode.requiredLevel }, description: savedNode.description } };
-        let actionDocument = savedNode.sourceUuid ? await fromUuid(savedNode.sourceUuid) : null;
-        if (actionDocument?.documentName === "Item") await actionDocument.update(itemData);
-        else { actionDocument = await Item.create(itemData, { renderSheet: false }); savedNode.sourceUuid = actionDocument.uuid; }
+        try {
+          ({ legacySources: legacyTreeItems } = await upsertTalentTreeItem({ page, school, practice, leaf: savedNode }));
+        } catch (error) {
+          console.error("Veilrunner | Could not save tree Item to its compendium.", error);
+          return ui.notifications.error(error.message);
+        }
         await this.#registerCustomTraits(traits);
       }
     }
     await saveTalentTreeCatalog(catalog);
+    await deleteLegacyTalentTreeItems(legacyTreeItems);
     this.authorNode = null;
     this.#draw();
   }
@@ -2249,7 +2275,7 @@ class CharacterCreationOverlay {
     const rect = track?.getBoundingClientRect?.();
     if (!rect?.width) return 0;
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    return clampPersona(Math.round(((ratio * 200) - 100) / 10) * 10);
+    return clampPersona(Math.round((ratio * 200) - 100));
   }
 
   #updatePersonaFromTrack(track, clientX) {
@@ -2276,7 +2302,7 @@ class CharacterCreationOverlay {
     const track = event.target.closest?.("[data-persona-drag-axis]");
     const axisKey = track?.dataset.personaDragAxis;
     if (!PERSONA_AXES.some(axis => axis.key === axisKey)) return;
-    const adjustments = { ArrowLeft: -10, ArrowDown: -10, ArrowRight: 10, ArrowUp: 10 };
+    const adjustments = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 };
     let value = clampPersona(this.state.personaIndex[axisKey]);
     if (event.key in adjustments) value = clampPersona(value + adjustments[event.key]);
     else if (event.key === "Home") value = -100;
@@ -2979,9 +3005,7 @@ class CharacterCreationOverlay {
       if (modifiers.length) sources.push({ label: reference.name, modifiers });
     }
     const disciplineReference = this.#pathEntry("discipline", this.state.discipline, { profession: this.state.profession });
-    const disciplineModifiers = disciplineReference?.persona?.length
-      ? disciplineReference.persona
-      : VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${this.state.profession}:${this.state.discipline}`] ?? [];
+    const disciplineModifiers = disciplinePersonaModifiers(disciplineReference, this.state.profession, this.state.discipline);
     if (disciplineModifiers.length) sources.push({ label: this.state.discipline, modifiers: disciplineModifiers });
     const values = Object.fromEntries(PERSONA_AXES.map(axis => [axis.key, 0]));
     for (const source of sources) {
@@ -3003,8 +3027,9 @@ class CharacterCreationOverlay {
       ["Attribute Points", `${this.#attributePointCost()} / ${attributePointsForLevel(this.state.startingLevel)}`],
       ["Talents & Skills", this.state.talentSkillPointsSpent],
       ["Tree Selections", this.state.talentSkillSelections?.join(", ")],
-      ["Storefront Purchases", `${purchases.length} selections · ${purchaseTotal} credits`],
-      ["Purchase Budget Remaining", Math.max(0, number(this.state.credits) - purchaseTotal)],
+      ["Storefront Purchases", `${purchases.length} selections · ${purchaseTotal.toLocaleString()}c`],
+      ["Starting Credits", `${this.#creditBudget().toLocaleString()}c`],
+      ["Purchase Budget Remaining", `${Math.max(0, this.#creditBudget() - purchaseTotal).toLocaleString()}c`],
       ["Contacts", this.#cleanContacts().length],
       ["Languages", listFromText(this.state.languages).join(", ")],
       ["Name", this.state.name]
@@ -3065,7 +3090,7 @@ class CharacterCreationOverlay {
       name, nameValue: this.state.name, portrait: this.state.portraitImage, portraitCrop: this.state.portraitCrop, level: this.state.startingLevel || 1,
       personaAxes: PERSONA_AXES, personaValues, collapsed: this.liveBuildCollapsed,
       editableIdentity: this.mode !== "levelUp" && (this.actor.isOwner || game.user.isGM),
-      credits: { value: Math.max(0, number(this.state.credits) - spent), remaining: true },
+      credits: { value: `${Math.max(0, this.#creditBudget() - spent).toLocaleString()}c`, remaining: true },
       sections: [
         { key: "identity", label: "Identity", presentation: "cards", entries: identity },
         { key: "attributes", label: "Attributes", presentation: "attributes", groups: attributes },
@@ -3073,7 +3098,7 @@ class CharacterCreationOverlay {
         { key: "perks", label: "Perks", compactBadges: true, limit: 5, entries: this.state.qualitiesTaken.map(entry => ({ title: entry.name, description: entry.description, img: entry.img, icon: "fa-solid fa-star" })) },
         { key: "flaws", label: "Flaws", compactBadges: true, limit: 5, entries: this.state.flawsTaken.map(entry => ({ title: entry.name, description: entry.description, img: entry.img, icon: "fa-solid fa-triangle-exclamation" })) },
         { key: "contacts", label: "Contacts", compactBadges: true, limit: 4, entries: contacts.map(entry => ({ title: entry.name || entry.role || "Contact", description: entry.notes || entry.disposition || entry.role, img: entry.img, icon: "fa-solid fa-user-group" })) },
-        { key: "purchases", label: "Purchases", presentation: "purchases", entries: purchases.map(line => { const record = this.catalogRecords.find(entry => entry.definitionId === line.definitionId); return { title: record?.name ?? line.definitionId, description: `${record?.price ?? 0} credits each`, img: record?.img, grade: record?.grade, rarity: record?.rarityName, rarityColor: record?.rarityColor, quantity: line.quantity }; }) }
+        { key: "purchases", label: "Purchases", presentation: "purchases", entries: purchases.map(line => { const record = this.catalogRecords.find(entry => entry.definitionId === line.definitionId); return { title: record?.name ?? line.definitionId, description: `${Number(record?.price ?? 0).toLocaleString()}c each`, img: record?.img, grade: record?.grade, rarity: record?.rarityName, rarityColor: record?.rarityColor, quantity: line.quantity }; }) }
       ]
     });
     /* Legacy markup retained below temporarily for comparison during the migration. */
@@ -3090,7 +3115,7 @@ class CharacterCreationOverlay {
         ${this.#liveBuildCards("Flaws", this.state.flawsTaken, entry => ({ title: entry.name, description: entry.description }))}
         ${this.#liveBuildCards("Talents and Skills", talents, entry => ({ title: `${entry.id} · Rank ${entry.rank}`, description: "Purchased talent or skill." }))}
         ${this.#liveBuildCards("Contacts", contacts, entry => ({ title: entry.name || entry.role || "Contact", description: entry.notes || entry.disposition || entry.role }))}
-        ${this.#liveBuildCards("Storefront", normalizeCart(this.state.storefront?.purchases).map(line => { const record = this.catalogRecords.find(entry => entry.definitionId === line.definitionId); return { title: `${record?.name ?? line.definitionId} ×${line.quantity}`, description: `${record?.price ?? 0} credits each` }; }))}
+        ${this.#liveBuildCards("Storefront", normalizeCart(this.state.storefront?.purchases).map(line => { const record = this.catalogRecords.find(entry => entry.definitionId === line.definitionId); return { title: `${record?.name ?? line.definitionId} ×${line.quantity}`, description: `${Number(record?.price ?? 0).toLocaleString()}c each` }; }))}
         <section class="vr-cc-live-section"><h3>Attribute Modifiers</h3><p>No authored attribute modifiers are currently attached to the selected reference cards.</p></section>
       </div>`;
   }
@@ -3296,7 +3321,7 @@ class CharacterCreationOverlay {
       const { currentWeight, carryCapacity } = this.#storefrontCarryState();
       const validation = await validateStorefrontTransaction({
         provider: this.catalogProvider, index: this.catalogIndex, lines: purchases,
-        credits: this.state.credits, carryWeight: currentWeight, carryCapacity
+        credits: this.#creditBudget(), carryWeight: currentWeight, carryCapacity
       });
       if (!validation.valid) {
         ui.notifications.warn(validation.errors[0] ?? "Storefront purchase validation failed.");
@@ -4026,10 +4051,15 @@ class CharacterCreationOverlay {
     const { currentWeight, carryCapacity } = this.#storefrontCarryState();
     const storefrontCommit = await buildStorefrontCommit({
       provider: this.catalogProvider, index: this.catalogIndex,
-      lines: this.state.storefront?.purchases, credits: this.state.credits, carryWeight: currentWeight, carryCapacity
+      lines: this.state.storefront?.purchases, credits: this.#creditBudget(), carryWeight: currentWeight, carryCapacity
     });
     if (!storefrontCommit.valid) {
       ui.notifications.warn(storefrontCommit.errors[0] ?? "Storefront purchase validation failed.");
+      return;
+    }
+    const treeItemValidation = await validateTalentTreeItemSources(this.state.talentTree);
+    if (!treeItemValidation.valid) {
+      ui.notifications.error(`Character generation cannot finish until its Spells and Skills are available: ${treeItemValidation.errors.join(" ")}`);
       return;
     }
     const update = {
@@ -4097,24 +4127,8 @@ class CharacterCreationOverlay {
   }
 
   async #grantTreeItems() {
-    const treeNodeId = item => item.flags?.[game.system.id]?.treeNodeId ?? item.flags?.veilrunner?.treeNodeId;
-    const existingItems = new Map(this.actor.items.filter(item => treeNodeId(item)).map(item => [treeNodeId(item), item]));
-    const existing = new Set(existingItems.keys());
-    const rankUpdates = (this.state.talentTree?.leaves ?? []).map(purchase => ({ purchase, item: existingItems.get(purchase.id) })).filter(entry => entry.item && number(entry.item.system?.currentLevel, 1) !== number(entry.purchase.rank, 1)).map(({ purchase, item }) => ({ _id: item.id, "system.currentLevel": Math.max(1, number(purchase.rank, 1)) }));
-    const documents = (this.state.talentTree?.leaves ?? [])
-      .map(purchase => ({ purchase, catalog: this.#treeCatalogEntry(purchase.id, "leaf") })).filter(entry => entry.catalog)
-      .filter(entry => !existing.has(entry.catalog.leaf.id)).map(({ purchase, catalog: { leaf, practice, school, page } }) => ({
-        name: leaf.name, type: "action", img: leaf.img || "icons/svg/light.svg",
-        system: {
-          activationKind: leaf.type === "ability" ? "ability" : "action", category: leaf.category || "actions", actionType: leaf.category === "reactions" ? "reaction" : "standard", actions: leaf.type === "ability" ? 0 : Math.max(1, number(leaf.actions, 1)),
-          currentLevel: Math.min(Math.max(1, number(leaf.maxRank, 1)), Math.max(1, number(purchase.rank, 1))), maxLevel: Math.max(1, number(leaf.maxRank, 1)), traits: leaf.traits ?? [],
-          resourceCosts: leaf.resourceCosts ?? { mana: 0, stamina: 0, health: 0 }, effects: leaf.effects ?? [],
-          tree: { enabled: true, page, school: school.name, practice: practice.name, x: number(leaf.x, 0), y: number(leaf.y, 0), requires: (leaf.requires ?? []).map(value => { const requirement = treeRequirement(value); return `${requirement.id}:${requirement.level}`; }), talentCost: Math.max(1, number(leaf.talentCost, 1)), rankCost: Math.max(0, number(leaf.rankCost, 1)), requiredLevel: Math.max(1, number(leaf.requiredLevel, 1)) },
-          description: leaf.description ?? ""
-        }, flags: { [game.system.id]: { treeNodeId: leaf.id } }
-      }));
-    if (documents.length) await this.actor.createEmbeddedDocuments("Item", documents);
-    if (rankUpdates.length) await this.actor.updateEmbeddedDocuments("Item", rankUpdates);
+    const result = await syncActorTalentTreeItems(this.actor, this.state.talentTree);
+    if (!result.valid) throw new Error(`Could not grant compendium-based tree Items: ${result.errors.join(" ")}`);
   }
 
   async #confirmLevelUp() {
@@ -4133,6 +4147,11 @@ class CharacterCreationOverlay {
     const initialTree = this.#treeSpent(this.initialTalentTree);
     const talents = pool("talentPoints", talentPointsForLevel(nextLevel), number(this.actor.system?.talentPoints?.total) - number(this.actor.system?.talentPoints?.available) + treeDelta.talent - initialTree.talent);
     const skills = pool("skillPoints", skillPointsForLevel(nextLevel), number(this.actor.system?.skillPoints?.total) - number(this.actor.system?.skillPoints?.available) + treeDelta.skill - initialTree.skill);
+    const treeItemValidation = await validateTalentTreeItemSources(this.state.talentTree);
+    if (!treeItemValidation.valid) {
+      ui.notifications.error(`Level-up cannot finish until its Spells and Skills are available: ${treeItemValidation.errors.join(" ")}`);
+      return;
+    }
     const applied = await applyHeroLevelUp(this.actor, {
       "system.level": nextLevel,
       "system.attributes": this.state.attributes,

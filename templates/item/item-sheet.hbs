@@ -1,41 +1,65 @@
 <section class="vr-item-sheet"{{#if isPhysical}} data-rarity="{{itemRarity.slug}}" data-rarity-tier="{{itemRarity.tier}}" style="--vr-item-rarity: {{itemRarity.color}};"{{/if}}>
   <header class="vr-basic-header">
     {{#if isCharacterOption}}
-      <button type="button" class="vr-character-option-artwork" data-action="setCharacterOptionArtwork" title="Choose character-generation artwork" aria-label="Choose character-generation artwork">
+      <button type="button" class="vr-character-option-artwork" data-action="setCharacterOptionArtwork" title="Choose character-generation artwork" aria-label="Choose character-generation artwork" {{#unless isGM}}disabled{{/unless}}>
         <img class="vr-basic-img" src="{{item.img}}" alt="" />
         <span><i class="fa-solid fa-image" aria-hidden="true"></i> Change Art</span>
       </button>
     {{else}}
-      <img class="vr-basic-img" src="{{item.img}}" data-edit="img" alt="" />
+      <img class="vr-basic-img" src="{{item.img}}" {{#if isGM}}data-edit="img"{{/if}} alt="" />
     {{/if}}
     <div class="vr-basic-identity">
-      <input type="text" name="name" value="{{item.name}}" placeholder="{{localize 'VEILRUNNER.Name'}}" />
+      <input type="text" name="name" value="{{item.name}}" placeholder="{{localize 'VEILRUNNER.Name'}}" {{#unless isGM}}disabled{{/unless}} />
     </div>
   </header>
 
   <nav class="vr-item-tabs vr-item-primary-tabs" aria-label="Item sheet sections">
+    {{#if isGM}}
+    <button type="button" class="{{#if itemTabIdentity}}active{{/if}}" data-action="setItemTab" data-tab="identity" aria-pressed="{{itemTabIdentity}}">
+      <i class="fa-solid fa-fingerprint" aria-hidden="true"></i><span>Identity</span>
+    </button>
+    {{/if}}
     <button type="button" class="{{#if itemTabDetails}}active{{/if}}" data-action="setItemTab" data-tab="details" aria-pressed="{{itemTabDetails}}">
       <i class="fa-solid fa-sliders" aria-hidden="true"></i><span>Details</span>
     </button>
+    {{#if isActionOrAbility}}
+    <button type="button" class="{{#if itemTabTree}}active{{/if}}" data-action="setItemTab" data-tab="tree" aria-pressed="{{itemTabTree}}">
+      <i class="fa-solid fa-diagram-project" aria-hidden="true"></i><span>Traits &amp; Tree</span>
+    </button>
+    {{/if}}
     <button type="button" class="{{#if itemTabDescription}}active{{/if}}" data-action="setItemTab" data-tab="description" aria-pressed="{{itemTabDescription}}">
       <i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Description</span>
     </button>
   </nav>
 
-  {{#if itemTabDetails}}
-
+  {{#if itemTabIdentity}}
   {{#if isGM}}
     <section class="vr-item-panel vr-item-identity">
       <h3>Identity &amp; Capabilities</h3>
       <p class="hint">Definition IDs are portable game-definition references. Foundry UUIDs and embedded Item IDs remain document and ownership references.</p>
       <div class="vr-item-field-grid">
         <label class="wide">Canonical Definition ID <input type="text" name="system.definitionId" value="{{system.definitionId}}" placeholder="veilrunner.domain.definition" /></label>
-        <label class="wide">Intents <input type="text" name="system.intentsText" value="{{itemIntentsText}}" placeholder="{{itemIntents}}" /></label>
+        <div class="wide vr-item-field">
+          <span>Intents</span>
+          <details class="vr-intent-dropdown">
+            <summary>{{#if itemIntentsText}}{{itemIntentsText}}{{else}}None selected{{/if}}</summary>
+            <div class="vr-intent-menu">
+              <input type="hidden" name="system.intentsText" value="" />
+              {{#each itemIntentOptions as |intent|}}
+                <label><input type="checkbox" name="system.intentsText" value="{{intent.value}}" data-item-intent {{checked intent.selected}} /> <span>{{intent.label}}</span></label>
+              {{/each}}
+            </div>
+          </details>
+        </div>
         <label class="wide">Provided Action Definition IDs <input type="text" name="system.providedActionIdsText" value="{{providedActionIdsText}}" placeholder="veilrunner.action.example" /></label>
       </div>
       {{#if itemDefinitionIdInvalid}}<p class="vr-rule-error">Definition IDs must use lowercase segments: veilrunner.domain.definition.</p>{{/if}}
     </section>
   {{/if}}
+  {{/if}}
+
+  {{#if itemTabDetails}}
+  <fieldset class="vr-item-tab-content {{#unless isGM}}vr-item-readonly{{/unless}}" {{#unless isGM}}disabled{{/unless}}>
 
   {{#if isPhysical}}
     {{> "systems/veilrunner/templates/item/parts/physical.hbs"}}
@@ -71,36 +95,43 @@
     </section>
     <section class="vr-item-panel vr-quality-mechanics">
       <h3>Mechanical Effects</h3>
-      {{#if editable}}<prose-mirror name="system.mechanics" value="{{qualityMechanicsValue}}">{{{qualityMechanicsHTML}}}</prose-mirror>{{else}}<div class="editor-content">{{{qualityMechanicsHTML}}}</div>{{/if}}
+      {{#if detailsEditable}}<prose-mirror name="system.mechanics" value="{{qualityMechanicsValue}}">{{{qualityMechanicsHTML}}}</prose-mirror>{{else}}<div class="editor-content">{{{qualityMechanicsHTML}}}</div>{{/if}}
       <p class="hint">Native Active Effects attached to this Item are also listed in the character-generation Inspector.</p>
     </section>
   {{/if}}
 
   {{#if isAction}}
-    <label>Kind
-      <select name="system.activationKind"><option value="action">Action</option><option value="ability" {{#if (eq system.activationKind "ability")}}selected{{/if}}>Ability (0 action points)</option></select>
-    </label>
-    <label class="vr-check">
-      <input type="checkbox" name="system.favorite" {{checked system.favorite}} />
-      {{localize 'VEILRUNNER.Action.FIELDS.favorite.label'}}
-    </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.actionType.label'}}
-      <select name="system.actionType">
-        {{#each (array "standard" "bonus" "reaction" "free") as |type|}}
-          <option value="{{type}}" {{#if (eq ../system.actionType type)}}selected{{/if}}>{{localize (concat "VEILRUNNER.ActionType." type)}}</option>
-        {{/each}}
-      </select>
-    </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.category.label'}}
+    <div class="vr-action-details-columns">
+    <section class="vr-item-panel vr-action-core">
+      <h3>Action Details</h3>
+      <div class="vr-item-field-grid">
+    <label>Category
       <select name="system.category">
         {{#each (array "actions" "reactions" "magic" "tech" "weapon" "digital" "normal" "consumables" "gadgets" "item-actions" "vehicles" "pets" "spirits") as |category|}}
           <option value="{{category}}" {{#if (eq ../system.category category)}}selected{{/if}}>{{localize (concat "VEILRUNNER.ActionCategory." category)}}</option>
         {{/each}}
       </select>
     </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.actions.label'}}
-      <input type="number" name="system.actions" value="{{system.actions}}" min="0" {{#if (eq system.activationKind "ability")}}max="0"{{/if}} />
+    <label>Action Type
+      <select name="system.actionMode">
+        {{#each actionModes as |mode|}}
+          <option value="{{mode.value}}" {{#if mode.selected}}selected{{/if}}>{{mode.label}}</option>
+        {{/each}}
+      </select>
     </label>
+    <div class="vr-action-cost-row wide">
+      <label>Action Cost
+        {{#if (eq actionMode "ability")}}<input type="text" value="Free (0)" disabled />{{else}}<select name="system.actions">{{#each actionCostOptions as |cost|}}<option value="{{cost}}" {{#if (eq ../system.actions cost)}}selected{{/if}}>{{cost}}</option>{{/each}}</select>{{/if}}
+      </label>
+      <label class="vr-stamina-cost">Initial Stamina Cost <input type="number" name="system.resourceCosts.stamina" value="{{system.resourceCosts.stamina}}" min="0" /></label>
+      <label class="vr-mana-cost">Initial Mana Cost <input type="number" name="system.resourceCosts.mana" value="{{system.resourceCosts.mana}}" min="0" /></label>
+    </div>
+    {{#if usesLevelCosts}}
+    <div class="vr-action-level-cost-row wide">
+      <label>Stamina Cost Increase <input type="number" name="system.rankScaling.staminaPerRank" value="{{system.rankScaling.staminaPerRank}}" min="0" /></label>
+      <label>Mana Cost Increase <input type="number" name="system.rankScaling.manaPerRank" value="{{system.rankScaling.manaPerRank}}" min="0" /></label>
+    </div>
+    {{/if}}
     <label>{{localize 'VEILRUNNER.Action.FIELDS.damageType.label'}}
       <select name="system.damageType">
         <option value="">{{localize 'VEILRUNNER.None'}}</option>
@@ -111,129 +142,42 @@
     </label>
     <label>{{localize 'VEILRUNNER.Action.FIELDS.maxLevel.label'}}
       <input type="number" name="system.maxLevel" value="{{system.maxLevel}}" min="1" />
+      {{#if isSpell}}<small>Highest level this spell rank can be purchased.</small>{{/if}}
     </label>
+    {{#if isEmbeddedAction}}
     <label>{{localize 'VEILRUNNER.Action.FIELDS.currentLevel.label'}}
       <select name="system.currentLevel">
         {{#each actionLevelOptions as |level|}}
           <option value="{{level}}" {{#if (eq ../system.currentLevel level)}}selected{{/if}}>{{level}}</option>
         {{/each}}
       </select>
+      {{#if isSpell}}<small>Highest level this actor can cast.</small>{{/if}}
     </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.damageDice.label'}}
-      <input type="number" name="system.damageDice" value="{{system.damageDice}}" min="0" />
+    {{/if}}
+    {{#if isSpell}}
+    <label>Base Spell Damage <input type="text" name="system.baseSpellDamage" value="{{baseSpellDamage}}" placeholder="1d6 + attribute" /><small>Damage applied once when the spell is cast.</small></label>
+    <label>Spell Damage Per Level <input type="text" name="system.spellDamagePerLevel" value="{{spellDamagePerLevel}}" placeholder="1d4" /><small>Added once for every ability level, starting at level 1.</small></label>
+    {{else}}
+    <label class="wide">Damage Formula <input type="text" name="system.damageFormula" value="{{actionDamageFormula}}" placeholder="1d4 (per level) + attribute" /><small>Use "per level" and "attribute" to calculate the final formula.</small></label>
+    {{/if}}
+    <label class="wide">Governing Attribute
+      <select name="system.governingAttribute">{{#each actionAttributeOptions as |attribute|}}<option value="{{attribute.value}}" {{#if attribute.selected}}selected{{/if}}>{{attribute.label}}</option>{{/each}}</select>
     </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.damageDie.label'}}
-      <input type="number" name="system.damageDie" value="{{system.damageDie}}" min="2" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.damageLevelInterval.label'}}
-      <input type="number" name="system.damageLevelInterval" value="{{system.damageLevelInterval}}" min="1" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.cost.label'}}
-      <input type="text" name="system.cost" value="{{system.cost}}" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.rollFormula.label'}}
-      <input type="text" name="system.rollFormula" value="{{system.rollFormula}}" placeholder="1d10 + @attributes.physical.dexterity" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.selector.label'}}
-      <input type="text" name="system.selector" value="{{system.selector}}" placeholder="attack" />
-    </label>
-    <label>Governing Attribute <input type="text" name="system.governingAttribute" value="{{system.governingAttribute}}" placeholder="agility" /></label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.requiredItemTypes.label'}}
-      <input type="text" name="system.requiredItemTypesText" value="{{actionRequiredItemTypesText}}" placeholder="weapon, shield" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.requiredItemTraits.label'}}
-      <input type="text" name="system.requiredItemTraitsText" value="{{actionRequiredItemTraitsText}}" placeholder="firearm" />
-    </label>
-    <label>Required Definition IDs <input type="text" name="system.requiredDefinitionIdsText" value="{{actionRequiredDefinitionIdsText}}" placeholder="veilrunner.weapon.example" /></label>
-    <label>Required Intents <input type="text" name="system.requiredItemIntentsText" value="{{actionRequiredItemIntentsText}}" placeholder="weapon, equippable" /></label>
-    <label class="vr-check"><input type="checkbox" name="system.requiresTarget" {{checked system.requiresTarget}} /> Requires selected target</label>
-    <label>Required Self Effects <input type="text" name="system.requiredEffectsText" value="{{actionRequiredEffectsText}}" placeholder="aimed, cloaked" /></label>
-    <label>Required Target Effects <input type="text" name="system.requiredTargetEffectsText" value="{{actionRequiredTargetEffectsText}}" placeholder="marked, exposed" /></label>
-    <label>HUD Composer Options <textarea name="system.composerText" rows="3" placeholder="Casting Rank: 1, 2, 3&#10;Range: Near, Far">{{actionComposerText}}</textarea></label>
-    <details class="vr-item-advanced-contracts">
-      <summary>Reactive HUD Contracts</summary>
-      <fieldset><legend>Rank Scaling</legend><label class="vr-check"><input type="checkbox" name="system.rankScaling.enabled" {{checked system.rankScaling.enabled}} /> Enabled</label><label>Minimum <input type="number" name="system.rankScaling.min" min="1" value="{{system.rankScaling.min}}" /></label><label>Maximum <input type="number" name="system.rankScaling.max" min="1" max="20" value="{{system.rankScaling.max}}" /></label><label>Mana per Rank <input type="number" name="system.rankScaling.manaPerRank" min="0" value="{{system.rankScaling.manaPerRank}}" /></label><label>Stamina per Rank <input type="number" name="system.rankScaling.staminaPerRank" min="0" value="{{system.rankScaling.staminaPerRank}}" /></label><label>AP per Rank <input type="number" name="system.rankScaling.actionPerRank" min="0" value="{{system.rankScaling.actionPerRank}}" /></label></fieldset>
-      <label>Requirements JSON <textarea name="system.requirementsJson" rows="5">{{actionRequirementsJson}}</textarea></label>
-      <label>Effect Consumption JSON <textarea name="system.consumesJson" rows="4">{{actionConsumesJson}}</textarea></label>
-      <label>Enhancements JSON <textarea name="system.enhancementsJson" rows="5">{{actionEnhancementsJson}}</textarea></label>
-      <label>Augments JSON <textarea name="system.augmentsJson" rows="5">{{actionAugmentsJson}}</textarea></label>
-    </details>
-    <label>{{localize 'VEILRUNNER.Action.FIELDS.summary.label'}}
-      <textarea name="system.summary" rows="3" placeholder="Short overview shown during character generation">{{system.summary}}</textarea>
-    </label>
-  {{/if}}
-
-  {{#if isAbility}}
-    <label class="vr-check">
-      <input type="checkbox" name="system.featured" {{checked system.featured}} />
-      {{localize 'VEILRUNNER.Ability.FIELDS.featured.label'}}
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.recharge.label'}}
-      <input type="text" name="system.recharge" value="{{system.recharge}}" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.actions.label'}}
-      <input type="number" name="system.actions" value="{{system.actions}}" min="0" max="0" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.damageType.label'}}
-      <select name="system.damageType">
-        <option value="">{{localize 'VEILRUNNER.None'}}</option>
-        {{#each actionDamageTypes as |type|}}
-          <option value="{{type}}" {{#if (eq ../system.damageType type)}}selected{{/if}}>{{localize (concat "VEILRUNNER.DamageTrait." type)}}</option>
-        {{/each}}
-      </select>
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.maxLevel.label'}}
-      <input type="number" name="system.maxLevel" value="{{system.maxLevel}}" min="1" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.currentLevel.label'}}
-      <select name="system.currentLevel">
-        {{#each actionLevelOptions as |level|}}
-          <option value="{{level}}" {{#if (eq ../system.currentLevel level)}}selected{{/if}}>{{level}}</option>
-        {{/each}}
-      </select>
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.damageDice.label'}}
-      <input type="number" name="system.damageDice" value="{{system.damageDice}}" min="0" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.damageDie.label'}}
-      <input type="number" name="system.damageDie" value="{{system.damageDie}}" min="2" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.damageLevelInterval.label'}}
-      <input type="number" name="system.damageLevelInterval" value="{{system.damageLevelInterval}}" min="1" />
-    </label>
-    <label>{{localize 'VEILRUNNER.Ability.FIELDS.summary.label'}}
-      <textarea name="system.summary" rows="3" placeholder="Short overview shown during character generation">{{system.summary}}</textarea>
-    </label>
-  {{/if}}
-
-  {{#if isActionOrAbility}}
-    <section class="vr-item-panel vr-action-tree-fields">
-      <h3>Traits & Tree</h3>
-      <label>Traits <input type="text" name="system.traitsText" value="{{traitsText}}" placeholder="attack, pyro, manipulate" list="vr-item-action-traits" /></label>
-      <datalist id="vr-item-action-traits">{{#each actionTraits as |trait|}}<option value="{{trait.label}}"></option>{{/each}}</datalist>
-      <div class="vr-item-field-grid">
-        <label>School <input type="text" name="system.tree.school" value="{{system.tree.school}}" /></label>
-        <label>Practice <input type="text" name="system.tree.practice" value="{{system.tree.practice}}" /></label>
-        <label>Mana Cost <input type="number" name="system.resourceCosts.mana" value="{{system.resourceCosts.mana}}" min="0" /></label>
-        <label>Stamina Cost <input type="number" name="system.resourceCosts.stamina" value="{{system.resourceCosts.stamina}}" min="0" /></label>
-        <label>Health Cost <input type="number" name="system.resourceCosts.health" value="{{system.resourceCosts.health}}" min="0" /></label>
-        <label>First Purchase TP <input type="number" name="system.tree.talentCost" value="{{system.tree.talentCost}}" min="1" /></label>
-        <label>SP per Level <input type="number" name="system.tree.rankCost" value="{{system.tree.rankCost}}" min="0" /></label>
-        <label>Required Level <input type="number" name="system.tree.requiredLevel" value="{{system.tree.requiredLevel}}" min="1" /></label>
+    <label class="vr-check wide"><input type="checkbox" name="system.favorite" {{checked system.favorite}} /> {{localize 'VEILRUNNER.Action.FIELDS.favorite.label'}}</label>
+    <label class="wide">{{localize 'VEILRUNNER.Action.FIELDS.summary.label'}} <textarea name="system.summary" rows="3" placeholder="Short overview shown during character generation">{{system.summary}}</textarea></label>
       </div>
-      <label class="vr-check"><input type="checkbox" name="system.tree.enabled" {{checked system.tree.enabled}} /> Include in Talents & Skills tree</label>
-      <div class="vr-item-section-heading"><h4>Actor & Area Effects</h4><button type="button" class="vr-item-icon-btn" data-action="addActionEffect" title="Add effect"><i class="fa-solid fa-plus"></i></button></div>
-      {{#each actionEffects as |effect|}}
-        <div class="vr-action-effect-row">
-          <select name="system.effects.{{@index}}.scope"><option value="actor">Actor</option><option value="area" {{#if (eq effect.scope "area")}}selected{{/if}}>Area</option></select>
-          <input name="system.effects.{{@index}}.target" value="{{effect.target}}" placeholder="Target, e.g. resources.stamina.max" />
-          <input name="system.effects.{{@index}}.value" value="{{effect.value}}" placeholder="Value" />
-          <input name="system.effects.{{@index}}.duration" value="{{effect.duration}}" placeholder="Duration" />
-          <input name="system.effects.{{@index}}.notes" value="{{effect.notes}}" placeholder="Notes" />
-          <button type="button" class="vr-item-icon-btn" data-action="removeActionEffect" data-index="{{@index}}"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      {{/each}}
     </section>
+
+    <section class="vr-item-panel vr-action-requirements">
+      <h3>Action Requirements</h3>
+      <div class="vr-item-field-grid">
+    <label class="wide">Required Target Effects <input type="text" name="system.requiredTargetEffectsText" value="{{actionRequiredTargetEffectsText}}" placeholder="marked, exposed" /></label>
+    <label class="wide">Required Self Effects <input type="text" name="system.requiredEffectsText" value="{{actionRequiredEffectsText}}" placeholder="aimed, cloaked" /></label>
+    <label class="wide">Required Equipped Items <input type="text" name="system.requiredEquippedItemsText" value="{{actionRequiredEquippedItemsText}}" placeholder="type:weapon, trait:firearm, id:veilrunner.weapon.example" /></label>
+    <label class="vr-check wide"><input type="checkbox" name="system.requiresTarget" {{checked system.requiresTarget}} /> Requires selected target</label>
+      </div>
+    </section>
+    </div>
   {{/if}}
 
   {{#if isAccessory}}
@@ -517,6 +461,52 @@
       <input type="text" name="system.persona" value="{{personaText}}" placeholder="+5 Lawful, +5 Empathy" />
     </label>
   {{/if}}
+  </fieldset>
+  {{/if}}
+
+  {{#if itemTabTree}}
+    <fieldset class="vr-item-tab-content {{#unless isGM}}vr-item-readonly{{/unless}}" {{#unless isGM}}disabled{{/unless}}>
+    <section class="vr-item-panel vr-action-tree-fields">
+      <h3>Traits &amp; Tree</h3>
+      <label>Traits <input type="text" name="system.traitsText" value="{{traitsText}}" placeholder="attack, pyro, manipulate" list="vr-item-action-traits" /></label>
+      <datalist id="vr-item-action-traits">{{#each actionTraits as |trait|}}<option value="{{trait.label}}"></option>{{/each}}</datalist>
+      <div class="vr-item-field-grid vr-action-tree-grid">
+        <label>School <input type="text" name="system.tree.school" value="{{system.tree.school}}" /></label>
+        <label>Practice <input type="text" name="system.tree.practice" value="{{system.tree.practice}}" /></label>
+        <label>Mana Cost <input type="number" name="system.resourceCosts.mana" value="{{system.resourceCosts.mana}}" min="0" /></label>
+        <label class="vr-stamina-cost">Stamina Cost <input type="number" name="system.resourceCosts.stamina" value="{{system.resourceCosts.stamina}}" min="0" /></label>
+        <label>Health Cost <input type="number" name="system.resourceCosts.health" value="{{system.resourceCosts.health}}" min="0" /></label>
+        <label>First Purchase TP <input type="number" name="system.tree.talentCost" value="{{system.tree.talentCost}}" min="1" /></label>
+        <label>SP per Level <input type="number" name="system.tree.rankCost" value="{{system.tree.rankCost}}" min="0" /></label>
+        <label>Required Level <input type="number" name="system.tree.requiredLevel" value="{{system.tree.requiredLevel}}" min="1" /></label>
+      </div>
+      <label class="vr-check"><input type="checkbox" name="system.tree.enabled" {{checked system.tree.enabled}} /> Include in Talents &amp; Skills tree</label>
+      <div class="vr-item-section-heading"><h4>Actor &amp; Area Effects</h4><button type="button" class="vr-item-icon-btn" data-action="addActionEffect" title="Add effect"><i class="fa-solid fa-plus"></i></button></div>
+      {{#each actionEffects as |effect|}}
+        <div class="vr-action-effect-row">
+          <select name="system.effects.{{@index}}.scope"><option value="actor">Actor</option><option value="area" {{#if (eq effect.scope "area")}}selected{{/if}}>Area</option></select>
+          <input name="system.effects.{{@index}}.target" value="{{effect.target}}" placeholder="Target, e.g. resources.stamina.max" />
+          <input name="system.effects.{{@index}}.value" value="{{effect.value}}" placeholder="Value" />
+          <input name="system.effects.{{@index}}.duration" value="{{effect.duration}}" placeholder="Duration" />
+          <input name="system.effects.{{@index}}.notes" value="{{effect.notes}}" placeholder="Notes" />
+          <button type="button" class="vr-item-icon-btn" data-action="removeActionEffect" data-index="{{@index}}"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      {{/each}}
+      <details class="vr-item-advanced-contracts">
+        <summary>Advanced Automation</summary>
+        <div class="vr-item-field-grid vr-action-tree-grid">
+          <label>Roll Formula <input type="text" name="system.rollFormula" value="{{system.rollFormula}}" placeholder="1d10 + @attributes.physical.dexterity" /></label>
+          <label>Roll Selector <input type="text" name="system.selector" value="{{system.selector}}" placeholder="attack" /></label>
+          <label class="wide">HUD Composer Options <textarea name="system.composerText" rows="3" placeholder="Casting Rank: 1, 2, 3&#10;Range: Near, Far">{{actionComposerText}}</textarea></label>
+        </div>
+        <fieldset><legend>Level Scaling</legend>{{#if usesLevelCosts}}<input type="hidden" name="system.rankScaling.enabled" value="true" /><span class="hint">Enabled for Skills and Spells</span>{{else}}<label class="vr-check"><input type="checkbox" name="system.rankScaling.enabled" {{checked system.rankScaling.enabled}} /> Enabled</label>{{/if}}<label>Minimum <input type="number" name="system.rankScaling.min" min="1" value="{{system.rankScaling.min}}" /></label><label>Maximum <input type="number" name="system.rankScaling.max" min="1" max="20" value="{{system.rankScaling.max}}" /></label><label>Action Cost Increase <input type="number" name="system.rankScaling.actionPerRank" min="0" value="{{system.rankScaling.actionPerRank}}" /></label></fieldset>
+        <label>Requirements JSON <textarea name="system.requirementsJson" rows="5">{{actionRequirementsJson}}</textarea></label>
+        <label>Effect Consumption JSON <textarea name="system.consumesJson" rows="4">{{actionConsumesJson}}</textarea></label>
+        <label>Enhancements JSON <textarea name="system.enhancementsJson" rows="5">{{actionEnhancementsJson}}</textarea></label>
+        <label>Augments JSON <textarea name="system.augmentsJson" rows="5">{{actionAugmentsJson}}</textarea></label>
+      </details>
+    </section>
+    </fieldset>
   {{/if}}
 
   {{#if itemTabDescription}}

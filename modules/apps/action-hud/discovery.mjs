@@ -1,8 +1,24 @@
 import { resolveActorActions } from "../../data/item/identity.mjs";
 import { isItemEquipped } from "../../rules/item-rules.mjs";
 import { HUD_DOMAINS } from "./constants.mjs";
+import { legacyActionDamageFormula, normalizeActionMode, spellDamageFields } from "../../data/item/action-formula.mjs";
 
 const providers = new Map();
+const DAMAGE_TYPE_ICONS = Object.freeze({
+  pyro: "fa-solid fa-fire",
+  hydro: "fa-solid fa-droplet",
+  cryo: "fa-solid fa-snowflake",
+  floral: "fa-solid fa-leaf",
+  geo: "fa-solid fa-mountain",
+  aero: "fa-solid fa-wind",
+  electric: "fa-solid fa-bolt",
+  sonic: "fa-solid fa-wave-square",
+  light: "fa-solid fa-sun",
+  void: "fa-solid fa-circle",
+  slashing: "fa-solid fa-sword",
+  bludgeoning: "fa-solid fa-hammer",
+  piercing: "fa-solid fa-crosshairs"
+});
 
 export function registerHudActionProvider(id, provider) {
   if (!id || typeof provider !== "function") throw new TypeError("HUD action providers require an id and function.");
@@ -24,6 +40,10 @@ export function normalizeHudAction(source, { provider = "owned", actor = null } 
   const system = source?.system ?? source ?? {};
   const id = String(source?.hudId ?? source?.id ?? "");
   const traits = [...new Set([...(system.traits ?? []), ...(source?.traits ?? [])].map(String))];
+  const domain = domainFor(source);
+  const actionMode = normalizeActionMode(system, source?.type ?? "action");
+  const spellDamage = spellDamageFields(system);
+  const damageType = String(system.damageType ?? source?.damageType ?? "").toLowerCase();
   return {
     hudId: id,
     id,
@@ -33,11 +53,16 @@ export function normalizeHudAction(source, { provider = "owned", actor = null } 
     sourceType: source?.documentName === "Item" || source?.parent === actor ? "item" : source?.generated ? "generated" : source?.sourceType ?? "definition",
     name: String(source?.name ?? "Unnamed Action"),
     img: source?.img ?? "icons/svg/light.svg",
-    domain: domainFor(source),
+    domain,
+    isSpell: actionMode === "spell" || domain === "magic",
+    actionMode,
     category: String(system.category ?? source?.category ?? "actions"),
     actionType: String(system.actionType ?? source?.actionType ?? "standard"),
     actionCount: Math.max(0, Number(system.actions ?? source?.actionCount ?? 1) || 0),
+    range: Math.max(0, Number(system.range ?? source?.range ?? 0) || 0),
     governingAttribute: String(system.governingAttribute ?? ""),
+    damageType,
+    damageIcon: DAMAGE_TYPE_ICONS[damageType] ?? "",
     traits,
     tags: [...new Set([...traits, ...(system.tags ?? []), String(system.damageType ?? source?.type ?? "")].filter(Boolean))],
     costs: { ...(system.resourceCosts ?? source?.costs ?? {}) },
@@ -47,6 +72,14 @@ export function normalizeHudAction(source, { provider = "owned", actor = null } 
     enhancements: system.enhancements ?? [],
     augments: system.augments ?? [],
     rankScaling: system.rankScaling ?? null,
+    currentLevel: Math.max(1, Number(system.currentLevel ?? source?.currentLevel ?? 1) || 1),
+    maxLevel: Math.max(1, Number(system.maxLevel ?? source?.maxLevel ?? 1) || 1),
+    damageDice: Math.max(0, Number(system.damageDice ?? source?.damageDice ?? 0) || 0),
+    damageDie: Math.max(2, Number(system.damageDie ?? source?.damageDie ?? 6) || 6),
+    damageLevelInterval: Math.max(1, Number(system.damageLevelInterval ?? source?.damageLevelInterval ?? 3) || 3),
+    damageFormula: legacyActionDamageFormula(system),
+    baseSpellDamage: spellDamage.baseSpellDamage,
+    spellDamagePerLevel: spellDamage.spellDamagePerLevel,
     generated: Boolean(source?.generated),
     weaponId: source?.weaponId ?? "",
     operation: source?.operation ?? "",
@@ -84,7 +117,7 @@ export function hotbarMacroActions(user = globalThis.game?.user) {
 }
 
 export function discoverHudActions(actor, context = {}) {
-  const owned = Array.from(actor?.items ?? []).filter(item => ["action", "ability"].includes(item.type)).map(item => normalizeHudAction(item, { provider: "owned", actor }));
+  const owned = Array.from(actor?.items ?? []).filter(item => ["action", "ability", "spell", "skill"].includes(item.type)).map(item => normalizeHudAction(item, { provider: "owned", actor }));
   const generated = resolveActorActions(actor).map(action => normalizeHudAction(action, { provider: "system", actor }));
   const supplied = [...providers].flatMap(([id, provider]) => (provider(actor, context) ?? []).map(action => normalizeHudAction(action, { provider: id, actor })));
   const macros = macroActions(context.user);

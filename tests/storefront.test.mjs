@@ -83,6 +83,7 @@ const fixtureCommit = await buildStorefrontCommit({ provider: fixtureProvider, i
 assert.equal(fixtureCommit.valid, true); assert.equal(fixtureCommit.documents[0].system.definitionId, fixtureRecords[0].definitionId);
 const contextMarkup = renderStorefrontContext({ mode: "details", cartLines: [{ definitionId: fixtureRecords[0].definitionId, quantity: 1, options: {} }], recordById: new Map(fixtureRecords.map(record => [record.definitionId, record])), selectedRecord: fixtureRecords[0], itemCount: 1, cartTotal: fixtureRecords[0].price, remainingCredits: 3200, projectedWeight: 3.6, carryCapacity: 20 });
 assert.match(contextMarkup, /Proficiency Unknown/); assert.match(contextMarkup, /View Cart/); assert.match(contextMarkup, /Credits Remaining/);
+assert.match(contextMarkup, /3,200c/, "storefront amounts use the c denomination");
 const cartMarkup = renderStorefrontContext({ mode: "cart", cartLines: [{ definitionId: fixtureRecords[0].definitionId, quantity: 1, options: {} }], recordById: new Map(fixtureRecords.map(record => [record.definitionId, record])), selectedRecord: fixtureRecords[0], itemCount: 1, cartTotal: fixtureRecords[0].price, remainingCredits: 3200, projectedWeight: 3.6, carryCapacity: 20 });
 assert.match(cartMarkup, /data-action="storefront-purchase-cart"/, "cart exposes an explicit Purchase action before items enter the Live Build");
 

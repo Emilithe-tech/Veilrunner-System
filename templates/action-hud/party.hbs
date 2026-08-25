@@ -1,9 +1,10 @@
-<aside class="vr-hud-party" aria-label="Party status">
-  <header><i class="fa-solid fa-people-group"></i><span>Party</span><em>{{panState}}</em></header>
+<aside class="vr-hud-party {{#unless partyOpen}}is-collapsed{{/unless}}" aria-label="Party status">
+  <header><i class="fa-solid fa-people-group"></i><span>Party</span><em>{{panState}}</em><button type="button" data-action="toggleParty" aria-label="{{#if partyOpen}}Close{{else}}Open{{/if}} party list" title="{{#if partyOpen}}Close{{else}}Open{{/if}} party list"><i class="fa-solid fa-chevron-{{#if partyOpen}}down{{else}}up{{/if}}" aria-hidden="true"></i></button></header>
+  {{#if partyOpen}}
   <div class="vr-hud-party-list">
     {{#each party as |member|}}
       <article class="vr-hud-party-card fidelity-{{member.fidelity}}">
-        <img src="{{member.img}}" alt="" />
+        <div class="vr-hud-party-portrait"><img src="{{member.img}}" alt="" /></div>
         <div><strong>{{member.name}}</strong>
           <div class="vr-hud-party-resources">
             {{#each member.resources as |resource|}}
@@ -22,5 +23,5 @@
       <p class="vr-hud-empty">No party telemetry.</p>
     {{/each}}
   </div>
+  {{/if}}
 </aside>
-

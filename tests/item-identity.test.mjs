@@ -24,6 +24,8 @@ assert.equal(isDefinitionId("veilrunner.weapon.Arc Pistol"), false);
 assert.deepEqual(normalizeItemIntents(["weapon", "WEAPON", "unknown", "market-sellable"]), ["weapon", "market-sellable"]);
 assert.deepEqual(defaultIntentsForItem("weapon", { weaponKind: "firearm" }), ["equippable", "market-sellable", "weapon", "action-provider"]);
 assert.ok(defaultIntentsForItem("action", { actionType: "reaction" }).includes("reaction-provider"));
+assert.ok(defaultIntentsForItem("spell", {}).includes("action-provider"));
+assert.ok(defaultIntentsForItem("skill", {}).includes("action-provider"));
 
 const schema = itemIdentityFields();
 assert.ok(schema.definitionId && schema.intents && schema.providedActionIds, "identity fields are reusable schema fields");
@@ -32,6 +34,7 @@ assert.equal(ITEM_INTENTS.includes("action-provider"), true);
 const { default: ActionData } = await import("../modules/data/item/action.mjs");
 const actionSchema = ActionData.defineSchema();
 assert.ok(actionSchema.definitionId && actionSchema.requiredDefinitionIds && actionSchema.requiredItemIntents, "action data exposes canonical prerequisites");
+assert.ok(actionSchema.actionMode && actionSchema.damageFormula, "action data exposes unified mode and smart damage authoring");
 assert.deepEqual(ActionData.migrateData({ definitionId: "VEILRUNNER.ACTION.TEST", intents: ["action-provider", "invalid"] }), {
   definitionId: "veilrunner.action.test", intents: ["action-provider"]
 });

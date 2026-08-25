@@ -20,7 +20,7 @@ export const ITEM_CREATE_TYPE_GROUPS = Object.freeze([
   Object.freeze({
     id: "other",
     label: "VEILRUNNER.ItemTypeGroups.other",
-    types: Object.freeze(["ability", "action"])
+    types: Object.freeze(["ability", "action", "skill", "spell"])
   })
 ]);
 

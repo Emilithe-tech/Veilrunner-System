@@ -1075,6 +1075,15 @@ export const VEILRUNNER_PERSONA_INDEX_MODIFIERS = Object.freeze({
   "Magus:Sorcerer": ["+5 Individual", "+5 Ruthless"]
 });
 
+// Keep every authored Discipline synchronized with the PDF-verified numeric
+// adjustments used by character generation and reference content.
+for (const profession of VEILRUNNER_PROFESSIONS) {
+  for (const discipline of profession.disciplines) {
+    const modifiers = VEILRUNNER_PERSONA_INDEX_MODIFIERS[`${profession.name}:${discipline.name}`];
+    if (modifiers) discipline.persona = [...modifiers];
+  }
+}
+
 export function professionDisciplineOptions() {
   return VEILRUNNER_PROFESSIONS.flatMap(profession =>
     profession.disciplines.map(discipline => ({
