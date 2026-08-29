@@ -3,7 +3,7 @@
   "type": "system",
   "title": "Veilrunner First Edition",
   "description": "The Official FoundryVTT System for Veilrunner",
-  "version": "0.0.17",
+  "version": "0.0.19",
   "license": "Open RPG Community License (ORC)",
   "manifest": "https://github.com/Emilithe-tech/Veilrunner-System/raw/main/system.json",
   "download": "https://github.com/Emilithe-tech/Veilrunner-System",
@@ -129,6 +129,15 @@
       "label": "Background Library",
       "system": "Veilrunner",
       "path": "packs/backgrounds",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "languages",
+      "label": "Language Library",
+      "system": "Veilrunner",
+      "path": "packs/languages",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -285,6 +294,11 @@
         ]
       },
       "background": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "language": {
         "htmlFields": [
           "description"
         ]

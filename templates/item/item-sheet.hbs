@@ -461,6 +461,11 @@
       <input type="text" name="system.persona" value="{{personaText}}" placeholder="+5 Lawful, +5 Empathy" />
     </label>
   {{/if}}
+  {{#if (eq item.type "species")}}
+    <label>{{localize 'VEILRUNNER.SpeciesItem.FIELDS.size.label'}}
+      <input type="text" name="system.size" value="{{system.size}}" />
+    </label>
+  {{/if}}
   </fieldset>
   {{/if}}
 

@@ -111,7 +111,9 @@ function economyProjection(actor) {
 
 export function buildHudProjection(actor, state = {}) {
   const preferences = getHudPreferences(actor);
-  const selectedTargetTokens = state.targetToken ? [state.targetToken] : [...(globalThis.game?.user?.targets ?? [])];
+  const selectedTargetTokens = Array.isArray(state.targetTokens)
+    ? state.targetTokens.filter(Boolean)
+    : state.targetToken ? [state.targetToken] : [...(globalThis.game?.user?.targets ?? [])];
   const targetToken = selectedTargetTokens[0] ?? null;
   const target = targetToken?.actor ?? null;
   const targetPresentations = selectedTargetTokens.map(token => getTargetIntelPresentation(token, { viewerActor: actor }));
@@ -167,6 +169,7 @@ export function buildHudProjection(actor, state = {}) {
     panState: getPanState(actor),
     party: partyProjection(actor),
     target: targetPresentation,
+    targetTokens: selectedTargetTokens,
     actions,
     allActions,
     pinned: projectedPins,

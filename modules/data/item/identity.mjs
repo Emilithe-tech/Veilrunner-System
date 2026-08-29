@@ -40,7 +40,7 @@ export function defaultIntentsForItem(type, system = {}) {
   if (type === "container") defaults.add("container");
   if (["action", "ability", "spell", "skill"].includes(type)) defaults.add("action-provider");
   if (["action", "spell", "skill"].includes(type) && (system.actionType === "reaction" || system.category === "reactions")) defaults.add("reaction-provider");
-  if (["species", "origin", "background", "archetype", "profession", "discipline", "quality", "perk", "flaw"].includes(type)) defaults.add("chargen-selectable");
+  if (["species", "origin", "background", "archetype", "profession", "discipline", "language", "quality", "perk", "flaw"].includes(type)) defaults.add("chargen-selectable");
   return [...defaults];
 }
 

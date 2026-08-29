@@ -1,4 +1,5 @@
 import { WEAPON_TYPE_GROUPS } from "../../../data/item/physical.mjs";
+import { catalogSubtypeSelection } from "./query.mjs";
 
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
 const title = value => String(value ?? "").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[-_]+/g, " ").replace(/\b\w/g, letter => letter.toUpperCase());
@@ -56,10 +57,17 @@ function filters(query, facets) {
 function subtypeChips(query) {
   if (query.category !== "weapons") return "";
   const all = WEAPON_SUBTYPES[0];
-  const groupMarkup = group => `<span class="vr-store-subtype-group"><b>${escape(title(group.key))}</b>${group.types.map(type => `<button type="button" data-storefront-subtype="${type}" class="${query.subtype === type ? "active" : ""}" aria-pressed="${query.subtype === type}">${escape(subtypeLabel(type))}</button>`).join("")}</span>`;
+  const selected = new Set(catalogSubtypeSelection(query));
+  const groupMarkup = group => {
+    const allSelected = group.types.every(type => selected.has(type));
+    const partiallySelected = !allSelected && group.types.some(type => selected.has(type));
+    const state = allSelected ? "active" : partiallySelected ? "partial" : "";
+    const pressed = allSelected ? "true" : partiallySelected ? "mixed" : "false";
+    return `<span class="vr-store-subtype-group"><button type="button" class="vr-store-subtype-group-toggle ${state}" data-storefront-subtype-group="${escape(group.key)}" data-storefront-subtypes="${escape(group.types.join(","))}" aria-pressed="${pressed}">${escape(title(group.key))}</button>${group.types.map(type => `<button type="button" data-storefront-subtype="${type}" class="${selected.has(type) ? "active" : ""}" aria-pressed="${selected.has(type)}">${escape(subtypeLabel(type))}</button>`).join("")}</span>`;
+  };
   const standardGroups = WEAPON_TYPE_GROUPS.filter(group => !group.key.endsWith("Firearms"));
   const firearmGroups = WEAPON_TYPE_GROUPS.filter(group => group.key.endsWith("Firearms"));
-  return `<nav class="vr-store-subtypes" aria-label="Weapon subtype"><div class="vr-store-subtype-row standard" aria-label="Standard weapon groups"><button type="button" data-storefront-subtype="${all[0]}" class="${query.subtype === all[0] ? "active" : ""}" aria-pressed="${query.subtype === all[0]}">${all[1]}</button>${standardGroups.map(groupMarkup).join("")}</div><div class="vr-store-subtype-row firearms" aria-label="Firearm groups">${firearmGroups.map(groupMarkup).join("")}</div></nav>`;
+  return `<nav class="vr-store-subtypes" aria-label="Weapon subtype"><div class="vr-store-subtype-row standard" aria-label="Standard weapon groups"><button type="button" data-storefront-subtype="${all[0]}" class="${selected.size ? "" : "active"}" aria-pressed="${!selected.size}">${all[1]}</button>${standardGroups.map(groupMarkup).join("")}</div><div class="vr-store-subtype-row firearms" aria-label="Firearm groups">${firearmGroups.map(groupMarkup).join("")}</div></nav>`;
 }
 
 function itemStats(record) {
@@ -90,8 +98,9 @@ export function renderStorefrontBrowser({ query, facets, page, selectedDefinitio
   return `<section class="vr-cc-storefront">${categoryTabs(query)}${filters(query, facets)}${subtypeChips(query)}<div class="vr-store-list" data-storefront-scroll>${body}</div>${pagination(page)}</section>`;
 }
 
-function summary(model) {
-  return `<footer class="vr-store-summary"><div><span><i class="fa-solid fa-cart-shopping"></i> Cart <b>${model.itemCount}</b></span><small>${model.itemCount} item${model.itemCount === 1 ? "" : "s"}</small></div><dl><div><dt>Credits Remaining</dt><dd><i class="fa-solid fa-coins"></i>${credits(model.remainingCredits)}</dd></div><div><dt>Total Carry Weight</dt><dd>${weight(model.projectedWeight)} / ${weight(model.carryCapacity)}</dd></div></dl><button type="button" data-action="storefront-show-cart">View Cart <i class="fa-solid fa-arrow-right"></i></button></footer>`;
+function summary(model, mode) {
+  const viewCart = mode === "cart" ? "" : `<button type="button" data-action="storefront-show-cart">View Cart <i class="fa-solid fa-arrow-right"></i></button>`;
+  return `<footer class="vr-store-summary ${mode === "cart" ? "cart-active" : ""}"><div><span><i class="fa-solid fa-cart-shopping"></i> Cart <b>${model.itemCount}</b></span><small>${model.itemCount} item${model.itemCount === 1 ? "" : "s"}</small></div><dl><div><dt>Credits Remaining</dt><dd><i class="fa-solid fa-coins"></i>${credits(model.remainingCredits)}</dd></div><div><dt>Total Carry Weight</dt><dd>${weight(model.projectedWeight)} / ${weight(model.carryCapacity)}</dd></div></dl>${viewCart}</footer>`;
 }
 
 function details(model) {
@@ -115,7 +124,11 @@ function cart(model) {
   return `<div class="vr-store-cart"><header><div><span>Cart</span><h2>${model.itemCount} item${model.itemCount === 1 ? "" : "s"}</h2></div>${model.itemCount ? `<button type="button" data-action="storefront-clear-cart"><i class="fa-solid fa-trash-can"></i>Clear Cart</button>` : ""}</header><div class="vr-store-cart-lines">${lines || `<div class="vr-store-detail-empty"><i class="fa-solid fa-cart-shopping"></i><p>Add catalog items to build a starting loadout.</p></div>`}</div><dl class="vr-store-cart-totals"><div><dt>Total Cost</dt><dd>${credits(model.cartTotal)}</dd></div><div><dt>Credits Remaining</dt><dd>${credits(model.remainingCredits)}</dd></div><div><dt>Total Carry Weight</dt><dd>${weight(model.projectedWeight)} / ${weight(model.carryCapacity)}</dd></div></dl><footer class="vr-store-cart-checkout"><button type="button" data-action="storefront-purchase-cart" ${model.itemCount ? "" : "disabled"}><i class="fa-solid fa-cart-shopping"></i>Purchase</button></footer></div>`;
 }
 
+function nextButton() {
+  return `<footer class="vr-store-next"><button type="button" data-action="next"><span>Next</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></footer>`;
+}
+
 export function renderStorefrontContext(model) {
   const mode = model.mode === "cart" ? "cart" : "details";
-  return `<aside class="vr-cc-info vr-cc-details-pane vr-cc-store-right"><nav class="vr-store-context-tabs"><button type="button" data-action="storefront-show-details" class="${mode === "details" ? "active" : ""}">Details</button><button type="button" data-action="storefront-show-cart" class="${mode === "cart" ? "active" : ""}">Cart <b>${model.itemCount}</b></button></nav><div class="vr-store-context-body">${mode === "cart" ? cart(model) : details(model)}</div>${summary(model)}</aside>`;
+  return `<aside class="vr-cc-info vr-cc-details-pane vr-cc-store-right"><nav class="vr-store-context-tabs"><button type="button" data-action="storefront-show-details" class="${mode === "details" ? "active" : ""}">Details</button><button type="button" data-action="storefront-show-cart" class="${mode === "cart" ? "active" : ""}">Cart <b>${model.itemCount}</b></button></nav><div class="vr-store-context-body">${mode === "cart" ? cart(model) : details(model)}</div>${summary(model, mode)}${nextButton()}</aside>`;
 }

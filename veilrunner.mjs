@@ -15,6 +15,8 @@ import { registerSettings } from "./modules/settings.mjs";
 import { migrateOfficialCompendiumDefinitions } from "./modules/data/item/identity.mjs";
 import { migrateTalentTreeItemsToCompendia } from "./modules/apps/chargen/talent-tree-items.mjs";
 import { migrateActionItemsToCompactFormat } from "./modules/data/item/action-migration.mjs";
+import { migrateSpeciesSizes } from "./modules/data/item/species-size-migration.mjs";
+import { migrateTalentTreeCatalogLayout } from "./modules/data/talent-tree.mjs";
 import { registerActorActionSync } from "./modules/data/item/actor-action-sync.mjs";
 
 const PARTY_SHEET_PARTIALS = [
@@ -94,7 +96,7 @@ Hooks.once("init", async () => {
 
   DocumentSheetConfig.registerSheet(foundry.documents.Item, sid, VeilrunnerItemSheet, {
     types: [
-      "action", "spell", "skill", "accessory", "ability", "armor", "archetype", "profession", "discipline", "treasure", "species", "origin", "background",
+      "action", "spell", "skill", "accessory", "ability", "armor", "archetype", "profession", "discipline", "treasure", "species", "origin", "background", "language",
       "quality", "perk", "flaw", "weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"
     ],
     makeDefault: true,
@@ -104,11 +106,15 @@ Hooks.once("init", async () => {
 
 Hooks.once("ready", async () => {
   try {
+    const treeLayout = await migrateTalentTreeCatalogLayout();
+    if (treeLayout.migrated) console.info("Veilrunner | Talent-tree coordinates migrated to the 3840x2160 canvas.", treeLayout);
     await migrateOfficialCompendiumDefinitions();
     const actionMigration = await migrateActionItemsToCompactFormat();
     if (actionMigration.world || actionMigration.actors || actionMigration.packs) console.info("Veilrunner | Actions migrated to compact authoring format.", actionMigration);
     const result = await migrateTalentTreeItemsToCompendia();
     if (!result.missingPacks.length && (result.migrated || result.actors)) console.info("Veilrunner | Talent-tree Items migrated to compendia.", result);
+    const speciesSizes = await migrateSpeciesSizes();
+    if (speciesSizes.migrated) console.info(`Veilrunner | Added Medium size to ${speciesSizes.migrated} Species definitions.`);
   } catch (error) {
     console.error("Veilrunner | Item migration failed", error);
   }

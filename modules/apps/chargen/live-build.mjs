@@ -18,7 +18,20 @@ function purchase(entry) {
 }
 
 function attributeTable(groups) {
-  return `<div class="vr-cc-live-attribute-table">${groups.map(group => `<section><h4>${escape(group.label)}</h4><div>${(group.rows ?? []).map(row => `<p><span>${escape(row.label)}</span><strong>${escape(row.value)}</strong></p>`).join("")}</div></section>`).join("")}</div>`;
+  return `<div class="vr-cc-live-attribute-table">${groups.map(group => `<section><h4>${escape(group.label)}</h4><div>${(group.rows ?? []).map(row => {
+    const base = Number(row.base ?? row.value) || 0;
+    const bonus = Number(row.bonus) || 0;
+    const total = Number(row.value ?? (base + bonus)) || 0;
+    const bonusMarkup = bonus ? `<b class="vr-cc-live-attribute-bonus">${escape(`${bonus > 0 ? "+" : ""}${bonus}`)}</b>` : "";
+    return `<p><span>${escape(row.label)}</span><strong><span class="vr-cc-live-attribute-adjustment">${bonusMarkup}</span><em class="vr-cc-live-attribute-total">${escape(total)}</em></strong></p>`;
+  }).join("")}</div></section>`).join("")}</div>`;
+}
+
+function identityCard(entry) {
+  const art = entry.img
+    ? `<img src="${escape(entry.img)}" alt="" />`
+    : `<i class="${escape(entry.icon || "fa-regular fa-image")}" aria-hidden="true"></i>`;
+  return `<button type="button" class="vr-cc-live-card vr-cc-live-full-art-card" data-inspect-title="${escape(entry.title)}" data-inspect-description="${escape(entry.description)}"><span class="vr-cc-live-card-art" aria-hidden="true">${art}</span><span class="vr-cc-live-card-name">${escape(entry.title)}</span></button>`;
 }
 
 /** A compact, data-only summary. It intentionally has no actor writes. */
@@ -31,7 +44,7 @@ export function renderLiveBuild({ name, nameValue = name, portrait, portraitCrop
     const remainder = Math.max(0, entries.length - visible.length);
     return `<section class="vr-cc-live-section ${isCollapsed ? "collapsed" : ""}" data-live-section="${escape(section.key)}">
       <button type="button" class="vr-cc-live-section-heading" data-action="toggle-live-section" data-live-section="${escape(section.key)}" aria-expanded="${!isCollapsed}"><span>${escape(section.label)}</span><i class="fa-solid fa-chevron-${isCollapsed ? "right" : "down"}" aria-hidden="true"></i></button>
-      ${isCollapsed ? "" : section.presentation === "attributes" ? attributeTable(section.groups ?? []) : `<div class="vr-cc-live-badges ${section.presentation === "cards" ? "vr-cc-live-cards" : ""} ${section.presentation === "purchases" ? "vr-cc-live-purchases" : ""} ${section.compactBadges ? "vr-cc-live-icon-badges" : ""}">${visible.length ? visible.map(entry => section.presentation === "cards" ? `<button type="button" class="vr-cc-live-card" data-inspect-title="${escape(entry.title)}" data-inspect-description="${escape(entry.description)}"><i class="fa-regular fa-image"></i><span>${escape(entry.title)}</span></button>` : section.presentation === "purchases" ? purchase(entry) : badge(entry)).join("") : '<span class="vr-cc-live-empty">None selected</span>'}${remainder ? `<span class="vr-cc-live-more" title="${escape(`${remainder} more selected`)}">+${remainder}</span>` : ""}</div>`}
+      ${isCollapsed ? "" : section.presentation === "attributes" ? attributeTable(section.groups ?? []) : `<div class="vr-cc-live-badges ${section.presentation === "cards" ? "vr-cc-live-cards" : ""} ${section.presentation === "purchases" ? "vr-cc-live-purchases" : ""} ${section.compactBadges ? "vr-cc-live-icon-badges" : ""}">${visible.length ? visible.map(entry => section.presentation === "cards" ? identityCard(entry) : section.presentation === "purchases" ? purchase(entry) : badge(entry)).join("") : '<span class="vr-cc-live-empty">None selected</span>'}${remainder ? `<span class="vr-cc-live-more" title="${escape(`${remainder} more selected`)}">+${remainder}</span>` : ""}</div>`}
     </section>`;
   }).join("");
   const crop = {

@@ -569,6 +569,17 @@ test("actions can be prepared with composer choices and multiple target context"
   delete globalThis.game.combat;
 });
 
+test("HUD projection accepts hook-confirmed targets while the user target set is stale", () => {
+  const hero = actor();
+  const enemy = actor({ id: "hook-target", name: "Hook Target", img: "target.webp", isOwner: false });
+  const token = { id: "hook-target-token", document: { uuid: "Scene.scene.Token.hook-target" }, actor: enemy };
+  globalThis.game.user.targets = new Set();
+  const view = buildHudProjection(hero, { targetTokens: [token] });
+  assert.equal(view.target.selected, true);
+  assert.equal(view.target.name, "Hook Target");
+  assert.equal(view.targetTokens[0], token);
+});
+
 test("weapon composer derives Single Shot and validates authored ammunition cost", () => {
   const hero = actor();
   const base = { id: "weapon:rifle:fire", actionCount: 1, traits: [], costs: {}, composer: [{ key: "fireMode", label: "Fire Mode", choices: ["single", "burst"], required: true }], weaponComposer: { range: 40, ammoCurrent: 2, modes: [{ id: "single", label: "Single Shot", actions: 1, ammoCost: 1 }, { id: "burst", label: "Burst", actions: 2, ammoCost: 3 }], options: [] } };

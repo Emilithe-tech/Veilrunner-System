@@ -4,9 +4,22 @@ const compareText = (left, right) => String(left ?? "").localeCompare(String(rig
 
 export const CATALOG_PAGE_SIZE = 25;
 export const DEFAULT_CATALOG_QUERY = Object.freeze({
-  search: "", category: "weapons", subtype: "all", rarity: "all", grade: "all",
+  search: "", category: "weapons", subtype: "all", subtypes: Object.freeze([]), rarity: "all", grade: "all",
   priceMin: "", priceMax: "", weightMin: "", weightMax: "", sort: "name", direction: "asc"
 });
+
+export function catalogSubtypeSelection(query = {}) {
+  const selected = Array.isArray(query.subtypes) && query.subtypes.length ? query.subtypes : query.subtype && query.subtype !== "all" ? [query.subtype] : [];
+  return [...new Set(selected.map(value => String(value ?? "").trim()).filter(value => value && value !== "all"))];
+}
+
+export function toggleCatalogSubtypes(query = {}, values = []) {
+  const selected = new Set(catalogSubtypeSelection(query));
+  const targets = [...new Set(values.map(value => String(value ?? "").trim()).filter(value => value && value !== "all"))];
+  const remove = targets.length > 0 && targets.every(value => selected.has(value));
+  for (const value of targets) remove ? selected.delete(value) : selected.add(value);
+  return [...selected];
+}
 
 export function catalogFacets(records) {
   const values = (key, sorter = compareText) => [...new Set(records.map(record => record[key]).filter(value => value !== "" && value !== null && value !== undefined))].sort(sorter);
@@ -20,12 +33,13 @@ export function catalogFacets(records) {
 
 export function queryCatalog(records, query = {}) {
   const active = { ...DEFAULT_CATALOG_QUERY, ...query };
+  const selectedSubtypes = new Set(catalogSubtypeSelection(query));
   const priceMin = finiteOrNull(active.priceMin); const priceMax = finiteOrNull(active.priceMax);
   const weightMin = finiteOrNull(active.weightMin); const weightMax = finiteOrNull(active.weightMax);
   const indexed = records.map((record, index) => ({ record, index })).filter(({ record }) =>
     (!text(active.search) || String(record.search ?? "").includes(text(active.search))) &&
     (active.category === "all" || record.storeCategory === active.category) &&
-    (active.subtype === "all" || record.subtype === active.subtype) &&
+    (!selectedSubtypes.size || selectedSubtypes.has(record.subtype)) &&
     (active.rarity === "all" || record.rarity === active.rarity) &&
     (active.grade === "all" || Number(record.grade) === Number(active.grade)) &&
     (priceMin === null || Number(record.price) >= priceMin) && (priceMax === null || Number(record.price) <= priceMax) &&

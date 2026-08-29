@@ -1,7 +1,9 @@
 /** Shipped three-tier tree catalog: School -> Practice -> Spell/Skill. */
+const NODE_SHAPES = ["circle", "diamond", "hex", "pentagon", "square", "rounded-square", "shield", "flag", "star", "capsule"];
 const spell = (id, name, order, options = {}) => ({
   id, name, order, x: Number(options.x) || 0, y: Number(options.y) || 0,
-  shape: ["circle", "hex", "pentagon", "square", "diamond"].includes(options.shape) ? options.shape : (options.type === "ability" ? "hex" : options.type === "trait" ? "circle" : "diamond"),
+  shape: NODE_SHAPES.includes(options.shape) ? options.shape : (options.type === "ability" ? "hex" : options.type === "trait" ? "circle" : "diamond"),
+  size: options.size ?? { preset: "medium" },
   type: ["ability", "reaction"].includes(options.type) ? options.type : "action",
   category: options.category ?? "magic", actions: options.type === "ability" ? 0 : (options.actions ?? 1),
   talentCost: options.talentCost ?? 1, rankCost: options.rankCost ?? 1, maxRank: options.maxRank ?? Number.MAX_SAFE_INTEGER,
@@ -11,7 +13,7 @@ const spell = (id, name, order, options = {}) => ({
 });
 
 const practice = (id, name, x, y, spells = [], options = {}) => ({
-  id, name, x, y, shape: ["circle", "hex", "pentagon", "square", "diamond"].includes(options.shape) ? options.shape : "diamond", talentCost: options.talentCost ?? 1, requiredLevel: options.requiredLevel ?? 1,
+  id, name, x, y, shape: NODE_SHAPES.includes(options.shape) ? options.shape : "diamond", size: options.size ?? { preset: "medium" }, talentCost: options.talentCost ?? 1, requiredLevel: options.requiredLevel ?? 1,
   requires: options.requires ?? [], color: options.color ?? "", spells: spells.map((entry, index) => ({
     ...entry,
     x: entry.x || (x + 105 + (index - (spells.length - 1) / 2) * 78),
@@ -19,12 +21,15 @@ const practice = (id, name, x, y, spells = [], options = {}) => ({
   }))
 });
 
-const MAGIC_ROOT = Object.freeze({ id: "magic-root", name: "Magic", x: 5000, y: 3500, color: "#d8b4fe", shape: "hex" });
-const TALENT_TREE_LAYOUT_VERSION = 6;
+export const TALENT_TREE_CANVAS = Object.freeze({ width: 3840, height: 2160, margin: 60 });
+export const TALENT_TREE_LAYOUT_VERSION = 10;
+const LEGACY_LAYOUT_SCALE = Object.freeze({ x: .55, y: .36 });
+const LEGACY_LAYOUT_EDGE = Object.freeze({ x: 3600, y: 1920 });
+const LEGACY_MAGIC_ROOT = Object.freeze({ id: "magic-root", name: "Aetheric Ability", x: 5000, y: 3500, color: "#d8b4fe", shape: "hex" });
 const SCHOOL_ANGLES = Object.freeze({ elemental: -90, primal: -30, arcane: 30, spirit: 90, creation: 150, intrinsic: 210 });
 const school = (id, name, x, y, color, practices) => {
   const angle = (SCHOOL_ANGLES[id] ?? -90) * Math.PI / 180;
-  const target = { x: MAGIC_ROOT.x + Math.cos(angle) * 330, y: MAGIC_ROOT.y + Math.sin(angle) * 330 };
+  const target = { x: LEGACY_MAGIC_ROOT.x + Math.cos(angle) * 330, y: LEGACY_MAGIC_ROOT.y + Math.sin(angle) * 330 };
   const outward = { x: Math.cos(angle), y: Math.sin(angle) };
   const across = { x: -outward.y, y: outward.x };
   const transform = node => {
@@ -37,7 +42,7 @@ const school = (id, name, x, y, color, practices) => {
 const s = spell;
 const spiritProgression = (verb, prefix, traits) => ["Minor", "Lesser", "Regular", "Greater", "Arch"].map((rank, index, ranks) => s(`${prefix}-${rank.toLowerCase()}-spirit`, `${verb} ${rank} Spirit`, index, { traits, requires: index ? [{ id: `${prefix}-${ranks[index - 1].toLowerCase()}-spirit`, level: 1 }] : [] }));
 
-export const VEILRUNNER_TALENT_TREES = Object.freeze({
+const LEGACY_TALENT_TREES = Object.freeze({
   skills: [],
   magic: [
     school("elemental", "Elemental", 500, 120, "#f97316", [
@@ -94,7 +99,131 @@ export const VEILRUNNER_TALENT_TREES = Object.freeze({
   ]
 });
 
-export const VEILRUNNER_TALENT_TREE_ROOTS = Object.freeze({ magic: MAGIC_ROOT, skills: { id: "skills-root", name: "Skills", x: 5000, y: 3500, color: "#67e8f9", shape: "hex" } });
+const LEGACY_TALENT_TREE_ROOTS = Object.freeze({ magic: LEGACY_MAGIC_ROOT, skills: { id: "skills-root", name: "Skills", x: 5000, y: 3500, color: "#67e8f9", shape: "hex" } });
+
+function clone(value) {
+  return globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value));
+}
+
+function pageNodes(page = []) {
+  return page.flatMap(school => [school, ...(school.practices ?? []).flatMap(practice => [practice, ...(practice.spells ?? [])])]).filter(Boolean);
+}
+
+function legacyPageScale(page, root) {
+  const nodes = [root, ...pageNodes(page)].filter(Boolean);
+  const maximumX = Math.max(1, ...nodes.map(node => Math.max(0, Number(node.x) || 0)));
+  const maximumY = Math.max(1, ...nodes.map(node => Math.max(0, Number(node.y) || 0)));
+  return {
+    x: Math.min(LEGACY_LAYOUT_SCALE.x, LEGACY_LAYOUT_EDGE.x / maximumX),
+    y: Math.min(LEGACY_LAYOUT_SCALE.y, LEGACY_LAYOUT_EDGE.y / maximumY)
+  };
+}
+
+function canvasCoordinate(value, axis, scale) {
+  const maximum = axis === "x" ? TALENT_TREE_CANVAS.width : TALENT_TREE_CANVAS.height;
+  return Math.max(TALENT_TREE_CANVAS.margin, Math.min(maximum - TALENT_TREE_CANVAS.margin, Math.round((Number(value) || 0) * scale[axis])));
+}
+
+export function clampTalentTreePoint(x, y) {
+  return {
+    x: Math.max(TALENT_TREE_CANVAS.margin, Math.min(TALENT_TREE_CANVAS.width - TALENT_TREE_CANVAS.margin, Math.round(Number(x) || 0))),
+    y: Math.max(TALENT_TREE_CANVAS.margin, Math.min(TALENT_TREE_CANVAS.height - TALENT_TREE_CANVAS.margin, Math.round(Number(y) || 0)))
+  };
+}
+
+export function talentTreeRingRadius(root, requested = 500) {
+  const radius = Math.max(180, Math.min(3000, Number(requested) || 500));
+  const maximum = Math.max(0, Math.min(
+    Number(root?.x) - TALENT_TREE_CANVAS.margin,
+    TALENT_TREE_CANVAS.width - TALENT_TREE_CANVAS.margin - Number(root?.x),
+    Number(root?.y) - TALENT_TREE_CANVAS.margin,
+    TALENT_TREE_CANVAS.height - TALENT_TREE_CANVAS.margin - Number(root?.y)
+  ));
+  return Math.min(radius, maximum);
+}
+
+function migrateLegacyPage(page, root) {
+  const result = clone(page ?? []);
+  const scale = legacyPageScale(result, root);
+  for (const node of pageNodes(result)) {
+    node.x = canvasCoordinate(node.x, "x", scale);
+    node.y = canvasCoordinate(node.y, "y", scale);
+  }
+  const migratedRoot = clone(root);
+  migratedRoot.x = canvasCoordinate(migratedRoot.x, "x", scale);
+  migratedRoot.y = canvasCoordinate(migratedRoot.y, "y", scale);
+  return { page: result, root: migratedRoot };
+}
+
+function translateConnectionStyle(style, dx, dy, translated) {
+  if (!style || typeof style !== "object" || translated.has(style)) return;
+  translated.add(style);
+  if (!Array.isArray(style.waypoints)) return;
+  for (const point of style.waypoints) {
+    if (!point || typeof point !== "object") continue;
+    point.x = (Number(point.x) || 0) + dx;
+    point.y = (Number(point.y) || 0) + dy;
+  }
+}
+
+function translateTreePage(page, dx, dy) {
+  const translated = new WeakSet();
+  for (const node of pageNodes(page)) {
+    node.x = (Number(node.x) || 0) + dx;
+    node.y = (Number(node.y) || 0) + dy;
+  }
+  for (const school of page) {
+    translateConnectionStyle(school.rootConnection, dx, dy, translated);
+    for (const practice of school.practices ?? []) {
+      translateConnectionStyle(practice.schoolConnection, dx, dy, translated);
+      for (const requirement of practice.requires ?? []) translateConnectionStyle(requirement?.line, dx, dy, translated);
+      for (const spell of practice.spells ?? []) {
+        translateConnectionStyle(spell.practiceConnection, dx, dy, translated);
+        for (const requirement of spell.requires ?? []) translateConnectionStyle(requirement?.line, dx, dy, translated);
+      }
+    }
+  }
+}
+
+function median(values) {
+  const sorted = values.filter(Number.isFinite).sort((left, right) => left - right);
+  if (!sorted.length) return 0;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function inferCenteredPageTranslation(page, key, center) {
+  const fallbackById = new Map(pageNodes(VEILRUNNER_TALENT_TREES[key]).map(node => [node.id, node]));
+  const matches = pageNodes(page).flatMap(node => fallbackById.has(node.id) ? [{ node, fallback: fallbackById.get(node.id) }] : []);
+  if (matches.length >= 2) return {
+    x: Math.round(median(matches.map(({ node, fallback }) => Number(fallback.x) - Number(node.x)))),
+    y: Math.round(median(matches.map(({ node, fallback }) => Number(fallback.y) - Number(node.y))))
+  };
+  const positionedPrimaryNodes = page.filter(node => Number.isFinite(Number(node?.x)) && Number.isFinite(Number(node?.y)));
+  const primaryNodes = positionedPrimaryNodes.filter(node => node.authored !== true);
+  if (!primaryNodes.length) primaryNodes.push(...positionedPrimaryNodes);
+  if (!primaryNodes.length) return { x: 0, y: 0 };
+  return {
+    x: Math.round(center.x - primaryNodes.reduce((sum, node) => sum + Number(node.x), 0) / primaryNodes.length),
+    y: Math.round(center.y - primaryNodes.reduce((sum, node) => sum + Number(node.y), 0) / primaryNodes.length)
+  };
+}
+
+const NATIVE_FALLBACKS = (() => {
+  const skills = migrateLegacyPage(LEGACY_TALENT_TREES.skills, LEGACY_TALENT_TREE_ROOTS.skills);
+  const magic = migrateLegacyPage(LEGACY_TALENT_TREES.magic, LEGACY_TALENT_TREE_ROOTS.magic);
+  const center = { x: TALENT_TREE_CANVAS.width / 2, y: TALENT_TREE_CANVAS.height / 2 };
+  translateTreePage(skills.page, center.x - skills.root.x, center.y - skills.root.y);
+  translateTreePage(magic.page, center.x - magic.root.x, center.y - magic.root.y);
+  return {
+    roots: Object.freeze({ skills: { ...skills.root, ...center }, magic: { ...magic.root, ...center } }),
+    skills: Object.freeze(skills.page),
+    magic: Object.freeze(magic.page)
+  };
+})();
+
+export const VEILRUNNER_TALENT_TREES = Object.freeze({ skills: NATIVE_FALLBACKS.skills, magic: NATIVE_FALLBACKS.magic });
+export const VEILRUNNER_TALENT_TREE_ROOTS = NATIVE_FALLBACKS.roots;
 
 export function skillPointCostForLevel(level) {
   return Math.max(1, Math.ceil(Math.max(1, Number(level) || 1) / 10));
@@ -102,51 +231,78 @@ export function skillPointCostForLevel(level) {
 
 export function talentTreePage(key) {
   const fallback = VEILRUNNER_TALENT_TREES[key] ?? [];
-  const catalog = game.settings?.get?.(game.system.id, "talentTreeCatalog");
-  if (!validPage(catalog?.[key])) return fallback;
-  return Number(catalog.layoutVersion) === TALENT_TREE_LAYOUT_VERSION ? catalog[key] : migratePageLayout(catalog[key], fallback);
+  const catalog = migrateTalentTreeLayout(game.settings?.get?.(game.system.id, "talentTreeCatalog"));
+  return validPage(catalog[key]) ? clone(catalog[key]) : clone(fallback);
 }
 
 export function talentTreeCatalog() {
-  const saved = game.settings?.get?.(game.system.id, "talentTreeCatalog") ?? {};
-  return {
-    layoutVersion: TALENT_TREE_LAYOUT_VERSION,
-    roots: foundry.utils.deepClone(Number(saved.layoutVersion) === TALENT_TREE_LAYOUT_VERSION ? (saved.roots ?? VEILRUNNER_TALENT_TREE_ROOTS) : VEILRUNNER_TALENT_TREE_ROOTS),
-    skills: validPage(saved.skills) ? foundry.utils.deepClone(Number(saved.layoutVersion) === TALENT_TREE_LAYOUT_VERSION ? saved.skills : migratePageLayout(saved.skills, VEILRUNNER_TALENT_TREES.skills)) : foundry.utils.deepClone(VEILRUNNER_TALENT_TREES.skills),
-    magic: validPage(saved.magic) ? foundry.utils.deepClone(Number(saved.layoutVersion) === TALENT_TREE_LAYOUT_VERSION ? saved.magic : migratePageLayout(saved.magic, VEILRUNNER_TALENT_TREES.magic)) : foundry.utils.deepClone(VEILRUNNER_TALENT_TREES.magic)
-  };
+  return migrateTalentTreeLayout(game.settings?.get?.(game.system.id, "talentTreeCatalog"));
 }
 
 export function talentTreeRoot(key) {
-  const saved = game.settings?.get?.(game.system.id, "talentTreeCatalog") ?? {};
-  return foundry.utils.deepClone(Number(saved.layoutVersion) === TALENT_TREE_LAYOUT_VERSION ? (saved.roots?.[key] ?? VEILRUNNER_TALENT_TREE_ROOTS[key]) : VEILRUNNER_TALENT_TREE_ROOTS[key]);
+  const catalog = migrateTalentTreeLayout(game.settings?.get?.(game.system.id, "talentTreeCatalog"));
+  return clone(catalog.roots?.[key] ?? VEILRUNNER_TALENT_TREE_ROOTS[key]);
 }
 
 function validPage(page) {
   return Array.isArray(page) && (page.length === 0 || page.every(school => Array.isArray(school?.practices)));
 }
 
-function migratePageLayout(savedPage, baselinePage) {
-  const result = foundry.utils.deepClone(savedPage);
-  for (const baselineSchool of baselinePage) {
-    let school = result.find(entry => entry.id === baselineSchool.id);
-    if (!school) { result.push(foundry.utils.deepClone(baselineSchool)); continue; }
-    Object.assign(school, { x: baselineSchool.x, y: baselineSchool.y, shape: baselineSchool.shape });
-    if (school.id === "spirit" && String(school.color ?? "").toLowerCase() === "#22d3ee") school.color = baselineSchool.color;
-    school.practices ??= [];
-    for (const baselinePractice of baselineSchool.practices ?? []) {
-      let practice = school.practices.find(entry => entry.id === baselinePractice.id);
-      if (!practice) { school.practices.push(foundry.utils.deepClone(baselinePractice)); continue; }
-      Object.assign(practice, { x: baselinePractice.x, y: baselinePractice.y, shape: baselinePractice.shape });
-      practice.spells ??= [];
-      for (const baselineSpell of baselinePractice.spells ?? []) {
-        const spell = practice.spells.find(entry => entry.id === baselineSpell.id);
-        if (!spell) practice.spells.push(foundry.utils.deepClone(baselineSpell));
-        else Object.assign(spell, { x: baselineSpell.x, y: baselineSpell.y, shape: baselineSpell.shape, maxRank: Math.max(1, Number(spell.maxRank) || baselineSpell.maxRank) });
-      }
-    }
+/** Convert legacy saved tree coordinates to native 3840x2160 canvas pixels. */
+export function migrateTalentTreeLayout(source = {}) {
+  const saved = source && typeof source === "object" ? clone(source) : {};
+  if (Number(saved.layoutVersion) === TALENT_TREE_LAYOUT_VERSION) {
+    return {
+      ...saved,
+      layoutVersion: TALENT_TREE_LAYOUT_VERSION,
+      roots: clone(saved.roots ?? VEILRUNNER_TALENT_TREE_ROOTS),
+      skills: validPage(saved.skills) ? saved.skills : clone(VEILRUNNER_TALENT_TREES.skills),
+      magic: validPage(saved.magic) ? saved.magic : clone(VEILRUNNER_TALENT_TREES.magic)
+    };
   }
-  return result;
+
+  const nativeLayout = Number(saved.layoutVersion) >= 7;
+  const migratePage = key => {
+    if (!validPage(saved[key])) return { page: clone(VEILRUNNER_TALENT_TREES[key]), root: clone(VEILRUNNER_TALENT_TREE_ROOTS[key]) };
+    const root = saved.roots?.[key] ?? LEGACY_TALENT_TREE_ROOTS[key];
+    return nativeLayout ? { page: clone(saved[key]), root: clone(root) } : migrateLegacyPage(saved[key], root);
+  };
+  const skills = migratePage("skills");
+  const magic = migratePage("magic");
+  const migrated = {
+    ...saved,
+    layoutVersion: TALENT_TREE_LAYOUT_VERSION,
+    roots: { skills: skills.root, magic: magic.root },
+    skills: skills.page,
+    magic: magic.page
+  };
+  const center = { x: TALENT_TREE_CANVAS.width / 2, y: TALENT_TREE_CANVAS.height / 2 };
+  for (const key of ["skills", "magic"]) {
+    const root = migrated.roots[key];
+    const rootTranslation = { x: center.x - (Number(root.x) || 0), y: center.y - (Number(root.y) || 0) };
+    const repairCenteredPage = [8, 9].includes(Number(saved.layoutVersion)) && !rootTranslation.x && !rootTranslation.y;
+    const translation = repairCenteredPage
+      ? inferCenteredPageTranslation(migrated[key], key, center)
+      : rootTranslation;
+    translateTreePage(migrated[key], translation.x, translation.y);
+    Object.assign(root, center);
+    if (["large", "standard"].includes(root.size?.preset)) root.size = { ...root.size, preset: "medium" };
+  }
+  for (const page of [migrated.skills, migrated.magic]) for (const node of pageNodes(page)) {
+    if (["large", "standard"].includes(node.size?.preset)) node.size = { ...node.size, preset: "medium" };
+  }
+  return migrated;
+}
+
+/** Persist the coordinate migration once for a GM-owned world setting. */
+export async function migrateTalentTreeCatalogLayout() {
+  if (!globalThis.game?.user?.isGM) return { migrated: false };
+  const current = game.settings.get(game.system.id, "talentTreeCatalog") ?? {};
+  if (!Object.keys(current).length || Number(current.layoutVersion) === TALENT_TREE_LAYOUT_VERSION) return { migrated: false };
+  const migrated = migrateTalentTreeLayout(current);
+  await game.settings.set(game.system.id, "talentTreeCatalog", migrated);
+  Hooks.callAll("veilrunnerTalentTreeCatalogChanged", migrated);
+  return { migrated: true, from: Number(current.layoutVersion) || 0, to: TALENT_TREE_LAYOUT_VERSION };
 }
 
 export async function saveTalentTreeCatalog(catalog) {

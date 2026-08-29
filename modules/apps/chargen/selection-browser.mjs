@@ -15,9 +15,9 @@ export function renderSelectionBrowser({ path, label, options = [], groups = [],
   })).filter(group => group.options.length);
   const cards = normalizedGroups.length
     ? `<div class="vr-cc-selection-groups">${normalizedGroups.map((group, index) => `<section class="vr-cc-selection-group"><h3>${escape(group.label)}</h3><div class="vr-cc-selection-row"><button type="button" class="vr-cc-selection-row-scroll previous" data-action="scroll-discipline-row" data-scroll-direction="-1" aria-label="Scroll ${escape(group.label)} disciplines left" hidden><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button><div class="vr-cc-selection-row-track" data-discipline-scroll-row="${index}" tabindex="0">${group.options.map(option => selectionCard(option, path, selected)).join("")}</div><button type="button" class="vr-cc-selection-row-scroll next" data-action="scroll-discipline-row" data-scroll-direction="1" aria-label="Scroll ${escape(group.label)} disciplines right"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button></div></section>`).join("")}</div>`
-    : `<div class="vr-cc-selection-card-grid">${ordered.length ? ordered.map(option => selectionCard(option, path, selected)).join("") : `<p class="vr-cc-path-empty">Choose ${path === "discipline" ? "a profession" : "an archetype"} first.</p>`}</div>`;
-  const header = mode === "all"
-    ? `<header><div><span>${escape(label)}</span><p>Browse every Discipline without walking the guided path.</p></div></header>`
+    : `<div class="vr-cc-selection-card-grid">${ordered.length ? ordered.map(option => selectionCard(option, path, selected)).join("") : `<p class="vr-cc-path-empty">${mode === "search" ? "No Disciplines match this search." : `Choose ${path === "discipline" ? "a profession" : "an archetype"} first.`}</p>`}</div>`;
+  const header = mode !== "guided"
+    ? `<header><div><span>${escape(label)}</span><p>${mode === "search" ? "Search by Discipline, Profession, or Archetype." : "Browse every Discipline without walking the guided path."}</p></div></header>`
     : "";
-  return `<section class="vr-cc-path-group vr-cc-selection-browser ${mode === "all" ? "compact" : ""} ${normalizedGroups.length ? "grouped" : ""}" data-path-group="${escape(path)}">${header}${cards}</section>`;
+  return `<section class="vr-cc-path-group vr-cc-selection-browser ${mode !== "guided" ? "compact" : ""} ${normalizedGroups.length ? "grouped" : ""}" data-path-group="${escape(path)}">${header}${cards}</section>`;
 }

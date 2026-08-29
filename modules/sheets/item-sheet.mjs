@@ -224,6 +224,7 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     context.isProfession = this.item.type === "profession";
     context.isDiscipline = this.item.type === "discipline";
     context.isTreasure = this.item.type === "treasure" && !context.isPhysical;
+    context.isLanguage = this.item.type === "language";
     context.isQuality = ["quality", "perk", "flaw"].includes(this.item.type);
     context.qualityKind = this.item.type === "perk" || this.item.type === "flaw" ? this.item.type : context.system.kind;
     context.qualityKindLocked = this.item.type === "perk" || this.item.type === "flaw";
@@ -245,7 +246,8 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     context.characterOptionDescriptionLabel = {
       species: "VEILRUNNER.SpeciesItem.FIELDS.description.label",
       origin: "VEILRUNNER.OriginItem.FIELDS.description.label",
-      background: "VEILRUNNER.BackgroundItem.FIELDS.description.label"
+      background: "VEILRUNNER.BackgroundItem.FIELDS.description.label",
+      language: "VEILRUNNER.LanguageItem.FIELDS.description.label"
     }[this.item.type] ?? "";
     context.armorTraits = ARMOR_TRAITS;
     context.actionDamageTypes = ARMOR_TRAITS;

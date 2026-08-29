@@ -274,9 +274,25 @@ function renderSideBreak(identifier) {
   `;
 }
 
-function groupPhaseCombatants(combatants, bands) {
-  const phaseGroups = [];
-  const byPhase = new Map();
+function groupPhaseCombatants(combatants, bands, { includeEmpty = false } = {}) {
+  const createGroup = phaseIndex => {
+    const band = bands[phaseIndex] ?? bands[bands.length - 1];
+    return {
+      phaseIndex,
+      identifier: band
+        ? {
+          id: `phase-${phaseIndex}`,
+          type: "phase",
+          label: phaseIndex + 1,
+          detail: initiativeBandRange(band, phaseIndex, bands)
+        }
+        : null,
+      players: [],
+      enemies: []
+    };
+  };
+  const phaseGroups = includeEmpty ? bands.map((_band, phaseIndex) => createGroup(phaseIndex)) : [];
+  const byPhase = new Map(phaseGroups.map(group => [group.phaseIndex, group]));
   const neutral = [];
 
   for (const combatant of combatants) {
@@ -287,20 +303,7 @@ function groupPhaseCombatants(combatants, bands) {
 
     const phaseIndex = initiativeBandIndex(combatant?.initiative, bands);
     if (!byPhase.has(phaseIndex)) {
-      const band = bands[phaseIndex] ?? bands[bands.length - 1];
-      const group = {
-        phaseIndex,
-        identifier: band
-          ? {
-            id: `phase-${phaseIndex}`,
-            type: "phase",
-            label: phaseIndex + 1,
-            detail: initiativeBandRange(band, phaseIndex, bands)
-          }
-          : null,
-        players: [],
-        enemies: []
-      };
+      const group = createGroup(phaseIndex);
       byPhase.set(phaseIndex, group);
       phaseGroups.push(group);
     }
@@ -469,7 +472,9 @@ function refreshPhaseTurnMarkers() {
 
 function renderPhaseTracker(combatants, settings, bands) {
   const activeCombatantIds = new Set(activePhaseCombatants().map(combatant => combatant.id));
-  const groups = groupPhaseCombatants(combatants, bands);
+  // "All Phases" means every configured phase, including an empty band. Active and
+  // hybrid views stay based on occupied groups so their next-turn behavior is unchanged.
+  const groups = groupPhaseCombatants(combatants, bands, { includeEmpty: settings.phaseView === "all" });
   const activeGroupIndex = groups.findIndex(group => group.players.concat(group.enemies, group.neutral ?? []).some(combatant => activeCombatantIds.has(combatant.id)));
   const visibleGroups = settings.phaseView === "all" || activeGroupIndex === -1
     ? groups
@@ -518,27 +523,6 @@ function renderTracker(combatants, settings) {
     previousIdentifierId = identifier?.id ?? "";
     return `${heading}${renderCombatant(combatant, settings)}`;
   }).join("");
-}
-
-function countIdentifiers(combatants) {
-  const mode = getInitiativeMode();
-  if (mode !== "phases" && mode !== "block") return 0;
-
-  const bands = mode === "phases" ? getInitiativeBands() : [];
-  if (mode === "phases") {
-    return groupPhaseCombatants(combatants, bands).reduce((total, group) => {
-      return total + (game.user.isGM && group.identifier ? 1 : 0) + (group.players.length ? 1 : 0) + (group.enemies.length ? 1 : 0) + (group.neutral?.length ? 1 : 0);
-    }, 0);
-  }
-
-  let previousIdentifierId = "";
-  let count = 0;
-  for (const combatant of combatants) {
-    const identifier = combatantIdentifier(combatant, mode, bands);
-    if (identifier && identifier.id !== previousIdentifierId) count += 1;
-    previousIdentifierId = identifier?.id ?? "";
-  }
-  return count;
 }
 
 function phaseTransitionState(combatants, settings) {
@@ -824,7 +808,6 @@ function renderCarousel() {
   root.className = `veilrunner vr-combat-carousel portrait-${settings.portraitShape} size-${settings.portraitSizeKey} bars-${settings.barVisibility}${settings.compact ? " gm-compact" : ""}${settings.locked ? " locked" : ""}${shouldAnimate ? ` phase-transition-in phase-slide-${slideDirection}` : ""}`;
   root.style.setProperty("--vr-carousel-portrait-size", `${portraitSize}px`);
   root.style.setProperty("--vr-carousel-text-size", `${textSize}px`);
-  root.style.setProperty("--vr-carousel-track-width", `${(combatants.length * (portraitSize + 8)) + (countIdentifiers(combatants) * 42) + 12}px`);
   applyPosition(root, getVeilrunnerSetting(VEILRUNNER_SETTINGS.combatCarouselPosition));
   root.innerHTML = `
     ${renderDragControls(settings)}

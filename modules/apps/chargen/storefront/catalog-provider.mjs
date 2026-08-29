@@ -48,6 +48,8 @@ function isItemsCompendium(pack) {
 export class CatalogProvider {
   #compendiumEntries = null;
   #compendiumDocuments = new Map();
+  #compendiumLoading = null;
+  #revision = 0;
   constructor(context) { this.context = context ?? { id: "veilrunner.store", entries: [] }; }
   get id() { return this.context.id; }
   entries() {
@@ -61,10 +63,19 @@ export class CatalogProvider {
     })).filter(entry => entry.definitionId && !configuredIds.has(normalizeDefinitionId(entry.definitionId)));
     return [...configured, ...discovered, ...(this.#compendiumEntries ?? [])];
   }
-  invalidate() { this.#compendiumEntries = null; this.#compendiumDocuments.clear(); }
+  invalidate() {
+    this.#revision += 1;
+    this.#compendiumEntries = null;
+    this.#compendiumDocuments.clear();
+    this.#compendiumLoading = null;
+  }
   async catalogEntries() {
-    if (!this.#compendiumEntries) {
+    if (this.#compendiumEntries) return this.entries();
+    if (this.#compendiumLoading) return this.#compendiumLoading;
+    const revision = this.#revision;
+    const loading = (async () => {
       const discovered = [];
+      const compendiumDocuments = new Map();
       const existing = new Set(this.entries().map(entry => normalizeDefinitionId(entry.definitionId)));
       for (const pack of documentsIn(globalThis.game?.packs).filter(isItemsCompendium)) {
         const items = await pack.getDocuments?.() ?? [];
@@ -73,9 +84,10 @@ export class CatalogProvider {
           const classification = compendiumWeaponClassification(item, pack);
           if (!classification) continue;
           const definitionId = getDefinitionId(item) || generatedWeaponDefinitionId(item);
-          if (!definitionId || existing.has(definitionId) || this.#compendiumDocuments.has(definitionId)) continue;
+          const normalizedId = normalizeDefinitionId(definitionId);
+          if (!normalizedId || existing.has(normalizedId) || compendiumDocuments.has(normalizedId)) continue;
           const entry = {
-            definitionId,
+            definitionId: normalizedId,
             price: item.system?.price,
             currency: item.system?.currency,
             availability: "available",
@@ -85,12 +97,25 @@ export class CatalogProvider {
             weaponType: classification.type
           };
           discovered.push(entry);
-          this.#compendiumDocuments.set(definitionId, item);
+          compendiumDocuments.set(normalizedId, item);
         }
       }
-      this.#compendiumEntries = discovered;
-    }
-    return this.entries();
+      return { discovered, compendiumDocuments };
+    })().then(result => {
+      if (revision !== this.#revision) {
+        if (this.#compendiumLoading === loading) this.#compendiumLoading = null;
+        return this.catalogEntries();
+      }
+      // Commit a complete discovery snapshot. Invalidation can no longer expose
+      // a half-populated document map to CatalogIndex.resolve().
+      this.#compendiumDocuments = result.compendiumDocuments;
+      this.#compendiumEntries = result.discovered;
+      return this.entries();
+    }).finally(() => {
+      if (this.#compendiumLoading === loading) this.#compendiumLoading = null;
+    });
+    this.#compendiumLoading = loading;
+    return loading;
   }
   entry(definitionId) { return this.entries().find(entry => normalizeDefinitionId(entry.definitionId) === normalizeDefinitionId(definitionId)) ?? null; }
   async resolve(definitionId) {
@@ -154,29 +179,55 @@ export function catalogRecord(item, entry) {
 
 /** Cached compact records; full Item documents are resolved only for Details/commit. */
 export class CatalogIndex {
-  #provider; #records = null; #loading = null;
+  #provider; #records = null; #loading = null; #revision = 0;
   constructor(provider) { this.#provider = provider; }
-  invalidate() { this.#records = null; this.#loading = null; this.#provider.invalidate?.(); }
+  invalidate() {
+    this.#revision += 1;
+    this.#records = null;
+    this.#loading = null;
+    this.#provider.invalidate?.();
+  }
   async records() {
     if (this.#records) return this.#records;
     if (this.#loading) return this.#loading;
-    this.#loading = this.#provider.catalogEntries().then(entries => Promise.all(entries.map(async entry => {
+    const revision = this.#revision;
+    const loading = this.#provider.catalogEntries().then(entries => Promise.all(entries.map(async entry => {
       const item = await this.#provider.resolve(entry.definitionId);
       return item && (entry.compendiumWeapon || getDefinitionId(item) === normalizeDefinitionId(entry.definitionId)) && (entry.autoDiscover || hasItemIntent(item, "market-sellable"))
         ? catalogRecord(item, entry) : null;
     }))).then(records => {
+      if (revision !== this.#revision) {
+        if (this.#loading === loading) this.#loading = null;
+        return this.records();
+      }
       this.#records = records.filter(Boolean);
-      this.#loading = null;
+      if (this.#loading === loading) this.#loading = null;
       return this.#records;
+    }).catch(error => {
+      if (this.#loading === loading) this.#loading = null;
+      throw error;
     });
-    return this.#loading;
+    this.#loading = loading;
+    return loading;
   }
 }
 
 /** Attach only once; compendium/world updates make normalized store records stale. */
-export function registerCatalogInvalidation(index) {
+export function registerCatalogInvalidation(index, onInvalidate = null) {
+  let refreshQueued = false;
+  const invalidate = item => {
+    if (!(item?.pack || (!item?.parent && getDefinitionId(item)))) return;
+    index.invalidate();
+    if (refreshQueued || typeof onInvalidate !== "function") return;
+    refreshQueued = true;
+    queueMicrotask(async () => {
+      refreshQueued = false;
+      try { await onInvalidate(); }
+      catch (error) { console.error("Veilrunner | Failed to refresh the Galactic Market catalog.", error); }
+    });
+  };
   const registrations = ["createItem", "updateItem", "deleteItem"].map(hook => [hook, Hooks.on(hook, item => {
-    if (item?.pack || (!item?.parent && getDefinitionId(item))) index.invalidate();
+    invalidate(item);
   })]);
   return () => registrations.forEach(([hook, id]) => Hooks.off(hook, id));
 }

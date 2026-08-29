@@ -18,7 +18,7 @@ assert.deepEqual(groups[0].options.map(option => option.label), [
   "Ammunition", "Armor", "Consumable", "Container", "Equipment", "Magazine", "Shield", "Treasure", "Weapon"
 ]);
 assert.deepEqual(groups[1].options.map(option => option.label), [
-  "Accessory", "Archetype", "Background", "Discipline", "Flaw", "Origin", "Perk", "Profession", "Species"
+  "Accessory", "Archetype", "Background", "Discipline", "Flaw", "Language", "Origin", "Perk", "Profession", "Species"
 ]);
 assert.deepEqual(groups[2].options.map(option => option.label), ["Ability", "Action", "Skill", "Spell"]);
 

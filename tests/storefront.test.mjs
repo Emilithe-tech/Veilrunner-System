@@ -8,7 +8,7 @@ globalThis.foundry = {
   utils: { deepClone: structuredClone, escapeHTML: value => String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;") }
 };
 const { addToCart, cartItemCount, cartTotal, cartWeight, mergeCarts, normalizeCart, removeFromCart, setCartQuantity } = await import("../modules/apps/chargen/storefront/cart.mjs");
-const { catalogFacets, paginateCatalog, queryCatalog } = await import("../modules/apps/chargen/storefront/query.mjs");
+const { catalogFacets, paginateCatalog, queryCatalog, toggleCatalogSubtypes } = await import("../modules/apps/chargen/storefront/query.mjs");
 const { buildStorefrontCommit, validateStorefrontTransaction } = await import("../modules/apps/chargen/storefront/transaction.mjs");
 const { CatalogIndex, CatalogProvider, compendiumWeaponClassification } = await import("../modules/apps/chargen/storefront/catalog-provider.mjs");
 const { VEILRUNNER_STARTER_STORE_FIXTURES, starterStoreContext } = await import("../modules/data/starter-store.mjs");
@@ -43,6 +43,9 @@ assert.deepEqual(catalogFacets(records).grades, [1, 2, 3]);
 assert.deepEqual(queryCatalog(records, { category: "weapons", sort: "price" }).map(record => record.definitionId), [records[0].definitionId, records[2].definitionId]);
 assert.deepEqual(queryCatalog(records, { category: "all", search: "round" }).map(record => record.definitionId), [records[1].definitionId]);
 assert.deepEqual(queryCatalog(records, { category: "all", subtype: "ballistic" }).map(record => record.definitionId), [records[1].definitionId]);
+assert.deepEqual(queryCatalog(records, { category: "weapons", subtypes: ["pistol", "assaultRifle"] }).map(record => record.definitionId), [records[2].definitionId, records[0].definitionId], "multiple selected weapon types filter as one union");
+assert.deepEqual(toggleCatalogSubtypes({ subtypes: [] }, ["pistol", "smg", "taser"]), ["pistol", "smg", "taser"], "selecting a group holds every type in that group");
+assert.deepEqual(toggleCatalogSubtypes({ subtypes: ["pistol", "smg", "taser", "bow"] }, ["pistol", "smg", "taser"]), ["bow"], "selecting an active group clears only that group");
 assert.deepEqual(queryCatalog(records, { category: "all", rarity: "uncommon" }).map(record => record.definitionId), [records[3].definitionId]);
 assert.deepEqual(queryCatalog(records, { category: "all", grade: 3 }).map(record => record.definitionId), [records[0].definitionId]);
 assert.deepEqual(queryCatalog(records, { category: "weapons", subtype: "assaultRifle", rarity: "rare", grade: 1 }).map(record => record.definitionId), [records[2].definitionId]);
@@ -55,6 +58,8 @@ assert.equal(paginateCatalog(records, 99).currentPage, 1, "page clamps after res
 const browserMarkup = renderStorefrontBrowser({ query: { category: "weapons", subtype: "all", rarity: "all", grade: "all", sort: "name", direction: "asc" }, facets: catalogFacets(records), page: paginateCatalog(records, 1), selectedDefinitionId: records[0].definitionId });
 assert.match(browserMarkup, /vr-store-item-row selected/); assert.match(browserMarkup, /vr-store-rarity/); assert.match(browserMarkup, /vr-store-grade/); assert.match(browserMarkup, /Assault Rifle/); assert.match(browserMarkup, /Projector/);
 assert.match(browserMarkup, /vr-store-subtype-row standard[\s\S]*?Arcane[\s\S]*?Martial[\s\S]*?vr-store-subtype-row firearms[\s\S]*?Light Firearms[\s\S]*?Heavy Firearms/, "standard weapon groups render above firearm groups");
+const groupedBrowserMarkup = renderStorefrontBrowser({ query: { category: "weapons", subtype: "all", subtypes: ["pistol", "smg", "taser"], rarity: "all", grade: "all", sort: "name", direction: "asc" }, facets: catalogFacets(records), page: paginateCatalog(records, 1), selectedDefinitionId: "" });
+assert.match(groupedBrowserMarkup, /vr-store-subtype-group-toggle active[^>]*data-storefront-subtype-group="lightFirearms"[\s\S]*?data-storefront-subtype="pistol" class="active"[\s\S]*?data-storefront-subtype="smg" class="active"[\s\S]*?data-storefront-subtype="taser" class="active"/, "an active group button highlights every item type it holds");
 
 const valid = await validateStorefrontTransaction({ provider, index, lines: [{ definitionId: records[0].definitionId, quantity: 2 }], credits: 60 });
 assert.equal(valid.valid, true); assert.equal(valid.total, 50); assert.equal(valid.remaining, 10);
@@ -86,6 +91,8 @@ assert.match(contextMarkup, /Proficiency Unknown/); assert.match(contextMarkup, 
 assert.match(contextMarkup, /3,200c/, "storefront amounts use the c denomination");
 const cartMarkup = renderStorefrontContext({ mode: "cart", cartLines: [{ definitionId: fixtureRecords[0].definitionId, quantity: 1, options: {} }], recordById: new Map(fixtureRecords.map(record => [record.definitionId, record])), selectedRecord: fixtureRecords[0], itemCount: 1, cartTotal: fixtureRecords[0].price, remainingCredits: 3200, projectedWeight: 3.6, carryCapacity: 20 });
 assert.match(cartMarkup, /data-action="storefront-purchase-cart"/, "cart exposes an explicit Purchase action before items enter the Live Build");
+assert.match(cartMarkup, /vr-store-summary[\s\S]*class="vr-store-next"[\s\S]*data-action="next"/, "Next is rendered below the complete cart summary");
+assert.doesNotMatch(cartMarkup, />View Cart /, "the active Cart page does not repeat its View Cart button");
 
 const weaponsFolder = { id: "weapons", name: "Weapons", folder: null };
 const heavyFirearmsFolder = { id: "heavy-firearms", name: "Heavy Firearms", folder: weaponsFolder };
@@ -104,5 +111,28 @@ const compendiumRecords = await compendiumIndex.records();
 assert.deepEqual(compendiumRecords.map(record => [record.name, record.subtype]), [["Solar Projector", "projector"]], "Weapons-folder compendium Items populate the storefront");
 const compendiumCommit = await buildStorefrontCommit({ provider: compendiumProvider, index: compendiumIndex, lines: [{ definitionId: "veilrunner.weapon.solar-projector", quantity: 1 }], credits: 1000 });
 assert.equal(compendiumCommit.documents[0].system.weaponType, "projector", "purchased compendium weapons retain their folder-derived type on the Hero sheet");
+
+let releaseFirstPackRead;
+let packReadCount = 0;
+const staleProjector = { ...compendiumProjector, name: "Stale Projector" };
+const freshProjector = { ...compendiumProjector, name: "Fresh Projector" };
+const racingPack = {
+  ...itemsPack,
+  async getDocuments() {
+    packReadCount += 1;
+    if (packReadCount === 1) return new Promise(resolve => { releaseFirstPackRead = () => resolve([staleProjector]); });
+    return [freshProjector];
+  }
+};
+game.packs = [racingPack];
+const racingProvider = new CatalogProvider(starterStoreContext());
+const racingIndex = new CatalogIndex(racingProvider);
+const staleLoad = racingIndex.records();
+await new Promise(resolve => setTimeout(resolve, 0));
+racingIndex.invalidate();
+releaseFirstPackRead();
+const racingRecords = await staleLoad;
+assert.deepEqual(racingRecords.map(record => record.name), ["Fresh Projector"], "an invalidated in-flight compendium read cannot cache a partial or stale market catalog");
+assert.equal(packReadCount, 2, "catalog discovery retries after an in-flight invalidation");
 
 console.log("storefront cart, query, validation, and canonical transaction checks passed");

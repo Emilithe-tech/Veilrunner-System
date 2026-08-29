@@ -24,6 +24,10 @@ assert.deepEqual(
 assert.ok(archetypes.length > 0 && archetypes.every(entry => entry.type === "archetype"));
 assert.ok(professions.length > 0 && professions.every(entry => entry.type === "profession"));
 assert.ok(disciplines.length > 0 && disciplines.every(entry => entry.type === "discipline"));
+assert.ok(
+  [...legacy, ...disciplines].every(entry => !JSON.stringify(entry).includes("Willpower")),
+  "all authored Discipline data uses Wisdom instead of the retired Willpower attribute"
+);
 assert.deepEqual(sortPathEntries("archetype", archetypes).map(entry => entry.name), ["Physique", "Armament", "Magic", "Technical", "Social"], "chargen preserves the canonical Archetype order");
 assert.deepEqual(archetypes.toSorted((left, right) => left.sort - right.sort).map(entry => entry.name), ["Physique", "Armament", "Magic", "Technical", "Social"], "compendium sort values preserve the canonical Archetype order");
 

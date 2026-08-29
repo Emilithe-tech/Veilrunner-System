@@ -20,6 +20,7 @@ import TreasureData from "./data/item/treasure.mjs";
 import SpeciesData from "./data/item/species.mjs";
 import OriginData from "./data/item/origin.mjs";
 import BackgroundData from "./data/item/background.mjs";
+import LanguageData from "./data/item/language.mjs";
 import QualityData, { FlawData, PerkData } from "./data/item/quality.mjs";
 import WeaponData from "./data/item/weapon.mjs";
 import AmmunitionData from "./data/item/ammunition.mjs";
@@ -66,6 +67,7 @@ export function registerConfig() {
     species: SpeciesData,
     origin: OriginData,
     background: BackgroundData,
+    language: LanguageData,
     quality: QualityData,
     perk: PerkData,
     flaw: FlawData,

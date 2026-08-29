@@ -145,6 +145,15 @@ export function contactSchema() {
   });
 }
 
+/** The single language selected with the universal chargen pick. */
+export function freeLanguageSchema() {
+  return new SchemaField({
+    definitionId: new StringField({ required: true, blank: true, initial: "" }),
+    sourceUuid: new StringField({ required: true, blank: true, initial: "" }),
+    name: new StringField({ required: true, blank: true, initial: "" })
+  });
+}
+
 /** Taken quality or flaw during character creation. */
 export function qualityFlawSchema() {
   return new SchemaField({
@@ -167,6 +176,8 @@ export function characterGenerationSchema() {
     complete: new BooleanField({ required: true, initial: false }),
     startingLevel: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false }),
     attributePointsSpent: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
+    attributeBase: new ObjectField({ required: true, initial: {} }),
+    attributeBonuses: new ObjectField({ required: true, initial: {} }),
     talentSkillPointsSpent: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
     talentSkillSelections: new ArrayField(new StringField({ required: true, blank: true, initial: "" }), { initial: [] }),
     talentPointsSpent: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
@@ -176,6 +187,7 @@ export function characterGenerationSchema() {
     creditsSpent: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
     // Completed storefront receipt: canonical IDs and transaction terms only.
     storefront: new ObjectField({ required: true, initial: {} }),
+    freeLanguage: freeLanguageSchema(),
     references: new ObjectField({ required: true, initial: {} }),
     notes: new StringField({ required: true, blank: true, initial: "" })
   });

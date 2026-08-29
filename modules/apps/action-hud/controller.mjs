@@ -11,6 +11,18 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 let gmSelectedCombatActorId = "";
 
+function targetKey(token) {
+  return String(token?.document?.uuid ?? token?.uuid ?? token?.id ?? "");
+}
+
+function localTargetTokens(user, token = null, targeted = null) {
+  const targets = [...(user?.targets ?? [])];
+  if (!token || typeof targeted !== "boolean") return targets;
+  const key = targetKey(token);
+  const withoutToken = targets.filter(entry => entry !== token && (!key || targetKey(entry) !== key));
+  return targeted ? [...withoutToken, token] : withoutToken;
+}
+
 function controlledCombatActor() {
   const combat = globalThis.game?.combat;
   if (!combat) return null;
@@ -122,7 +134,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
   };
 
   actor = null;
-  state = { workspace: HUD_WORKSPACES.NORMAL, domain: "", query: "", composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false, selectedAssetUuid: "", requestedSave: null, partyOpen: true };
+  state = { workspace: HUD_WORKSPACES.NORMAL, domain: "", query: "", composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false, selectedAssetUuid: "", requestedSave: null, partyOpen: true, targetTokens: null };
   #searchTimer = null;
   #composerTimer = null;
 
@@ -202,6 +214,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     if (!actor) return this.close({ animate: false });
     const changed = actor.id !== this.actor?.id;
     this.actor = actor;
+    this.state.targetTokens = localTargetTokens(globalThis.game?.user);
     if (changed) {
       const prefs = getHudPreferences(actor);
       this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, domain: prefs.filters.domain, query: prefs.filters.query, composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false, selectedAssetUuid: prefs.selectedAssetUuid };
@@ -242,7 +255,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "This action is invalid.");
     if ((action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.rankScaling?.enabled) return this.openComposer(action);
     const actionActor = action.assetActorUuid ? view.assets.find(asset => asset.uuid === action.assetActorUuid)?.actor ?? this.actor : this.actor;
-    await executeHudAction(actionActor, action);
+    await executeHudAction(actionActor, action, { targetToken: view.targetTokens[0] ?? null });
     this.refresh(["self", "workspace", "economy", "target", "party"]);
   }
 
@@ -265,7 +278,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "This action cannot be prepared.");
     const configurable = (action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.rankScaling?.enabled;
     if (configurable) return this.openComposer(action, { preparing: true });
-    await prepareHudAction(this.actor, action.id);
+    await prepareHudAction(this.actor, action.id, {}, view.targetTokens);
     globalThis.ui?.notifications?.info?.(`${action.name} is prepared for your turn.`);
     this.refresh(["workspace", "target"]);
   }
@@ -277,7 +290,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     const action = view.composer?.action;
     if (!action) return;
     if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "Finish configuring this action before preparing it.");
-    await prepareHudAction(this.actor, action.id, selections);
+    await prepareHudAction(this.actor, action.id, selections, view.targetTokens);
     globalThis.ui?.notifications?.info?.(`${action.name} is prepared for your turn.`);
     this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false };
     this.refresh(["workspace", "target"]);
@@ -287,7 +300,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     const view = buildHudProjection(this.actor, this.state);
     const prepared = view.prepared.find(entry => entry.preparedId === target.dataset.preparedId);
     if (!prepared) return;
-    const result = await executeHudAction(this.actor, prepared, { selections: prepared.selections });
+    const result = await executeHudAction(this.actor, prepared, { selections: prepared.selections, targetToken: view.targetTokens[0] ?? null });
     if (result.success) await removePreparedHudAction(this.actor, prepared.preparedId);
     this.refresh(["self", "workspace", "economy", "target", "party"]);
   }
@@ -301,7 +314,8 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     const form = this.element.querySelector(".vr-hud-composer");
     const selections = form ? Object.fromEntries(new FormData(form)) : this.state.composerSelections;
     const id = this.state.composerActionId;
-    const result = await executeHudAction(this.actor, id, { selections });
+    const view = buildHudProjection(this.actor, this.state);
+    const result = await executeHudAction(this.actor, id, { selections, targetToken: view.targetTokens[0] ?? null });
     if (result.success) this.state = { ...this.state, workspace: HUD_WORKSPACES.NORMAL, composerActionId: "", composerSelections: {}, composerPreparing: false, calculationOpen: false };
     this.refresh(["self", "workspace", "economy", "target", "party"]);
   }
@@ -358,7 +372,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
 
   static async onGrantIntel(event, target) {
     if (!game.user.isGM) return;
-    const token = [...game.user.targets][0];
+    const token = buildHudProjection(this.actor, this.state).targetTokens[0] ?? null;
     if (token) await grantTargetIntel(token, this.actor, target.dataset.intelModule);
     this.refresh(["target", "workspace"]);
   }
@@ -448,7 +462,16 @@ export function registerActionHud() {
     }
     refresh();
   });
-  for (const hook of ["createCombatant", "updateCombatant", "deleteCombatant", "targetToken", "canvasReady"]) Hooks.on(hook, () => refresh());
+  for (const hook of ["createCombatant", "updateCombatant", "deleteCombatant"]) Hooks.on(hook, () => refresh());
+  Hooks.on("targetToken", (user, token, targeted) => {
+    if (user?.id !== game.user?.id) return;
+    hud.state.targetTokens = localTargetTokens(user, token, targeted);
+    refresh(["target", "workspace"]);
+  });
+  Hooks.on("canvasReady", () => {
+    hud.state.targetTokens = localTargetTokens(globalThis.game?.user);
+    refresh();
+  });
   Hooks.on("controlToken", (token, controlled) => {
     if (game.user.isGM && controlled && token?.actor && combatantForActor(token.actor, game.combat)) gmSelectedCombatActorId = token.actor.id;
     refresh();

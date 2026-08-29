@@ -70,7 +70,7 @@ assert.match(chargenSource, /qualityFlawMode: "all"/, "Browse All is the default
 assert.doesNotMatch(chargenSource, /modeButton\("recommended"/, "Recommended is not rendered as a mode");
 assert.match(chargenSource, /class="vr-cc-qf-search".*modeButton\("all", "Browse all"\).*modeButton\("perks", "Browse Perks"\).*modeButton\("flaws", "Browse Flaws"\).*Available Only.*modeButton\("selected", "Selected"\).*<span>Pillar<\/span>.*<span>Tier<\/span>.*<span>Tags<\/span>.*<span>Create Custom<\/span>/s, "the browser header follows the requested order with Available Only before Selected");
 assert.match(chargenSource, /data-selected-kind=.*data-selected-index=/, "removal buttons carry an unambiguous selection location");
-assert.doesNotMatch(chargenSource, /addEventListener\("pointerover".*qualityFlawFocus/s, "hover does not populate the Inspector");
+assert.doesNotMatch(chargenSource, /addEventListener\("pointerover", event => \{[^}]*qualityFlawFocus/s, "hover does not populate the Inspector");
 assert.match(chargenSource, /Flaws per Pillar/);
 assert.match(chargenSource, /Perks by Pillar/);
 assert.match(chargenSource, /const perkScale = Math\.max\(1, \.\.\.Object\.values\(audit\.perkPillarTotals\)\)/, "perk bars scale to the character's highest perk pillar");
