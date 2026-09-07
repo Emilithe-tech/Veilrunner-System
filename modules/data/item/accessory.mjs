@@ -30,7 +30,7 @@ export default class AccessoryData extends foundry.abstract.TypeDataModel {
         target: textField(),
         value: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
         notes: textField()
-      }), { initial: [] }),
+      }), { initial: () => [] }),
       bonusesText: textField(),
       description: new SchemaField({
         value: new HTMLField({ required: false, blank: true, initial: "" }),

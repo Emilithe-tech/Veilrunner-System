@@ -1,6 +1,6 @@
 import { EQUIPMENT_SLOTS, PHYSICAL_ITEM_TYPES, RULE_ELEMENT_KEYS } from "../data/item/physical.mjs";
+import { isSafeEffectPath, normalizeEffectChange, normalizeEffectMode } from "./effect-boundary.mjs";
 
-const UNSAFE_PATH_PARTS = new Set(["__proto__", "prototype", "constructor"]);
 const RULE_KEYS = new Set(RULE_ELEMENT_KEYS);
 
 const list = value => Array.isArray(value) ? value : value && typeof value === "object" ? Object.values(value) : [];
@@ -8,8 +8,7 @@ const textList = value => list(value).map(entry => String(entry ?? "").trim()).f
 const finite = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 
 export function isSafeRulePath(path) {
-  const parts = String(path ?? "").trim().split(".").filter(Boolean);
-  return Boolean(parts.length) && !parts.some(part => UNSAFE_PATH_PARTS.has(part));
+  return isSafeEffectPath(path);
 }
 
 export function itemRequiredSlots(item) {
@@ -50,8 +49,11 @@ export function isItemEquipped(actor, item) {
 }
 
 export function normalizeRuleElement(rule = {}, index = 0) {
-  const key = RULE_KEYS.has(rule.key) ? rule.key : "FlatModifier";
+  const sourceKey = String(rule?.key ?? "").trim();
+  const key = sourceKey || "FlatModifier";
   return {
+    id: String(rule.id ?? ""),
+    definitionId: String(rule.definitionId ?? ""),
     key,
     label: String(rule.label ?? "").trim(),
     enabled: rule.enabled !== false,
@@ -80,12 +82,14 @@ export function normalizeRuleElement(rule = {}, index = 0) {
 }
 
 export function validateRuleElement(rule = {}) {
+  const sourceKey = String(rule?.key ?? "").trim();
   const normalized = normalizeRuleElement(rule);
   const errors = [];
-  if (!RULE_KEYS.has(normalized.key)) errors.push("Unknown rule element.");
+  if (!RULE_KEYS.has(sourceKey)) errors.push("Unknown rule element.");
   if (["ActiveEffectLike", "ItemAlteration"].includes(normalized.key) && !isSafeRulePath(normalized.path)) errors.push("A safe property path is required.");
+  if (["ActiveEffectLike", "ItemAlteration"].includes(normalized.key) && !normalizeEffectMode(normalized.mode).valid) errors.push("Unsupported effect change mode.");
   if (normalized.key === "RollOption" && !normalized.option) errors.push("A roll option is required.");
-  if (["GrantItem"].includes(normalized.key) && !normalized.uuid) errors.push("An Item UUID is required.");
+  if (["GrantItem"].includes(normalized.key) && !normalized.definitionId && !normalized.uuid) errors.push("Choose a canonical Item definition.");
   if (normalized.key === "ChoiceSet" && !normalized.choices.length) errors.push("At least one choice is required.");
   if (["Resistance", "Weakness", "DamageDice"].includes(normalized.key) && !normalized.damageType) errors.push("A damage type is required.");
   return { valid: errors.length === 0, errors, rule: normalized };
@@ -146,7 +150,7 @@ export function resolveActorItemRules(actor, context = {}) {
   for (const item of sourceItems(actor)) {
     if (!PHYSICAL_ITEM_TYPES.includes(item.type)) continue;
     const equipped = isItemEquipped(actor, item) || activeItemIds.has(item.id) || activeItemIds.has(item.uuid);
-    for (const rule of rulesForItem(item)) sources.push({ item, equipped, rule });
+    for (const [ruleIndex, rule] of rulesForItem(item).entries()) sources.push({ item, equipped, rule, ruleIndex });
   }
 
   // Roll options are resolved first so later predicates can depend on them.
@@ -174,15 +178,28 @@ export function resolveActorItemRules(actor, context = {}) {
     changes: [], modifiers: [], damageDice: [], resistances: [], weaknesses: [],
     choices: [], grants: [], alterations: [], degreeAdjustments: [], errors: []
   };
-  for (const { item, equipped, rule } of sources) {
+  for (const { item, equipped, rule, ruleIndex } of sources) {
     if (!rule.enabled || (rule.requiresEquipped && !equipped) || !predicatePasses(rule.predicate, options)) continue;
-    const source = { ...rule, itemId: item.id, itemUuid: item.uuid, itemName: item.name, valueNumber: numericRuleValue(rule.value, context.data) };
     const validation = validateRuleElement(rule);
     if (!validation.valid) {
       resolved.errors.push({ itemId: item.id, rule: rule.slug, errors: validation.errors });
       continue;
     }
-    if (rule.key === "ActiveEffectLike") resolved.changes.push(source);
+    const provenance = {
+      kind: "item-rule",
+      scope: rule.target === "action" ? "action" : "actor",
+      sourceId: `${item.id}:${rule.slug}`,
+      sourceUuid: item.uuid,
+      sourceName: item.name,
+      definitionId: item.system?.definitionId,
+      origin: item.uuid
+    };
+    const orderKey = [item.uuid ?? item.id ?? "", rule.slug, String(ruleIndex).padStart(6, "0")].join(":");
+    const source = { ...rule, itemId: item.id, itemUuid: item.uuid, itemName: item.name, provenance, orderKey, valueNumber: numericRuleValue(rule.value, context.data) };
+    if (rule.key === "ActiveEffectLike") {
+      const change = normalizeEffectChange({ key: rule.path, mode: rule.mode, value: rule.value, priority: rule.priority }, { source: provenance, index: ruleIndex });
+      resolved.changes.push({ ...source, path: change.path, mode: change.mode, priority: change.priority, provenance: change.provenance, orderKey: change.orderKey });
+    }
     else if (rule.key === "FlatModifier") resolved.modifiers.push(source);
     else if (rule.key === "DamageDice") resolved.damageDice.push(source);
     else if (rule.key === "Resistance") resolved.resistances.push(source);
@@ -194,7 +211,9 @@ export function resolveActorItemRules(actor, context = {}) {
     else if (rule.key === "ItemAlteration") resolved.alterations.push(source);
     else if (rule.key === "DegreeOfSuccess") resolved.degreeAdjustments.push(source);
   }
-  resolved.changes.sort((a, b) => a.priority - b.priority);
+  for (const entries of [resolved.changes, resolved.modifiers, resolved.damageDice, resolved.resistances, resolved.weaknesses, resolved.choices, resolved.grants, resolved.alterations, resolved.degreeAdjustments]) {
+    entries.sort((a, b) => a.priority - b.priority || a.orderKey.localeCompare(b.orderKey));
+  }
   return resolved;
 }
 
@@ -206,7 +225,9 @@ function selectorsMatch(ruleSelector, selectors) {
 export function stackedModifiers(resolved, selectors = ["all"]) {
   const wanted = new Set(textList(selectors));
   wanted.add("all");
-  const candidates = list(resolved?.modifiers).filter(modifier => selectorsMatch(modifier.selector, wanted));
+  const candidates = list(resolved?.modifiers)
+    .filter(modifier => selectorsMatch(modifier.selector, wanted))
+    .sort((a, b) => a.priority - b.priority || String(a.orderKey ?? "").localeCompare(String(b.orderKey ?? "")));
   const untyped = candidates.filter(modifier => modifier.type === "untyped");
   const typed = new Map();
   for (const modifier of candidates.filter(entry => entry.type !== "untyped")) {
@@ -217,7 +238,12 @@ export function stackedModifiers(resolved, selectors = ["all"]) {
   }
   const kept = [...untyped];
   for (const bucket of typed.values()) kept.push(...[bucket.bonus, bucket.penalty].filter(Boolean));
-  return { entries: kept, total: kept.reduce((sum, modifier) => sum + modifier.valueNumber, 0) };
+  const keptSet = new Set(kept);
+  return {
+    entries: kept,
+    suppressed: candidates.filter(modifier => !keptSet.has(modifier)),
+    total: kept.reduce((sum, modifier) => sum + modifier.valueNumber, 0)
+  };
 }
 
 function applyMode(current, value, mode) {

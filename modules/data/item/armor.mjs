@@ -65,12 +65,12 @@ export default class ArmorData extends foundry.abstract.TypeDataModel {
       resistances: new ArrayField(new SchemaField({
         trait: textField(),
         level: wholeNumber(1)
-      }), { initial: [] }),
+      }), { initial: () => [] }),
       resistancesText: textField(),
       weaknesses: new ArrayField(new SchemaField({
         trait: textField(),
         level: wholeNumber(1)
-      }), { initial: [] }),
+      }), { initial: () => [] }),
       weaknessesText: textField(),
       durabilityRating: wholeNumber(),
       effects: new ArrayField(new SchemaField({
@@ -87,12 +87,12 @@ export default class ArmorData extends foundry.abstract.TypeDataModel {
         target: textField(),
         value: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
         notes: textField()
-      }), { initial: [] }),
+      }), { initial: () => [] }),
       bonuses: new ArrayField(new SchemaField({
         target: textField(),
         value: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
         notes: textField()
-      }), { initial: [] }),
+      }), { initial: () => [] }),
       bonusesText: textField(),
       description: new SchemaField({
         value: new HTMLField({ required: false, blank: true, initial: "" }),

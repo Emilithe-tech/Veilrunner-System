@@ -1,0 +1,17 @@
+{{#if hidden}}
+  <input type="hidden" name="{{name}}" value="{{value}}" />
+{{else if array}}
+  <section class="vr-contract-list">
+    <input type="hidden" name="{{marker}}" value="true" />
+    <div class="vr-item-section-heading"><h4>{{label}}</h4><button type="button" data-contract-add="{{path}}" aria-label="Add {{label}}"><i class="fa-solid fa-plus"></i> Add</button></div>
+    {{#each rows}}<div class="vr-contract-row">{{> "systems/veilrunner/templates/item/parts/contract-field.hbs" field}}<button type="button" data-contract-remove="{{parentPath}}" data-index="{{index}}" aria-label="Remove entry {{index}}"><i class="fa-solid fa-trash"></i></button></div>{{else}}<p class="hint">No entries.</p>{{/each}}
+  </section>
+{{else if object}}
+  <fieldset class="vr-contract-object"><legend>{{label}}</legend><div class="vr-item-field-grid">{{#each fields}}{{> "systems/veilrunner/templates/item/parts/contract-field.hbs" this}}{{/each}}</div></fieldset>
+{{else if select}}
+  <label>{{label}}<select name="{{name}}" {{#if rerender}}data-contract-rerender{{/if}}>{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+{{else if boolean}}
+  <label class="vr-check"><input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}} />{{label}}</label>
+{{else}}
+  <label>{{label}}<input type="{{inputType}}" name="{{name}}" value="{{value}}" min="{{min}}" step="{{step}}" /></label>
+{{/if}}

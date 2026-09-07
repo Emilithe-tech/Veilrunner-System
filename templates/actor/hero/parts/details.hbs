@@ -1,16 +1,43 @@
-<section class="details-panel">
-  {{#if actionDetailsDrawer}}
-    <div class="panel-heading">
-      <span>{{actionDetails.name}}</span>
-      <button type="button" class="panel-icon-btn" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
-        <i class="fa-solid fa-angles-left"></i>
-      </button>
-    </div>
+<section class="details-panel {{#if inventoryDetailsDrawer}}is-inventory-context{{else if actionDetailsDrawer}}is-action-context{{else}}is-base-context{{/if}}">
+  {{#if inventoryDetailsDrawer}}
+    <header class="details-context-header inventory-details-header" data-rarity="{{inventoryDetails.rarity.slug}}" data-rarity-tier="{{inventoryDetails.rarity.tier}}" style="--vr-item-rarity: {{inventoryDetails.rarity.color}};">
+      <div class="details-panel-controls">
+        <span class="details-context-icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
+        <button type="button" class="panel-icon-btn details-panel-close" data-action="closeInventoryItemDetails" title="{{localize 'VEILRUNNER.InventoryCard.Close'}}" aria-label="{{localize 'VEILRUNNER.InventoryCard.Close'}}">
+          <i class="fa-solid fa-angles-left"></i>
+        </button>
+      </div>
+      <div class="details-context-title">
+        <img src="{{inventoryDetails.img}}" alt="" />
+        <span><strong>{{inventoryDetails.name}}</strong><small>{{inventoryDetails.typeLabel}}</small></span>
+      </div>
+    </header>
+    <article class="inventory-details-drawer" data-rarity="{{inventoryDetails.rarity.slug}}" data-rarity-tier="{{inventoryDetails.rarity.tier}}" style="--vr-item-rarity: {{inventoryDetails.rarity.color}};">
+      <div class="inventory-details-classification">
+        <span>{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{inventoryDetails.grade}}</span>
+        <strong>{{inventoryDetails.rarity.name}}</strong>
+      </div>
+      <dl>
+        <div><dt>{{localize 'VEILRUNNER.InventoryList.Quantity'}}</dt><dd>{{inventoryDetails.quantity}}</dd></div>
+        <div><dt>{{localize 'VEILRUNNER.InventoryList.Weight'}}</dt><dd>{{inventoryDetails.weight}} kg</dd></div>
+      </dl>
+      <div class="inventory-details-description">{{{inventoryDetails.description}}}</div>
+    </article>
+  {{else if actionDetailsDrawer}}
+    <header class="details-context-header action-details-header">
+      <div class="details-panel-controls">
+        <span class="details-context-icon" aria-hidden="true"><i class="fa-solid fa-bolt"></i></span>
+        <button type="button" class="panel-icon-btn details-panel-close" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
+          <i class="fa-solid fa-angles-left"></i>
+        </button>
+      </div>
+      <div class="details-context-title"><strong>{{actionDetails.name}}</strong></div>
+    </header>
     <article class="action-details-drawer">
       <img src="{{actionDetails.img}}" alt="" />
       <dl>
         <div><dt>{{localize 'VEILRUNNER.Action.FIELDS.currentLevel.label'}}</dt><dd>{{actionDetails.currentLevel}} / {{actionDetails.maxLevel}}</dd></div>
-        <div><dt>{{localize 'VEILRUNNER.ActionWorkspace.ActionCount'}}</dt><dd>{{actionDetails.actionCount}}</dd></div>
+        <div><dt>{{localize 'VEILRUNNER.ActionWorkspace.ActionCount'}}</dt><dd>{{actionDetails.economyLabel}}</dd></div>
         <div><dt>{{localize 'VEILRUNNER.ActionWorkspace.Damage'}}</dt><dd>{{actionDetails.damageValue}}</dd></div>
         <div><dt>{{localize actionDetails.typeLabelKey}}</dt><dd>{{actionDetails.typeLabel}}</dd></div>
         <div><dt>{{localize actionDetails.costLabel}}</dt><dd>{{actionDetails.cost}}</dd></div>
@@ -18,24 +45,24 @@
       <div class="action-details-description">{{{actionDetails.description}}}</div>
     </article>
   {{else}}
-  <div class="panel-heading">
-    <span>
-      {{#each categories as |cat|}}
-        {{#if cat.active}}{{localize cat.label}}{{/if}}
-      {{/each}}
-    </span>
-    <button type="button" class="panel-icon-btn" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
-      <i class="fa-solid fa-angles-left"></i>
-    </button>
-  </div>
-  <nav class="details-tab-row">
-    {{#each categories as |cat|}}
-      <button type="button" class="details-tab-icon {{#if cat.active}}active{{/if}}"
-         data-action="setSubTab" data-section="about" data-tab="{{cat.key}}" title="{{localize cat.label}}" aria-label="{{localize cat.label}}">
-        <i class="{{cat.icon}}"></i>
+  <header class="details-base-header">
+    <div class="details-panel-controls">
+      <nav class="details-tab-row" aria-label="{{localize 'VEILRUNNER.Details'}}">
+        {{#each categories as |cat|}}
+          <button type="button" class="details-tab-icon {{#if cat.active}}active{{/if}}"
+             data-action="setSubTab" data-section="about" data-tab="{{cat.key}}" title="{{localize cat.label}}" aria-label="{{localize cat.label}}">
+            <i class="{{cat.icon}}"></i>
+          </button>
+        {{/each}}
+      </nav>
+      <button type="button" class="panel-icon-btn details-panel-close" data-action="toggleDetails" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
+        <i class="fa-solid fa-angles-left"></i>
       </button>
-    {{/each}}
-  </nav>
+    </div>
+    <div class="details-panel-title">
+      {{#each categories as |cat|}}{{#if cat.active}}<span>{{localize cat.label}}</span>{{/if}}{{/each}}
+    </div>
+  </header>
 
   <div class="details-body {{detailsTabAnimationClass}}">
     {{#if (eq category "party")}}

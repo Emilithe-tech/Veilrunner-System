@@ -1,0 +1,25 @@
+/* .veilrunner base application object. */
+
+.veilrunner {
+  --vr-bg: #080910;
+  --vr-panel: #0e1018;
+  --vr-panel-alt: #141722;
+  --vr-pan-on: rgb(0 255 73);
+  --vr-pan-off: rgb(255 0 0);
+  --vr-border: rgba(255, 255, 255, 0.08);
+  --vr-accent: #a855f7;
+  --vr-accent-soft: rgba(168, 85, 247, 0.2);
+  --vr-accent-glow: rgba(168, 85, 247, 0.45);
+  --vr-cyan: #22d3ee;
+  --vr-blue: #3b82f6;
+  --vr-text: #f3f4f8;
+  /* Portrait-editor labels need full contrast against the dark crop panel. */
+  --vr-text-dim: #ffffff;
+  --vr-red: #ef4444;
+  --vr-amber: #f5a524;
+  --vr-green: #34d399;
+  --vr-ring-track: rgba(255, 255, 255, 0.08);
+  color: var(--vr-text);
+  background: var(--vr-bg);
+  font-family: "Inter", "Signika", sans-serif;
+}

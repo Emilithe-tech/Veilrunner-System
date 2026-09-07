@@ -1,7 +1,9 @@
-import { resolveActorActions } from "../../data/item/identity.mjs";
+import { discoverActorProvidedActions, selectOwnedActionItems } from "../../actions/action-sources.mjs";
 import { isItemEquipped } from "../../rules/item-rules.mjs";
 import { HUD_DOMAINS } from "./constants.mjs";
 import { legacyActionDamageFormula, normalizeActionMode, spellDamageFields } from "../../data/item/action-formula.mjs";
+import { normalizeActionEconomy, normalizeActionTiming, normalizeResourceCosts } from "../../actions/resolved-action.mjs";
+import { actionProgression } from "../../data/item/legacy-action-progression.mjs";
 
 const providers = new Map();
 const DAMAGE_TYPE_ICONS = Object.freeze({
@@ -42,6 +44,8 @@ export function normalizeHudAction(source, { provider = "owned", actor = null } 
   const traits = [...new Set([...(system.traits ?? []), ...(source?.traits ?? [])].map(String))];
   const domain = domainFor(source);
   const actionMode = normalizeActionMode(system, source?.type ?? "action");
+  const timing = normalizeActionTiming(system);
+  const economy = normalizeActionEconomy(system, timing);
   const spellDamage = spellDamageFields(system);
   const damageType = String(system.damageType ?? source?.damageType ?? "").toLowerCase();
   return {
@@ -50,6 +54,7 @@ export function normalizeHudAction(source, { provider = "owned", actor = null } 
     uuid: source?.uuid ?? "",
     provider,
     source,
+    definitionId: String(system.definitionId ?? ""),
     sourceType: source?.documentName === "Item" || source?.parent === actor ? "item" : source?.generated ? "generated" : source?.sourceType ?? "definition",
     name: String(source?.name ?? "Unnamed Action"),
     img: source?.img ?? "icons/svg/light.svg",
@@ -57,23 +62,36 @@ export function normalizeHudAction(source, { provider = "owned", actor = null } 
     isSpell: actionMode === "spell" || domain === "magic",
     actionMode,
     category: String(system.category ?? source?.category ?? "actions"),
-    actionType: String(system.actionType ?? source?.actionType ?? "standard"),
-    actionCount: Math.max(0, Number(system.actions ?? source?.actionCount ?? 1) || 0),
-    range: Math.max(0, Number(system.range ?? source?.range ?? 0) || 0),
+    timing,
+    economy,
+    actionType: timing.type === "reaction" ? "reaction" : ["free", "passive"].includes(timing.type) ? "free" : "standard",
+    actionCount: economy.actions,
+    range: Math.max(0, Number(system.targeting?.range ?? system.range ?? source?.range ?? 0) || 0),
     governingAttribute: String(system.governingAttribute ?? ""),
     damageType,
     damageIcon: DAMAGE_TYPE_ICONS[damageType] ?? "",
     traits,
     tags: [...new Set([...traits, ...(system.tags ?? []), String(system.damageType ?? source?.type ?? "")].filter(Boolean))],
-    costs: { ...(system.resourceCosts ?? source?.costs ?? {}) },
-    requiresTarget: Boolean(system.requiresTarget),
+    costs: { ...normalizeResourceCosts(system) },
+    requiresTarget: Boolean(system.targeting?.required ?? system.targeting?.requiresTarget ?? system.requiresTarget),
+    targeting: { ...system.targeting },
     requirements: system.requirements ?? [],
+    requiredItemTypes: system.requiredItemTypes ?? [],
+    requiredItemTraits: system.requiredItemTraits ?? [],
+    requiredDefinitionIds: system.requiredDefinitionIds ?? [],
+    requiredItemIntents: system.requiredItemIntents ?? [],
+    requiredEffects: system.requiredEffects ?? [],
+    requiredTargetEffects: system.requiredTargetEffects ?? [],
+    rollFormula: system.rollFormula ?? "",
+    selector: system.selector ?? "action",
+    effects: system.effects ?? [],
     composer: system.composer ?? source?.composer ?? [],
     enhancements: system.enhancements ?? [],
     augments: system.augments ?? [],
-    rankScaling: system.rankScaling ?? null,
-    currentLevel: Math.max(1, Number(system.currentLevel ?? source?.currentLevel ?? 1) || 1),
-    maxLevel: Math.max(1, Number(system.maxLevel ?? source?.maxLevel ?? 1) || 1),
+    progression: actionProgression(system),
+    hasLevelSelection: actionProgression(system).maxLevel > 1,
+    currentLevel: Math.max(1, Number(system.owned?.currentLevel ?? system.currentLevel ?? source?.currentLevel ?? 1) || 1),
+    maxLevel: Math.max(1, Number(system.progression?.maxLevel ?? system.maxLevel ?? source?.maxLevel ?? 1) || 1),
     damageDice: Math.max(0, Number(system.damageDice ?? source?.damageDice ?? 0) || 0),
     damageDie: Math.max(2, Number(system.damageDie ?? source?.damageDie ?? 6) || 6),
     damageLevelInterval: Math.max(1, Number(system.damageLevelInterval ?? source?.damageLevelInterval ?? 3) || 3),
@@ -87,19 +105,21 @@ export function normalizeHudAction(source, { provider = "owned", actor = null } 
     weaponComposer: source?.weaponComposer ?? null,
     disabled: Boolean(source?.disabled),
     disabledReason: String(source?.disabledReason ?? ""),
-    summary: String(system.summary ?? source?.description ?? ""),
+    summary: String(system.summary ?? source?.summary ?? source?.description ?? ""),
     favorite: Boolean(system.favorite || system.featured),
     attack: system.selector === "attack" || traits.includes("attack") || source?.operation === "fire"
   };
+}
+
+export function itemHudActions(item, actor = item?.actor) {
+  return (item.system?.hudActions ?? []).map(definition => normalizeHudAction({ ...definition, id: `item:${item.id}:${definition.id}`, name: definition.name || item.name, img: definition.img || item.img, category: definition.category || "item-actions", sourceType: "item-action", parentItemId: item.id }, { provider: "equipment", actor }));
 }
 
 function itemGrantedActions(actor) {
   const results = [];
   for (const item of Array.from(actor?.items ?? [])) {
     if (!isItemEquipped(actor, item)) continue;
-    for (const definition of item.system?.hudActions ?? []) {
-      results.push(normalizeHudAction({ ...definition, id: `item:${item.id}:${definition.id}`, name: definition.name || item.name, img: definition.img || item.img, category: definition.category || "item-actions", sourceType: "item-action", parentItemId: item.id }, { provider: "equipment", actor }));
-    }
+    results.push(...itemHudActions(item, actor));
   }
   return results;
 }
@@ -117,8 +137,8 @@ export function hotbarMacroActions(user = globalThis.game?.user) {
 }
 
 export function discoverHudActions(actor, context = {}) {
-  const owned = Array.from(actor?.items ?? []).filter(item => ["action", "ability", "spell", "skill"].includes(item.type)).map(item => normalizeHudAction(item, { provider: "owned", actor }));
-  const generated = resolveActorActions(actor).map(action => normalizeHudAction(action, { provider: "system", actor }));
+  const owned = selectOwnedActionItems(actor).map(item => normalizeHudAction(item, { provider: "owned", actor }));
+  const generated = discoverActorProvidedActions(actor).map(action => normalizeHudAction(action, { provider: "system", actor }));
   const supplied = [...providers].flatMap(([id, provider]) => (provider(actor, context) ?? []).map(action => normalizeHudAction(action, { provider: id, actor })));
   const macros = macroActions(context.user);
   const deduped = new Map([...owned, ...generated, ...itemGrantedActions(actor), ...supplied, ...macros].filter(action => action.id).map(action => [action.id, action]));

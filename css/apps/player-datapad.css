@@ -1,0 +1,805 @@
+/* .vr-player-datapad player Datapad object. */
+
+.veilrunner.sheet.actor .datapad-reference{
+  display: grid;
+  gap: 12px;
+  max-height: 100%;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.veilrunner.sheet.actor .datapad-launch-btn{
+  margin: 0 0 10px;
+}
+
+.vr-open-datapad {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vr-player-datapad {
+  position: fixed;
+  --vr-accent: var(--vr-datapad-accent, #a855f7);
+  z-index: 90;
+  display: block;
+  padding: 0;
+  background: transparent;
+  outline: none !important;
+}
+
+.vr-player-datapad:focus,
+.vr-player-datapad:focus-visible,
+.vr-player-datapad .vr-datapad-shell:focus,
+.vr-player-datapad .vr-datapad-shell:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* The Datapad and Party journal use their selected-state indicators instead
+   of Foundry/browser focus frames, which otherwise render as orange borders. */
+.vr-player-datapad button:focus,
+.vr-player-datapad button:focus-visible,
+.vr-player-datapad input:focus,
+.vr-player-datapad input:focus-visible,
+.vr-player-datapad select:focus,
+.vr-player-datapad select:focus-visible,
+.vr-player-datapad textarea:focus,
+.vr-player-datapad textarea:focus-visible{
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.vr-player-datapad button:focus,
+.vr-player-datapad button:focus-visible,
+.vr-player-datapad input:focus,
+.vr-player-datapad input:focus-visible,
+.vr-player-datapad select:focus,
+.vr-player-datapad select:focus-visible,
+.vr-player-datapad textarea:focus,
+.vr-player-datapad textarea:focus-visible {
+  border-color: var(--vr-dp-border) !important;
+}
+
+.vr-datapad-shell {
+  --vr-dp-vision-bg: #080910;
+  --vr-dp-bg: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 12%, var(--vr-dp-vision-bg));
+  --vr-dp-panel: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 18%, var(--vr-dp-vision-bg));
+  --vr-dp-border: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 30%, rgba(255, 255, 255, 0.12));
+  --vr-dp-text: #f3f4f8;
+  --vr-dp-dim: #a6adbd;
+  --vr-dp-accent: var(--vr-datapad-accent, #a855f7);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: clamp(320px, 92vw, 1100px);
+  height: clamp(420px, 90vh, 760px);
+  min-width: min(720px, 92vw);
+  min-height: min(520px, 90vh);
+  resize: both;
+  overflow: hidden;
+  color: var(--vr-dp-text);
+  background: radial-gradient(750px 360px at 0 0, color-mix(in srgb, var(--vr-dp-accent) 16%, transparent), transparent 65%), var(--vr-dp-bg);
+  border: 1px solid var(--vr-dp-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .7);
+}
+
+.vr-datapad-shell button {
+  color: inherit;
+  text-shadow: none;
+  transition:
+    color .18s ease,
+    background-color .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease,
+    transform .18s cubic-bezier(.2, .8, .2, 1);
+}
+
+.vr-datapad-shell button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.vr-datapad-shell button:active:not(:disabled) {
+  transform: translateY(0) scale(.97);
+  transition-duration: .08s;
+}
+
+.vr-datapad-shell button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.vr-datapad-shell button:disabled {
+  transition: color .18s ease, opacity .18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vr-datapad-shell button {
+    transition: none;
+  }
+
+  .vr-datapad-shell button:hover:not(:disabled),
+  .vr-datapad-shell button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+.vr-datapad-header, .vr-datapad-content > header, .vr-datapad-record, .vr-datapad-nav button, .vr-datapad-shell footer {
+  display: flex;
+  align-items: center;
+}
+
+.vr-datapad-header { justify-content: space-between; gap: 10px; min-width: 0; padding: 0 8px; border-bottom: 1px solid var(--vr-dp-border); background: linear-gradient(180deg, rgba(20, 23, 34, .92), rgba(8, 9, 16, .92)); }
+.vr-datapad-drag-handle { display: inline-grid; flex: 0 0 20px; place-items: center; height: 38px; color: var(--vr-dp-dim); cursor: grab; }.vr-datapad-drag-handle:active { cursor: grabbing; }
+.vr-datapad-content h2 { margin: 2px 0 0; color: var(--vr-dp-text) !important; text-shadow: none; }
+.vr-datapad-header-actions { display: flex; flex: 0 0 auto; gap: 7px; }.vr-datapad-header-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 34px; height: 34px; color: var(--vr-dp-text); background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 7px; }.vr-datapad-header-actions button:has(span) { width: auto; padding: 0 10px; }
+.vr-datapad-layout { display: block; min-height: 0; overflow: hidden; }
+.vr-datapad-nav { position: relative; display: grid; grid-template-columns: repeat(6, minmax(82px, 1fr)); flex: 1 1 auto; gap: 0; min-width: 0; overflow: visible; isolation: isolate; }.vr-datapad-nav-group { position: relative; z-index: 1; min-width: 82px; }.vr-datapad-nav > .vr-datapad-nav-group > button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 100%; min-height: 56px; padding: 6px 7px 8px; color: var(--vr-text-dim); font-size: .64rem; font-weight: 700; line-height: 1.1; text-align: center; text-shadow: none; text-transform: uppercase; background: transparent; border: 0 !important; border-radius: 0; box-shadow: none !important; -webkit-tap-highlight-color: transparent; }.vr-datapad-nav > .vr-datapad-nav-group + .vr-datapad-nav-group > button::before { content: ""; position: absolute; top: 18%; bottom: 18%; left: 0; width: 1px; background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .075), transparent); }.vr-datapad-nav > .vr-datapad-nav-group > button::after { content: ""; position: absolute; right: 22%; bottom: 0; left: 22%; height: 2px; border-radius: 999px; background: transparent; transition: background .18s ease, box-shadow .18s ease; }.vr-datapad-nav > .vr-datapad-nav-group > button:hover { color: rgba(243, 244, 248, .86); }.vr-datapad-nav > .vr-datapad-nav-group > button:hover > i { color: rgba(243, 244, 248, .88); }.vr-datapad-nav > .vr-datapad-nav-group > button.active { color: var(--vr-text); background: transparent; }.vr-datapad-nav > .vr-datapad-nav-group > button.active::after { background: transparent; box-shadow: none; }.vr-datapad-nav > .vr-datapad-nav-group > button > i { color: rgba(188, 190, 202, .66); font-size: 1.3rem; line-height: 1; transition: color .18s ease, filter .18s ease; }.vr-datapad-nav > .vr-datapad-nav-group > button.active > i { color: var(--vr-accent); filter: drop-shadow(0 0 7px rgba(168, 85, 247, .8)) drop-shadow(0 0 16px rgba(168, 85, 247, .35)); }.vr-datapad-nav .menu-arrow { position: absolute; top: 8px; right: 8px; width: auto; color: #a6adbd; font-size: .55rem; }.vr-datapad-menu { position: absolute; z-index: 5; top: 100%; left: 0; display: none; min-width: 175px; padding: 9px 5px 5px; background: #10131c; border: 1px solid rgba(168, 85, 247, .45); border-radius: 0 0 8px 8px; box-shadow: 0 10px 28px rgba(0, 0, 0, .48); }.vr-datapad-nav-group:hover .vr-datapad-menu, .vr-datapad-nav-group:focus-within .vr-datapad-menu { display: grid; }.vr-datapad-menu button { display: flex; align-items: center; gap: 8px; padding: 8px 9px; color: #d8e3ef; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-datapad-menu button:hover, .vr-datapad-menu button.active { color: #f8fafc; background: rgba(34, 211, 238, .11); border-color: rgba(34, 211, 238, .28); }.vr-datapad-menu i { width: 17px; color: #67e8f9; text-align: center; }
+.vr-datapad-menu { width: 100%; min-width: 0; }
+.vr-datapad-menu button { justify-content: flex-start; width: 100%; min-width: 0; }
+.vr-datapad-content { display: flex; height: 100%; min-width: 0; min-height: 0; flex-direction: column; padding: 22px; overflow: auto; }
+.vr-datapad-content > header { gap: 13px; padding-bottom: 16px; border-bottom: 1px solid var(--vr-dp-border); }
+.vr-datapad-content > header > div { flex: 1; }
+.vr-datapad-new { padding: 8px 11px; color: var(--vr-dp-text); background: rgba(168, 85, 247, .2); border: 1px solid rgba(168, 85, 247, .45); border-radius: 7px; white-space: nowrap; }
+.vr-datapad-content > header > i { color: var(--vr-dp-accent); font-size: 1.7rem; }
+.vr-datapad-content p { margin: 3px 0 0; color: var(--vr-dp-dim); }
+.vr-datapad-records { display: grid; gap: 8px; margin-top: 16px; }
+.vr-datapad-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px; background: var(--vr-dp-panel); border: 1px solid var(--vr-dp-border); border-radius: 9px; }
+.vr-datapad-record { gap: 12px; width: 100%; padding: 5px; color: var(--vr-dp-text); text-align: left; background: transparent; border: 0; border-radius: 6px; }
+.vr-datapad-entry:hover { border-color: rgba(34, 211, 238, .48); background: #161b28; }
+.vr-datapad-record:hover { border-color: rgba(34, 211, 238, .48); background: #161b28; }
+.vr-datapad-record > i { color: #22d3ee; }.vr-datapad-record span { flex: 1; }.vr-datapad-record small { color: var(--vr-dp-dim); }
+.vr-datapad-entry.is-hidden { border-color: rgba(244, 114, 182, .55); }.vr-datapad-entry.is-hidden .vr-datapad-record { opacity: .64; }.vr-datapad-entry.is-locked { border-style: dashed; }.vr-datapad-record:disabled { cursor: default; opacity: .75; }.vr-datapad-gm-controls { display: flex; gap: 7px; align-items: center; color: var(--vr-dp-dim); font-size: .76rem; }.vr-datapad-gm-controls label { display: flex; gap: 4px; align-items: center; white-space: nowrap; }.vr-datapad-gm-controls select { width: 120px; min-height: 28px; color: var(--vr-dp-text); background: #080910; border: 1px solid var(--vr-dp-border); border-radius: 5px; }
+.vr-datapad-gm-controls > button { width: 29px; height: 28px; color: var(--vr-dp-text); background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 5px; }
+.vr-quest-workspace { display: grid; grid-template-columns: 210px minmax(190px, .58fr) minmax(0, 1.55fr); min-height: 460px; flex: 1 1 auto; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }.vr-quest-workspace.directory-collapsed { grid-template-columns: 52px minmax(190px, .58fr) minmax(0, 1.55fr); }.vr-quest-directory, .vr-quest-list { border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }.vr-quest-directory > header, .vr-quest-list > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; border-bottom: 1px solid var(--vr-dp-border); text-transform: uppercase; }.vr-quest-directory > header button { width: 27px; height: 27px; color: var(--vr-dp-dim); background: transparent; border: 0; border-radius: 4px; }.vr-quest-directory > header button:hover { color: var(--vr-text); background: rgba(168, 85, 247, .14); }.vr-quest-directory-controls { display: grid; gap: 3px; padding: 8px; }.vr-quest-directory-controls button { display: flex; align-items: center; gap: 9px; padding: 8px; color: var(--vr-dp-dim); font-size: .78rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 6px; }.vr-quest-directory-controls button:hover, .vr-quest-directory-controls button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); border-color: rgba(168, 85, 247, .3); }.vr-quest-directory-controls i { width: 16px; color: #67e8f9; text-align: center; }.directory-collapsed .vr-quest-directory > header { justify-content: center; padding: 0; }.directory-collapsed .vr-quest-directory > header span, .directory-collapsed .vr-quest-directory-controls { display: none; }.directory-collapsed .vr-quest-directory > header button i { display: inline-block; transform: rotate(180deg); }.vr-quest-list { display: grid; align-content: start; overflow-y: auto; }.vr-quest-list > header small { color: #67e8f9; }.vr-quest-list-entry { display: grid; gap: 3px; width: 100%; padding: 11px; color: var(--vr-dp-text); text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255, 255, 255, .055); }.vr-quest-list-entry:hover, .vr-quest-list-entry.active { background: rgba(168, 85, 247, .13); box-shadow: inset 3px 0 0 var(--vr-accent); }.vr-quest-list-entry > span { font-weight: 700; }.vr-quest-list-entry small { color: var(--vr-dp-dim); font-size: .69rem; }.vr-quest-list-entry.is-hidden { opacity: .58; }.vr-quest-list-empty, .vr-quest-preview-empty { padding: 24px 14px; color: var(--vr-dp-dim); text-align: center; }.vr-quest-preview { min-width: 0; overflow-y: auto; background: rgba(4, 5, 10, .16); }.vr-quest-preview-empty { display: grid; place-content: center; min-height: 100%; gap: 9px; }.vr-quest-preview-empty i { color: var(--vr-accent); font-size: 1.6rem; }.vr-quest-preview-empty p { margin: 0; }.vr-quest-preview .vr-datapad-quest-view { margin: 0; padding: 16px; }
+.vr-quest-workspace { position: relative; grid-template-columns: 270px minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr); transition: grid-template-columns .32s cubic-bezier(.22, 1, .36, 1); }.vr-quest-workspace.directory-collapsed { grid-template-columns: 0 minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr); }.vr-quest-workspace.outline-collapsed { grid-template-columns: 270px 0 0 minmax(0, 1fr); }.vr-quest-workspace.directory-collapsed.outline-collapsed { grid-template-columns: 0 0 0 minmax(0, 1fr); }.vr-quest-directory { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); opacity: 1; transition: opacity .22s ease, visibility .22s ease; }.directory-collapsed .vr-quest-directory { visibility: hidden; opacity: 0; pointer-events: none; }.vr-quest-directory-list { min-height: 0; overflow-y: auto; border-top: 1px solid var(--vr-dp-border); }.vr-quest-outline { min-width: 0; overflow-y: auto; padding: 15px 13px; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .012); }.vr-quest-outline > header { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; color: var(--vr-dp-dim); font-size: .68rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }.vr-quest-outline > header i { color: #67e8f9; }.vr-quest-outline > div { display: grid; gap: 2px; }.vr-quest-outline button { padding: 5px 3px; color: var(--vr-dp-text); line-height: 1.3; text-align: left; background: transparent; border: 0; border-radius: 4px; }.vr-quest-outline button:hover { color: #67e8f9; background: rgba(34, 211, 238, .08); }.vr-quest-outline-empty { padding-top: 30px; color: var(--vr-dp-dim); font-size: .82rem; line-height: 1.5; text-align: center; }.directory-collapsed .vr-quest-directory-list { display: none; }.vr-quest-directory > header { padding-right: 43px; }.vr-quest-directory > header > div { display: flex; gap: 3px; }.vr-quest-directory-toggle { position: absolute; z-index: 4; top: 4px; left: 236px; display: grid; place-items: center; width: 28px; height: 34px; padding: 0; color: var(--vr-dp-dim); background: var(--vr-dp-panel); border: 1px solid var(--vr-dp-border); border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, .22); transition: left .32s cubic-bezier(.22, 1, .36, 1), top .24s ease, height .32s cubic-bezier(.22, 1, .36, 1), color .2s ease, border-color .2s ease, background .2s ease; }.vr-quest-directory-toggle:hover { color: var(--vr-dp-text); border-color: var(--vr-dp-accent); background: color-mix(in srgb, var(--vr-dp-accent) 14%, var(--vr-dp-panel)); }.directory-collapsed .vr-quest-directory-toggle { top: var(--quest-directory-handle-top, 50%); left: 0; height: 3rem; cursor: grab; border-radius: 0 6px 6px 0; transform: translateY(-50%); }.directory-collapsed .vr-quest-directory-toggle.is-dragging { cursor: grabbing; user-select: none; }.directory-collapsed .vr-quest-directory-toggle::before { display: none; }.directory-collapsed .vr-quest-directory-toggle i { transform: translateX(3px); }.directory-collapsed .vr-quest-directory-toggle.directory-handle-return { animation: vr-quest-directory-handle-return .42s cubic-bezier(.22, 1, .36, 1) both; }@keyframes vr-quest-directory-handle-return { from { opacity: 0; transform: translate(-14px, -50%); } to { opacity: 1; transform: translate(0, -50%); } }.vr-quest-outline-resizer { position: relative; cursor: col-resize; background: rgba(255, 255, 255, .025); }.vr-quest-outline-resizer::after { content: ""; position: absolute; top: 40%; bottom: 40%; left: 2px; width: 2px; background: rgba(34, 211, 238, .35); border-radius: 99px; }.vr-quest-outline-resizer:hover, .vr-quest-outline-resizer:active { background: rgba(34, 211, 238, .14); }.vr-quest-preview { grid-column: 4; }.outline-collapsed .vr-quest-outline, .outline-collapsed .vr-quest-outline-resizer { display: none; }
+.vr-quest-folder-list { display: grid; gap: 2px; padding: 0 8px 8px; border-bottom: 1px solid var(--vr-dp-border); }.vr-quest-folder-list button { display: flex; align-items: center; gap: 7px; padding: 6px 7px 6px calc(7px + var(--quest-folder-depth, 0) * 13px); color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-quest-folder-list button:hover, .vr-quest-folder-list button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .12); border-color: rgba(168, 85, 247, .28); }.vr-quest-folder-list button.drag-over { border-color: #67e8f9; background: rgba(34, 211, 238, .12); }.vr-quest-folder-list i { color: #facc15; }
+.vr-quest-folder-entry { padding-left: calc(23px + var(--quest-folder-depth, 0) * 13px) !important; }.vr-quest-folder-entry small { margin-left: auto; color: var(--vr-dp-dim); font-size: .65rem; }.vr-quest-folder-entry i { color: #a6adbd !important; }
+.vr-datapad-directory-workspace { display: grid; grid-template-columns: 270px minmax(0, 1fr); flex: 1 1 auto; min-height: 460px; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }.vr-datapad-directory, .vr-datapad-directory-preview { min-width: 0; min-height: 0; }.vr-datapad-directory { display: flex; flex-direction: column; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }.vr-datapad-directory > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--vr-dp-border); }.vr-datapad-directory > header > div { display: flex; align-items: center; gap: 3px; }.vr-datapad-directory > header button { display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 7px; color: var(--vr-dp-dim); font: inherit; letter-spacing: normal; text-transform: none; background: transparent; border: 0; border-radius: 4px; }.vr-datapad-directory > header button:hover { color: var(--vr-dp-text); background: rgba(168, 85, 247, .14); }.vr-datapad-folder-list { min-height: 0; padding: 8px; overflow-y: auto; }.vr-datapad-folder-row { display: flex; min-width: 0; padding-left: calc(var(--datapad-folder-depth, 0) * 13px); }.vr-datapad-folder-select, .vr-datapad-folder-entry { display: flex; align-items: center; gap: 7px; width: 100%; padding: 6px 7px; color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-datapad-folder-select:hover, .vr-datapad-folder-select.active, .vr-datapad-folder-entry:hover, .vr-datapad-folder-entry.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .12); border-color: rgba(168, 85, 247, .28); }.vr-datapad-folder-select i { color: #facc15; }.vr-datapad-folder-select span, .vr-datapad-folder-entry span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.vr-datapad-folder-entry { width: calc(100% - (var(--datapad-folder-depth, 0) * 13px)); margin-left: calc(var(--datapad-folder-depth, 0) * 13px); }.vr-datapad-folder-entry i { color: #a6adbd; }.vr-datapad-folder-entry small { margin-left: auto; color: var(--vr-dp-dim); font-size: .65rem; white-space: nowrap; }.vr-datapad-directory-empty { padding: 16px 7px; color: var(--vr-dp-dim); font-size: .78rem; text-align: center; }.vr-datapad-directory-preview { display: grid; place-items: center; padding: 28px; overflow-y: auto; text-align: center; background: rgba(4, 5, 10, .16); }.vr-datapad-directory-preview > div { display: grid; justify-items: center; gap: 9px; color: var(--vr-dp-dim); }.vr-datapad-directory-preview i { color: var(--vr-dp-accent); font-size: 1.6rem; }.vr-datapad-directory-preview h3 { margin: 0; color: var(--vr-dp-text); }.vr-datapad-directory-preview p { margin: 0; }.vr-datapad-directory-preview button { padding: 7px 10px; color: var(--vr-dp-text); background: rgba(168, 85, 247, .14); border: 1px solid rgba(168, 85, 247, .4); border-radius: 5px; }
+.vr-quest-directory > header button[data-action="new-entry"] { display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 0 7px; font-size: .68rem; font-weight: 800; letter-spacing: normal; text-transform: none; }
+.vr-quest-folder-row, .vr-datapad-folder-row { padding-left: 0; }.vr-quest-folder-list button, .vr-quest-folder-entry, .vr-datapad-folder-entry { width: 100%; margin-left: 0; padding-left: 7px !important; }
+.vr-datapad-folder-entry .vr-datapad-share-icon { flex: 0 0 auto; margin-left: 7px; color: var(--vr-datapad-accent, var(--vr-accent)); font-size: .7rem; }
+.vr-datapad-directory-preview:has(.vr-datapad-journal-view) { display: block !important; padding: 0; text-align: left; }.vr-datapad-journal-view { display: flex; width: 100%; min-height: 100%; box-sizing: border-box; flex-direction: column; color: var(--vr-dp-text); }.vr-datapad-journal-view > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--vr-dp-border); }.vr-datapad-journal-view > header > div:first-child { display: block; color: inherit; }.vr-datapad-journal-view h3 { margin: 0; }.vr-datapad-journal-view p { margin: 4px 0 0; color: var(--vr-dp-dim); }.vr-datapad-journal-actions { display: flex; align-items: center; gap: 9px; padding-left: 4px; }.vr-datapad-journal-view > header .vr-datapad-journal-actions button { display: grid; flex: 0 0 auto; place-items: center; width: 25px; height: 25px; padding: 0; }.vr-datapad-journal-actions [data-action="edit-inline-journal"] i { font-size: .68rem; }.vr-datapad-journal-actions [data-action="close-inline-journal"] i { font-size: .88rem; }.vr-datapad-journal-pages { flex: 1 1 auto; padding: 22px; overflow-y: auto; }.vr-datapad-journal-page + .vr-datapad-journal-page { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--vr-dp-border); }.vr-datapad-journal-page > h3 { margin-bottom: 10px; font-size: 1rem; }.vr-datapad-journal-page img { max-width: 100%; height: auto; }.vr-datapad-journal-content { color: var(--vr-dp-text); line-height: 1.55; }.vr-datapad-journal-content :first-child { margin-top: 0; }.vr-datapad-journal-empty { padding: 22px; }
+.vr-quest-folder-row { display: flex; align-items: center; min-width: 0; padding-left: calc(3px + var(--quest-folder-depth, 0) * 13px); text-align: left; }.vr-quest-tree-toggle, .vr-quest-tree-spacer { order: 2; display: inline-grid; flex: 0 0 20px; place-items: center; width: 20px; height: 25px; padding: 0 !important; color: var(--vr-dp-dim); background: transparent; border: 0 !important; }.vr-quest-tree-toggle:hover { color: #67e8f9; }.vr-quest-tree-toggle i { color: inherit !important; font-size: .64rem; }.vr-quest-folder-select { order: 1; display: flex !important; flex: 1; align-items: center; justify-content: flex-start !important; min-width: 0; padding: 5px 6px !important; text-align: left !important; }.vr-quest-folder-select span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.vr-quest-folder-entry { text-align: left !important; }
+.directory-collapsed .vr-quest-folder-list { display: none; }
+.vr-quest-sort-picker { position: relative; }.vr-quest-sort-picker > button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px; color: var(--vr-dp-dim); font-size: .78rem; text-align: left; background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 6px; }.vr-quest-sort-picker > button span { flex: 1; }.vr-quest-sort-picker > button > i:last-child { font-size: .6rem; }.vr-quest-sort-picker > button:hover { color: var(--vr-dp-text); border-color: rgba(168, 85, 247, .4); }.vr-quest-sort-picker i { width: 16px; color: #67e8f9; text-align: center; }.vr-quest-sort-menu { position: absolute; z-index: 6; top: 100%; left: 0; display: none; width: 100%; padding: 5px; background: #10131c; border: 1px solid rgba(168, 85, 247, .45); border-radius: 0 0 7px 7px; box-shadow: 0 10px 22px rgba(0, 0, 0, .45); }.vr-quest-sort-picker:hover .vr-quest-sort-menu, .vr-quest-sort-picker:focus-within .vr-quest-sort-menu { display: grid; }.vr-quest-sort-menu button { display: flex; align-items: center; gap: 8px; padding: 7px; color: var(--vr-dp-dim); font-size: .76rem; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-quest-sort-menu button:hover, .vr-quest-sort-menu button.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); border-color: rgba(168, 85, 247, .3); }
+.vr-quest-sort-picker { display: flex; }.vr-quest-sort-picker > button.vr-quest-sort-cycle { flex: 1; border-radius: 6px 0 0 6px; }.vr-quest-sort-picker > button.vr-quest-sort-toggle { flex: 0 0 34px; width: 34px; justify-content: center; padding: 0; border-left: 0; border-radius: 0 6px 6px 0; }.vr-quest-sort-picker > button.vr-quest-sort-toggle i { width: auto; font-size: .6rem; }.vr-quest-sort-picker:hover .vr-quest-sort-menu:not(.open), .vr-quest-sort-picker:focus-within .vr-quest-sort-menu:not(.open) { display: none; }.vr-quest-sort-menu.open { display: grid; }
+
+.vr-datapad-quest-view { display: grid; gap: 16px; max-width: 960px; margin: 16px auto 0; }.vr-quest-view-actions { display: flex; justify-content: space-between; gap: 8px; }.vr-quest-view-actions button { padding: 7px 10px; color: var(--vr-dp-text); background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 6px; }.vr-datapad-quest-view > header { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 13px; border-bottom: 1px solid var(--vr-dp-border); }.vr-datapad-quest-view h1 { margin: 0; color: var(--vr-dp-text); font-size: clamp(1.6rem, 4vw, 2.7rem); letter-spacing: .07em; text-transform: uppercase; }.vr-quest-status { align-self: start; padding: 6px 9px; color: var(--vr-dp-text); font-size: .7rem; font-weight: 800; letter-spacing: .1em; border: 1px solid var(--vr-dp-border); border-radius: 4px; text-transform: uppercase; white-space: nowrap; }.vr-quest-status.complete { border-color: rgba(34, 211, 238, .5); color: #67e8f9; }.vr-quest-status.undiscovered { border-color: rgba(148, 163, 184, .5); color: #cbd5e1; }.vr-quest-view-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .38fr); gap: 18px; }.vr-quest-view-main { display: grid; gap: 14px; }.vr-quest-view-main section, .vr-quest-view-layout aside { padding: 15px; border: 1px solid var(--vr-dp-border); border-radius: 9px; background: rgba(255, 255, 255, .025); }.vr-quest-view-layout aside { justify-self: end; align-self: start; width: 100%; }.vr-quest-view-main h3 { margin: 0 0 8px; color: #22d3ee; font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; }.vr-quest-view-main p { margin: 0; line-height: 1.6; }.vr-quest-image { display: block; width: 100%; margin-bottom: 14px; object-fit: cover; border-radius: 6px; }.vr-quest-image.landscape { aspect-ratio: 16 / 9; }.vr-quest-image.portrait { aspect-ratio: 3 / 4; }.vr-quest-image.square { aspect-ratio: 1; }.vr-quest-view-layout dl { display: grid; gap: 11px; margin: 0; }.vr-quest-view-layout dl div { display: grid; gap: 2px; }.vr-quest-view-layout dt { color: var(--vr-dp-dim); font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }.vr-quest-view-layout dd { margin: 0; color: var(--vr-dp-text); }
+.vr-datapad-quest-editor { display: grid; gap: 14px; max-width: 960px; margin: 16px auto 0; }.vr-datapad-quest-editor section, .vr-quest-editor-title { padding: 14px; border: 1px solid var(--vr-dp-border); border-radius: 9px; background: rgba(255, 255, 255, .025); }.vr-datapad-quest-editor section h3 { margin: 0 0 12px; color: #22d3ee; font-size: .76rem; letter-spacing: .1em; text-transform: uppercase; }.vr-quest-editor-title { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; }.vr-quest-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px 14px; }.vr-datapad-quest-editor label { display: grid; gap: 5px; color: var(--vr-dp-dim); font-size: .76rem; font-weight: 700; }.vr-datapad-quest-editor label.wide { grid-column: 1 / -1; }.vr-datapad-quest-editor input, .vr-datapad-quest-editor select, .vr-datapad-quest-editor textarea { width: 100%; min-height: 32px; padding: 6px 8px; color: var(--vr-dp-text); background: #080910; border: 1px solid var(--vr-dp-border); border-radius: 5px; }.vr-datapad-quest-editor textarea { min-height: 100px; resize: vertical; }.vr-datapad-quest-editor .vr-quest-toggle { display: flex; align-items: center; gap: 7px; min-height: 32px; }.vr-datapad-quest-editor .vr-quest-toggle input { width: auto; min-height: 0; }.vr-datapad-quest-editor footer { display: flex; justify-content: flex-end; gap: 8px; padding: 0; border: 0; }.vr-datapad-quest-editor footer button { padding: 8px 12px; color: var(--vr-dp-text); background: transparent; border: 1px solid var(--vr-dp-border); border-radius: 6px; }.vr-datapad-quest-editor footer button.primary { background: rgba(168, 85, 247, .22); border-color: rgba(168, 85, 247, .45); }
+.vr-quest-image-field { display: grid; gap: 5px; color: var(--vr-dp-dim); font-size: .76rem; font-weight: 700; }.vr-quest-image-field.wide { grid-column: 1 / -1; }.vr-quest-image-field > div { display: flex; gap: 6px; }.vr-quest-image-field input { flex: 1; }.vr-quest-image-field button { flex: 0 0 34px; width: 34px; min-height: 32px; color: var(--vr-dp-text); background: rgba(168, 85, 247, .12); border: 1px solid var(--vr-dp-border); border-radius: 5px; }.vr-quest-image-field button:hover { color: #67e8f9; border-color: rgba(34, 211, 238, .45); }
+.vr-quest-reward-items { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }.vr-quest-reward-items button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 8px; color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); border: 1px solid rgba(168, 85, 247, .36); border-radius: 5px; }.vr-quest-reward-items button:hover { color: #67e8f9; border-color: rgba(34, 211, 238, .48); }.vr-quest-reward-items i { color: #facc15; }
+.vr-quest-view-layout dt { color: var(--vr-dp-dim); font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.vr-datapad-empty { max-width: 500px; margin: 54px auto; color: var(--vr-dp-dim); text-align: center; }.vr-datapad-empty > i { color: var(--vr-dp-accent); font-size: 2rem; }.vr-datapad-empty small { display: block; margin-top: 13px; line-height: 1.5; }.vr-datapad-empty code { color: #22d3ee; }
+.vr-datapad-shell footer { gap: 7px; padding: 10px 20px; color: var(--vr-dp-dim); font-size: .78rem; border-top: 1px solid var(--vr-dp-border); }.vr-datapad-shell kbd { padding: 1px 5px; color: var(--vr-dp-text); background: var(--vr-dp-panel); border: 1px solid var(--vr-dp-border); border-radius: 3px; }
+.vr-player-datapad:fullscreen { padding: 0; background: var(--vr-dp-bg, #080910); }.vr-player-datapad:fullscreen .vr-datapad-shell { width: 100vw; height: 100vh; min-width: 0; min-height: 0; resize: none; border: 0; border-radius: 0; }
+
+@media (max-width: 700px) { .vr-player-datapad { padding: 0; }.vr-datapad-shell { width: 100vw; height: 100vh; min-width: 0; min-height: 0; resize: none; border-radius: 0; }.vr-datapad-header { padding: 7px; }.vr-datapad-nav { overflow-x: auto; overflow-y: visible; }.vr-datapad-nav > .vr-datapad-nav-group > button { justify-content: center; padding: 10px 9px; }.vr-datapad-nav > .vr-datapad-nav-group > button span, .vr-datapad-header-actions button span { display: none; }.vr-datapad-header-actions button:has(span) { width: 34px; padding: 0; }.vr-datapad-content { padding: 16px; }.vr-datapad-entry { grid-template-columns: 1fr; }.vr-datapad-gm-controls { justify-content: space-between; }.vr-quest-view-layout, .vr-quest-editor-title, .vr-quest-grid { grid-template-columns: 1fr; }.vr-datapad-quest-editor label.wide { grid-column: auto; } }
+
+@media (max-width: 850px) { .vr-quest-view-layout, .vr-quest-editor-title, .vr-quest-grid { grid-template-columns: 1fr; } }
+
+/* Player Datapad inherits both the selected UI Style and Button Theme. */
+.vr-player-datapad .vr-datapad-header {
+  background: linear-gradient(180deg, var(--vr-dp-panel), var(--vr-dp-bg));
+}
+
+.vr-player-datapad .vr-datapad-header-actions button,
+.vr-player-datapad .vr-datapad-new {
+  border-color: color-mix(in srgb, var(--vr-dp-accent) 42%, var(--vr-dp-border));
+  background: color-mix(in srgb, var(--vr-dp-accent) 12%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-header-actions button:hover,
+.vr-player-datapad .vr-datapad-new:hover {
+  color: var(--vr-dp-text);
+  border-color: var(--vr-dp-accent);
+  background: color-mix(in srgb, var(--vr-dp-accent) 24%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--vr-dp-accent) 34%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active {
+  color: var(--vr-dp-text);
+  background: transparent !important;
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active::after {
+  background: linear-gradient(90deg, transparent, var(--vr-dp-accent), transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vr-dp-accent) 85%, transparent), 0 -10px 24px color-mix(in srgb, var(--vr-dp-accent) 20%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-nav-indicator {
+  position: absolute;
+  z-index: 0;
+  right: auto;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% / 6);
+  height: auto;
+  border-inline: 1px solid color-mix(in srgb, var(--vr-dp-accent) 18%, transparent);
+  border-radius: 0;
+  background:
+    radial-gradient(85% 70% at 50% 100%, color-mix(in srgb, var(--vr-dp-accent) 18%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-dp-accent) 10%, transparent), color-mix(in srgb, #22d3ee 4%, transparent));
+  box-shadow:
+    inset 0 -2px 0 color-mix(in srgb, var(--vr-dp-accent) 72%, transparent),
+    0 0 24px color-mix(in srgb, var(--vr-dp-accent) 16%, transparent);
+  transform: translateX(calc(var(--nav-from) * 100%));
+  transition: transform .26s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+
+.vr-player-datapad .vr-datapad-nav-indicator::after{
+  content: "";
+  position: absolute;
+  right: 22%;
+  bottom: 0;
+  left: 22%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  box-shadow: 0 0 8px currentColor, 0 -10px 24px color-mix(in srgb, currentColor 24%, transparent);
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button::after {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active > i,
+.vr-player-datapad .vr-datapad-menu i,
+.vr-player-datapad .vr-datapad-record > i {
+  color: var(--vr-dp-accent);
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--vr-dp-accent) 68%, transparent));
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button > i {
+  transition: color .18s ease, filter .18s ease, transform .18s ease;
+}
+
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button:hover > i,
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active > i {
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button > i,
+  .vr-player-datapad .vr-datapad-nav-indicator {
+    transition: none;
+  }
+
+  .vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button:hover > i,
+  .vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active > i {
+    transform: none;
+  }
+}
+
+.vr-player-datapad .vr-datapad-menu,
+.vr-player-datapad .vr-quest-sort-menu {
+  background: color-mix(in srgb, var(--vr-dp-ui-color, #101216) 18%, #080910);
+  border-color: color-mix(in srgb, var(--vr-dp-accent) 45%, var(--vr-dp-border));
+  opacity: 1;
+}
+
+.vr-player-datapad .vr-datapad-menu button:hover,
+.vr-player-datapad .vr-datapad-menu button.active {
+  background: color-mix(in srgb, var(--vr-dp-accent) 13%, transparent);
+  border-color: color-mix(in srgb, var(--vr-dp-accent) 34%, transparent);
+}
+
+/* Directory drawer motion and compact collapsed handle. */
+.vr-quest-workspace { transition-duration: 1s; }
+.vr-quest-directory { transition-duration: 1s; }
+.vr-quest-directory-toggle {
+  left: 240px;
+  width: 20px;
+  transition-duration: 1s;
+}
+.directory-collapsed .vr-quest-directory-toggle {
+  height: 3.25rem;
+}
+.directory-collapsed .vr-quest-directory-toggle i { transform: translateX(2px); }
+.directory-collapsed .vr-quest-directory-toggle.directory-handle-return { animation-duration: .01s; }
+
+.vr-player-datapad .vr-datapad-nav-indicator { color: var(--vr-dp-accent); }
+
+/* Match the quest outline links to the directory header's tab spacing. */
+.vr-quest-outline button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 8px 11px;
+  text-align: left;
+}
+
+/* Directory folders share a left edge; pages sit beneath their folder. */
+.vr-quest-folder-row,
+.vr-datapad-folder-row {
+  padding-left: 0 !important;
+}
+
+.vr-datapad-folder-select,
+.vr-datapad-folder-entry {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.vr-quest-folder-entry,
+.vr-datapad-folder-entry {
+  width: 100%;
+  margin-left: 0;
+  padding-left: 30px !important;
+}
+
+.vr-quest-folder-entry {
+  /* Folder padding (7px) + one folder-icon column (16px) + its gap (7px). */
+  padding-left: 30px !important;
+}
+
+/* The quest directory and its page outline can be sized independently. */
+.vr-quest-workspace {
+  grid-template-columns: var(--quest-directory-width, 270px) 6px minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr) !important;
+}
+
+.vr-quest-workspace.directory-collapsed {
+  grid-template-columns: 0 0 minmax(150px, var(--quest-outline-width, 210px)) 6px minmax(0, 1fr) !important;
+}
+
+.vr-quest-workspace.outline-collapsed {
+  grid-template-columns: var(--quest-directory-width, 270px) 6px 0 0 minmax(0, 1fr) !important;
+}
+
+.vr-quest-workspace.directory-collapsed.outline-collapsed {
+  grid-template-columns: 0 0 0 0 minmax(0, 1fr) !important;
+}
+
+.veilrunner.sheet.actor .party-drawer-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.veilrunner.sheet.actor .party-drawer-heading .section-heading { margin: 0; }
+
+.veilrunner.sheet.actor .party-drawer-open-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--vr-accent) 42%, transparent);
+  border-radius: 3px;
+  color: var(--vr-text-dim);
+  background: color-mix(in srgb, var(--vr-ui-color) 11%, transparent);
+}
+
+.veilrunner.sheet.actor .party-drawer-open-btn:hover,
+.veilrunner.sheet.actor .party-drawer-open-btn:focus-visible { color: var(--vr-text); border-color: var(--vr-accent); background: color-mix(in srgb, var(--vr-accent) 18%, transparent); }
+
+.vr-inventory-item-context-menu,
+.vr-action-item-context-menu {
+  position: fixed;
+  z-index: 1000001;
+  display: grid;
+  min-width: 150px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--vr-tech-surface-raised, var(--vr-panel, #101116));
+  border: 1px solid color-mix(in srgb, var(--vr-accent, #a855f7) 54%, var(--vr-tech-border-strong, #414657));
+  border-radius: 5px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+}
+
+.vr-inventory-item-context-menu button,
+.vr-action-item-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 3px;
+  color: var(--vr-theme-raised-text, #ffffff);
+  text-align: left;
+  background: transparent;
+}
+
+.vr-inventory-item-context-menu button:hover,
+.vr-inventory-item-context-menu button:focus-visible {
+  color: var(--vr-accent, #a855f7);
+  background: color-mix(in srgb, var(--vr-accent, #a855f7) 14%, var(--vr-tech-control-hover, #1a1d25));
+}
+
+.vr-inventory-item-context-menu button.remove { color:#fca5a5; }
+.vr-inventory-item-context-menu button.remove:hover,
+.vr-inventory-item-context-menu button.remove:focus-visible { color:#fecaca; background:rgba(239,68,68,.2); }
+
+.vr-action-item-context-menu button.modify { color:#bae6fd; }
+.vr-action-item-context-menu button.modify:hover,
+.vr-action-item-context-menu button.modify:focus-visible { background:rgba(14,165,233,.2); }
+.vr-action-item-context-menu button.remove { color:#fecaca; }
+.vr-action-item-context-menu button.remove:hover,
+.vr-action-item-context-menu button.remove:focus-visible { background:rgba(239,68,68,.2); }
+
+.vr-quest-workspace.is-resizing {
+  transition: none !important;
+}
+
+.vr-quest-directory-resizer,
+.vr-quest-outline-resizer {
+  position: relative;
+  cursor: col-resize;
+  background: rgba(255, 255, 255, .025);
+}
+
+.vr-quest-directory {
+  grid-column: 1;
+}
+
+.vr-quest-directory-resizer {
+  grid-column: 2;
+}
+
+.vr-quest-outline {
+  grid-column: 3;
+}
+
+.vr-quest-outline-resizer {
+  grid-column: 4;
+}
+
+.vr-quest-directory-resizer::after,
+.vr-quest-outline-resizer::after {
+  content: "";
+  position: absolute;
+  top: 40%;
+  bottom: 40%;
+  left: 2px;
+  width: 2px;
+  background: rgba(34, 211, 238, .35);
+  border-radius: 99px;
+}
+
+.vr-quest-directory-resizer:hover,
+.vr-quest-directory-resizer:active,
+.vr-quest-outline-resizer:hover,
+.vr-quest-outline-resizer:active {
+  background: rgba(34, 211, 238, .14);
+}
+
+.directory-collapsed .vr-quest-directory-resizer {
+  display: none;
+}
+
+.outline-collapsed .vr-quest-outline-resizer {
+  display: none;
+}
+
+.vr-quest-preview {
+  grid-column: 5;
+}
+
+.vr-quest-directory-toggle {
+  left: calc(var(--quest-directory-width, 270px) - 34px);
+}
+
+/* When open, the Directory toggle belongs with the other header controls. */
+.vr-quest-directory > header {
+  padding-right: 11px;
+}
+
+.vr-quest-directory > header .vr-quest-directory-toggle {
+  position: static;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  color: var(--vr-dp-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  transform: none;
+  transition: color .2s ease, background .2s ease;
+}
+
+.vr-quest-directory > header .vr-quest-directory-toggle:hover {
+  color: var(--vr-dp-text);
+  background: rgba(168, 85, 247, .14);
+}
+
+/* The existing folder/page icon communicates visibility. */
+.vr-quest-visibility-icon {
+  position: relative;
+  flex: 0 0 16px;
+  width: 16px;
+  color: var(--vr-dp-dim) !important;
+}
+
+.vr-quest-visibility-players > .vr-quest-visibility-icon {
+  color: var(--vr-datapad-accent, var(--vr-accent)) !important;
+}
+
+.vr-quest-visibility-none > .vr-quest-visibility-icon {
+  opacity: .55;
+}
+
+.vr-quest-visibility-icon::after {
+  content: attr(data-visibility-label);
+  position: absolute;
+  z-index: 12;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: 170px;
+  padding: 5px 7px;
+  color: var(--vr-dp-text);
+  font-family: var(--font-primary);
+  font-size: .68rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  background: var(--vr-dp-panel);
+  border: 1px solid var(--vr-dp-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: translate(-50%, 3px);
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+
+.vr-quest-visibility-icon:hover::after {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 3s, 3s, 3s;
+}
+
+/* Keep the directory controls intact at its narrowest allowed size. */
+.vr-quest-workspace:not(.directory-collapsed) .vr-quest-directory {
+  min-width: 270px;
+}
+
+/* Keep quest names to one responsive line. */
+.vr-quest-folder-list {
+  padding-left: 0;
+}
+
+.vr-quest-folder-row {
+  padding-left: 0 !important;
+}
+
+.vr-quest-folder-select,
+.vr-quest-folder-entry {
+  position: relative;
+}
+
+.vr-quest-folder-select span,
+.vr-quest-folder-entry span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vr-quest-folder-entry small {
+  flex: 0 0 auto;
+}
+
+/* Page entries align their visibility/file icon closer to the group gutter. */
+.vr-quest-folder-entry {
+  padding-left: 16px !important;
+}
+
+/* Folder branches use a restrained tree connector without consuming name space. */
+.vr-quest-folder-branch {
+  position: relative;
+}
+
+.vr-quest-folder-branch:has(> .vr-quest-folder-entry)::before {
+  content: "";
+  position: absolute;
+  top: 25px;
+  bottom: 12px;
+  left: 13px;
+  width: 4px;
+  background: var(--vr-datapad-accent, var(--vr-accent));
+  pointer-events: none;
+}
+
+.vr-quest-folder-branch > .vr-quest-folder-entry::before {
+  content: "";
+  position: absolute;
+  top: 35%;
+  left: 13px;
+  width: 14px;
+  height: 3px;
+  background: var(--vr-datapad-accent, var(--vr-accent));
+  pointer-events: none;
+}
+
+/* Quest authoring separates player-facing content from GM-only controls. */
+.vr-quest-editor-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, .9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.vr-quest-editor-column {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.vr-quest-editor-title {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 850px) {
+  .vr-quest-editor-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vr-quest-reward-drop {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  border: 1px dashed rgba(34, 211, 238, .35);
+  border-radius: 6px;
+  transition: border-color .18s ease, background .18s ease;
+}
+
+.vr-quest-reward-drop.drag-over {
+  background: rgba(34, 211, 238, .1);
+  border-color: #22d3ee;
+}
+
+.vr-quest-reward-drop small {
+  color: var(--vr-dp-dim);
+  font-size: .69rem;
+  font-weight: 500;
+}
+
+.vr-quest-mode-list {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px 8px;
+  overflow-y: auto;
+}
+
+.vr-quest-directory-group {
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+
+.vr-quest-directory-group.drag-over {
+  background: rgba(34, 211, 238, .1);
+  outline: 1px dashed #22d3ee;
+  outline-offset: -2px;
+}
+
+.vr-quest-directory-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 5px;
+  color: var(--vr-dp-text);
+  font-size: .73rem;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-align: left;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+}
+
+.vr-quest-directory-group-toggle > i {
+  width: 10px;
+  color: #67e8f9;
+  font-size: .68rem;
+  text-align: center;
+}
+
+.vr-quest-directory-group-toggle > small {
+  margin-left: auto;
+  color: var(--vr-dp-dim);
+  font-size: .66rem;
+}
+
+.vr-quest-directory-group .vr-quest-folder-list,
+.vr-quest-status-list {
+  padding-top: 0;
+}
+
+.vr-quest-status-list {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 6px;
+}
+
+/* Keep navigation pop-out menus above the directory and fully opaque. */
+.vr-player-datapad .vr-datapad-header {
+  position: relative;
+  z-index: 20;
+}
+
+.vr-player-datapad .vr-datapad-nav {
+  z-index: 21;
+}
+
+.vr-player-datapad .vr-datapad-menu {
+  z-index: 100;
+  background-color: #10131c !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none;
+}
+
+/* Datapad achievements */
+.vr-achievement-workspace { display: grid; grid-template-columns: 210px 230px minmax(0, 1fr); flex: 1 1 auto; min-height: 460px; margin: 16px -22px -22px; border-top: 1px solid var(--vr-dp-border); }
+.vr-achievement-chapters { min-width: 0; border-right: 1px solid var(--vr-dp-border); background: rgba(255, 255, 255, .018); }
+.vr-achievement-chapters > header, .vr-achievement-cards > header { display: flex; align-items: center; justify-content: space-between; min-height: 43px; padding: 0 11px; color: var(--vr-dp-text); font-size: .72rem; font-weight: 800; letter-spacing: .08em; border-bottom: 1px solid var(--vr-dp-border); text-transform: uppercase; }
+.vr-achievement-chapters > header button, .vr-achievement-cards > header button { color: var(--vr-dp-text); background: transparent; border: 0; }
+.vr-achievement-chapter { display: flex; gap: 8px; align-items: center; width: 100%; padding: 9px 10px; color: var(--vr-dp-dim); text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.vr-achievement-chapter:hover, .vr-achievement-chapter.active { color: var(--vr-dp-text); background: rgba(168, 85, 247, .13); box-shadow: inset 3px 0 0 var(--vr-accent); }
+.vr-achievement-chapter > i { color: #facc15; }.vr-achievement-chapter span { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; }.vr-achievement-chapter small { color: var(--vr-dp-dim); }
+.vr-achievement-cards { min-width: 0; padding: 0 16px 18px; overflow-y: auto; background: rgba(4, 5, 10, .16); }.vr-achievement-cards > header { margin: 0 -16px 16px; }.vr-achievement-cards > header div { display: grid; gap: 2px; }.vr-achievement-cards > header small { color: var(--vr-dp-dim); font-size: .62rem; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.vr-achievement-card { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 13px; align-items: center; width: 100%; min-height: 108px; margin: 0 0 11px; padding: 9px; color: var(--vr-dp-text); text-align: left; background: rgba(255,255,255,.035); border: 1px solid color-mix(in srgb, var(--achievement-color, #facc15) 68%, transparent); border-radius: 8px; box-shadow: 0 0 14px color-mix(in srgb, var(--achievement-color, #facc15) 15%, transparent); }
+.vr-achievement-card:not(.is-locked):hover { background: rgba(255,255,255,.075); transform: translateY(-1px); }.vr-achievement-card-art { display: grid; place-items: center; width: 92px; height: 88px; overflow: hidden; color: var(--achievement-color, #facc15); font-size: 2rem; object-fit: cover; background: rgba(0,0,0,.3); border: 1px solid currentColor; border-radius: 6px; }.vr-achievement-card-art span { display: inline-block; margin: 0 -4px; }.vr-achievement-card h3 { margin: 0; font-size: 1rem; }.vr-achievement-card-copy p { display: flex; gap: 4px; margin: 10px 0 0; }.vr-achievement-card-copy p img { width: 24px; height: 24px; object-fit: cover; border: 1px solid var(--achievement-color, #facc15); border-radius: 50%; }.vr-achievement-card.is-locked { grid-template-columns: 92px minmax(0,1fr); cursor: default; color: var(--vr-dp-dim); border-style: dashed; filter: grayscale(1); }.vr-achievement-card.is-locked .vr-achievement-card-art { grid-auto-flow: column; color: #87909f; font-family: serif; }.vr-achievement-empty { padding: 20px; color: var(--vr-dp-dim); text-align: center; }
+.vr-achievement-card-description { display: -webkit-box; max-height: 3.6em; margin-top: 5px; overflow: hidden; color: var(--vr-dp-dim); font-size: .78rem; line-height: 1.2; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }.vr-achievement-card-description > * { display: inline; margin: 0; }
+.vr-achievement-page-config { display: grid; gap: 13px; margin: 16px 0 0; padding: 15px; background: rgba(250, 204, 21, .055); border: 1px solid rgba(250, 204, 21, .45); border-radius: 7px; }.vr-achievement-page-config > header { display: flex; gap: 9px; align-items: center; }.vr-achievement-page-config > header > i { color: #facc15; font-size: 1.2rem; }.vr-achievement-page-config h3, .vr-achievement-page-config h4, .vr-achievement-page-config p { margin: 0; }.vr-achievement-page-config p { color: var(--color-text-dark-secondary); font-size: .8rem; }.vr-achievement-config-fields { display: grid; grid-template-columns: minmax(0, 1fr) 125px; gap: 10px; }.vr-achievement-config-fields label { display: grid; gap: 5px; font-size: .8rem; font-weight: 700; }.vr-achievement-config-fields label > div { display: flex; gap: 4px; }.vr-achievement-config-fields input[type="text"] { min-width: 0; flex: 1; }.vr-achievement-config-fields button { min-width: 30px; }.vr-achievement-config-fields .vr-achievement-visible { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; }.vr-achievement-config-fields .vr-achievement-visible input { width: auto; }.vr-achievement-award-grid { display: grid; gap: 8px; }.vr-achievement-award-grid > div { display: grid; gap: 8px; }.vr-achievement-party-row { display: grid; gap: 6px; padding: 8px; border: 1px solid rgba(250,204,21,.26); border-radius: 6px; }.vr-achievement-party-row > header { display: flex; gap: 7px; align-items: center; color: var(--color-text-dark-primary); font-size: .76rem; font-weight: 700; }.vr-achievement-party-row > header i { color: #facc15; }.vr-achievement-party-row > div { display: flex; flex-wrap: wrap; gap: 8px; }.vr-achievement-award-grid button { position: relative; display: grid; gap: 3px; width: 64px; padding: 3px; color: var(--color-text-dark-secondary); font-size: .66rem; text-align: center; background: transparent; border: 1px solid transparent; border-radius: 5px; }.vr-achievement-award-grid button:hover, .vr-achievement-award-grid button.awarded { color: var(--color-text-dark-primary); border-color: #d39d24; background: rgba(250,204,21,.12); }.vr-achievement-award-grid img { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; }.vr-achievement-award-grid button i { position: absolute; right: 0; bottom: 15px; display: none; place-items: center; width: 17px; height: 17px; color: #111; font-size: .6rem; background: #facc15; border-radius: 50%; }.vr-achievement-award-grid button.awarded i { display: grid; }.vr-achievement-page-config footer { display: flex; justify-content: flex-end; }.vr-achievement-page-config footer button { padding: 6px 10px; }
+@media (max-width: 700px) { .vr-achievement-workspace { grid-template-columns: 1fr; }.vr-achievement-workspace .vr-datapad-directory, .vr-achievement-chapters { border-right: 0; border-bottom: 1px solid var(--vr-dp-border); }.vr-achievement-cards { min-height: 300px; }.vr-achievement-config-fields { grid-template-columns: 1fr; } }
+
+/* The selected tab is identified by its icon/fill/underline only. Do not let
+   Foundry's active-button theme draw a warm outline around it. */
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active,
+.vr-player-datapad .vr-datapad-nav > .vr-datapad-nav-group > button.active:hover,
+.vr-player-datapad button.active{
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+/* GM achievement grants are contained within their achievement card. */
+.vr-achievement-card { display: block; min-height: 180px; padding: 9px; }
+.vr-achievement-card-open { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 13px; align-items: center; width: 100%; min-height: 88px; padding: 0; color: inherit; text-align: left; background: transparent; border: 0; }
+.vr-achievement-card-grants { display: grid; min-height: 48px; gap: 2px; margin: 4px 0 0; padding: 4px 0 0; border: 0; border-top: 1px solid color-mix(in srgb, var(--achievement-color, #facc15) 32%, transparent); border-radius: 0; background: transparent; }
+.vr-achievement-card-grants h4 { margin: 0; color: var(--vr-dp-text); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+.vr-achievement-card-grants .vr-achievement-party-row { display: grid; gap: 1px; padding: 0; border: 0; border-radius: 0; }
+.vr-achievement-card-grants .vr-achievement-party-row + .vr-achievement-party-row { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(250, 204, 21, .48); }
+.vr-achievement-card-grants .vr-achievement-party-row > header { display: flex; min-height: 36px; gap: 7px; align-items: center; color: var(--vr-dp-text); font-size: .76rem; font-weight: 700; }
+.vr-achievement-card-grants .vr-achievement-party-row > header i { color: #facc15; }
+.vr-achievement-card-grants .vr-achievement-party-row > .vr-achievement-grant-all { display: inline-flex; justify-self: start; justify-content: center; align-items: center; width: auto; min-width: 72px; height: 24px; min-height: 24px; margin: 0; padding: 15 15px; color: var(--vr-dp-text); font-size: .65rem; font-weight: 700; line-height: 1; white-space: nowrap; background: rgba(250,204,21,.08); border: 1px solid rgba(250,204,21,.45); border-radius: 4px; }
+.vr-achievement-card-grants .vr-achievement-party-row > .vr-achievement-grant-all:hover, .vr-achievement-card-grants .vr-achievement-party-row > .vr-achievement-grant-all.awarded { background: rgba(250,204,21,.18); border-color: #d39d24; }
+.vr-achievement-card-grants .vr-achievement-party-row > .vr-achievement-grant-all:disabled { cursor: not-allowed; opacity: .45; }
+.vr-achievement-card-grants .vr-achievement-party-members { display: flex; flex-wrap: wrap; gap: 10px; padding-left: 6px; }
+.vr-achievement-card-grants .vr-achievement-party-row > header .vr-achievement-party-members { align-self: center; margin-left: 60px; padding-left: 0; transform: translateY(15px); }
+.vr-achievement-card-grants .vr-achievement-party-row button { position: relative; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; color: var(--vr-dp-dim); text-align: center; background: transparent; border: 1px solid transparent; border-radius: 4px; }
+.vr-achievement-card-grants .vr-achievement-party-row button:hover, .vr-achievement-card-grants .vr-achievement-party-row button.awarded { color: var(--vr-dp-text); border-color: #d39d24; background: rgba(250,204,21,.12); }
+.vr-achievement-card-grants .vr-achievement-party-row img { width: 36px; height: 36px; object-fit: cover; border-radius: 50%; }
+.vr-achievement-card-grants .vr-achievement-party-row button i { position: absolute; right: 0; bottom: 9px; display: none; place-items: center; width: 11px; height: 11px; color: #111; font-size: .42rem; background: #facc15; border-radius: 50%; }
+.vr-achievement-card-grants .vr-achievement-party-row button.awarded i { display: grid; }
+
+/* GM right-click menu for Datapad folders and entries. */
+.vr-datapad-context-menu { position: fixed; z-index: 1000001; display: grid; min-width: 145px; margin: 0; padding: 4px; list-style: none; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.vr-datapad-context-menu button { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 28px; padding: 5px 8px; color: var(--vr-dp-text, #f4f4f5); text-align: left; background: transparent; border: 0; border-radius: 3px; }
+.vr-datapad-context-menu button:hover { background: rgba(168,85,247,.2); }
+.vr-datapad-context-menu .danger { color: #f87171; }
+.vr-datapad-context-submenu { position: relative; }
+.vr-datapad-context-submenu > div { position: absolute; top: -4px; left: calc(100% - 1px); display: none; min-width: 145px; padding: 4px; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.vr-datapad-context-submenu:hover > div, .vr-datapad-context-submenu:focus-within > div { display: grid; }
+.vr-datapad-context-rename { display: grid; gap: 6px; min-width: 190px; padding: 4px; }
+.vr-datapad-context-rename label { display: grid; gap: 4px; color: var(--vr-dp-text, #f4f4f5); font-size: .72rem; }
+.vr-datapad-context-rename input { width: 100%; min-width: 0; }
+.vr-datapad-context-rename > div { display: flex; gap: 4px; justify-content: flex-end; }

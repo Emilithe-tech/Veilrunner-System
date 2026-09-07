@@ -1,15 +1,72 @@
+import { actionProgression } from "./legacy-action-progression.mjs";
+import { actionRequirements } from "./legacy-action-requirements.mjs";
+
 /** Shared normalization for the compact Action/Ability authoring format. */
 export const ACTION_MODES = Object.freeze(["action", "reaction", "ability", "spell", "digital"]);
+
+const LEGACY_REQUIREMENT_KINDS = Object.freeze({
+  "health-percent": "health",
+  "actor-type": "actorType"
+});
+
+export function migrateLegacyActionRequirement(requirement = {}) {
+  const kind = LEGACY_REQUIREMENT_KINDS[requirement.kind ?? requirement.type] ?? requirement.kind ?? requirement.type ?? "definition";
+  const rawThreshold = requirement.threshold ?? requirement.value;
+  const numericThreshold = rawThreshold === null || rawThreshold === undefined || rawThreshold === "" ? null : Number(rawThreshold);
+  return {
+    id: String(requirement.id ?? ""),
+    subject: requirement.subject ?? (requirement.scope === "target" ? "target" : requirement.scope === "source" ? "source" : "self"),
+    kind,
+    operator: requirement.operator === "neq" ? "ne" : String(requirement.operator ?? "gte"),
+    path: String(requirement.path ?? ""),
+    reference: String(requirement.reference ?? requirement.key ?? ""),
+    value: String(requirement.value ?? ""),
+    threshold: Number.isFinite(numericThreshold) ? numericThreshold : null,
+    description: String(requirement.description ?? requirement.reason ?? ""),
+    knowledge: requirement.knowledge === "mechanical" ? "mechanical" : "player",
+    ...(requirement.equipment ? { equipment: structuredClone(requirement.equipment) } : {})
+  };
+}
+
+export function migrateActionRequirements(requirements) {
+  if (Array.isArray(requirements)) {
+    return { all: requirements.map(migrateLegacyActionRequirement), any: [], none: [], description: "" };
+  }
+  const source = requirements && typeof requirements === "object" ? requirements : {};
+  return {
+    all: (Array.isArray(source.all) ? source.all : []).map(migrateLegacyActionRequirement),
+    any: (Array.isArray(source.any) ? source.any : []).map(migrateLegacyActionRequirement),
+    none: (Array.isArray(source.none) ? source.none : []).map(migrateLegacyActionRequirement),
+    description: String(source.description ?? "")
+  };
+}
 
 export function normalizeActionMode(system = {}, itemType = "action") {
   if (itemType === "ability") return "ability";
   if (itemType === "spell") return "spell";
+  if (system.timing?.type === "reaction") return "reaction";
+  if (["free", "passive"].includes(system.timing?.type)) return "ability";
   const explicit = String(system.actionMode ?? "").trim().toLowerCase();
   if (ACTION_MODES.includes(explicit)) return explicit;
   if (itemType === "ability" || system.activationKind === "ability" || system.actionType === "free") return "ability";
   if (system.actionType === "reaction" || system.category === "reactions") return "reaction";
   if (["tech", "digital", "hacking"].includes(system.category)) return "digital";
   return "action";
+}
+
+/** Normalize a rendered Traits field without treating an unrendered tab as an empty submission. */
+export function normalizeSubmittedActionTraits(value, { present = true, registry = [] } = {}) {
+  if (!present) return null;
+  const traitIds = new Map(registry.flatMap(entry => [
+    [String(entry?.id ?? "").toLowerCase(), entry?.id],
+    [String(entry?.label ?? "").toLowerCase(), entry?.id]
+  ]).filter(([key, id]) => key && id));
+  const traits = String(value ?? "").split(",")
+    .map(entry => entry.trim())
+    .filter(Boolean)
+    .map(entry => traitIds.get(entry.toLowerCase()) ?? entry.toLowerCase().replace(/[^a-z0-9]+/g, "-"))
+    .filter(Boolean);
+  return [...new Set(traits)];
 }
 
 export function legacyActionDamageFormula(system = {}) {
@@ -74,11 +131,27 @@ export function resolveActionDamageFormula(value, { level = 1, attributeValue = 
     .replace(/\battribute\b/ig, String(attribute))
     .replace(/\s+/g, " ")
     .trim();
-  formula = formula.replace(/^\+\s*/, "").replace(/\s*\+\s*0$/, "").trim();
+  formula = formula.replace(/^\+\s*/, "").replace(/\s*\+\s*0$/, "").replace(/\+\s*-/g, "-").trim();
   const fixedDamage = parsed.addsAttribute ? attribute : 0;
-  const minimum = dice ? dice + fixedDamage : fixedDamage;
-  const maximum = dice ? (dice * parsed.faces) + fixedDamage : fixedDamage;
-  const average = dice ? (dice * ((parsed.faces + 1) / 2)) + fixedDamage : fixedDamage;
+  let minimum = dice ? dice + fixedDamage : fixedDamage;
+  let maximum = dice ? (dice * parsed.faces) + fixedDamage : fixedDamage;
+  let average = dice ? (dice * ((parsed.faces + 1) / 2)) + fixedDamage : fixedDamage;
+  // Authored weapon damage may contain fixed values and several rule dice.
+  // Evaluate only an additive arithmetic grammar; never execute formula text.
+  const compact = formula.replace(/\s/g, "");
+  if (/^[+-]?(?:\d+d\d+|\d+(?:\.\d+)?)(?:[+-](?:\d+d\d+|\d+(?:\.\d+)?))*$/i.test(compact)) {
+    minimum = maximum = average = 0;
+    for (const token of compact.match(/[+-]?(?:\d+d\d+|\d+(?:\.\d+)?)/ig)) {
+      const sign = token.startsWith("-") ? -1 : 1;
+      const die = token.match(/(\d+)d(\d+)/i);
+      const low = die ? Number(die[1]) : Math.abs(Number(token));
+      const high = die ? Number(die[1]) * Number(die[2]) : low;
+      minimum += sign * (sign > 0 ? low : high);
+      maximum += sign * (sign > 0 ? high : low);
+      average += sign * (low + high) / 2;
+    }
+    if (!/d/i.test(compact)) formula = String(minimum);
+  }
   const terms = [];
   if (dice) terms.push({ kind: "dice", label: `${dice}d${parsed.faces}` });
   if (parsed.addsAttribute) terms.push({ kind: "attribute", label: `+ ${attributeLabel} (${attribute})` });
@@ -152,6 +225,42 @@ export function migrateActionSystemData(source = {}, { itemType = "action", comp
     const fields = spellDamageFields(source);
     source.baseSpellDamage = fields.baseSpellDamage;
     source.spellDamagePerLevel = fields.spellDamagePerLevel;
+  }
+  const prerequisiteKeys = ["requiredItemTypes", "requiredItemTraits", "requiredDefinitionIds", "requiredItemIntents", "requiredEffects", "requiredTargetEffects"];
+  if (owns("requirements") || prerequisiteKeys.some(owns)) source.requirements = migrateActionRequirements(actionRequirements(source));
+  for (const key of prerequisiteKeys) delete source[key];
+  if (complete || hasModeData || owns("timing")) {
+    const resolvedMode = mode ?? normalizeActionMode(source, itemType);
+    const timingType = resolvedMode === "reaction" ? "reaction" : resolvedMode === "ability" ? "free" : "action";
+    source.timing = {
+      type: source.timing?.type ?? timingType,
+      trigger: String(source.timing?.trigger ?? source.trigger ?? "")
+    };
+  }
+  if (complete || owns("actions") || owns("economy") || owns("actionMode") || owns("actionType")) {
+    const timingType = source.timing?.type ?? (source.actionType === "reaction" ? "reaction" : source.actionType === "free" ? "free" : "action");
+    source.economy = timingType === "reaction"
+      ? { actions: 0, reactions: Math.max(1, Math.trunc(Number(source.economy?.reactions) || 1)) }
+      : ["free", "passive"].includes(timingType)
+        ? { actions: 0, reactions: 0 }
+        : { actions: Math.max(0, Math.trunc(Number(source.economy?.actions ?? source.actions) || 0)), reactions: 0 };
+  }
+  if (complete || owns("requiresTarget") || owns("targeting")) {
+    source.targeting = {
+      type: String(source.targeting?.type ?? "self"),
+      required: Boolean(source.targeting?.required ?? source.targeting?.requiresTarget ?? source.requiresTarget),
+      count: Math.max(1, Math.trunc(Number(source.targeting?.count) || 1)),
+      range: Math.max(0, Number(source.targeting?.range ?? source.range) || 0)
+    };
+  }
+  if (complete || owns("maxLevel") || owns("progression") || owns("rankScaling")) {
+    source.progression = actionProgression(source);
+  }
+  if (owns("currentLevel") || owns("owned")) {
+    source.owned = {
+      ...(source.owned ?? {}),
+      currentLevel: source.owned?.currentLevel === null ? null : Math.max(1, Math.trunc(Number(source.owned?.currentLevel ?? source.currentLevel) || 1))
+    };
   }
   return source;
 }

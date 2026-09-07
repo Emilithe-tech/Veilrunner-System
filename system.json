@@ -65,7 +65,7 @@
       "name": "actions-test-library",
       "label": "Actions Test Library",
       "system": "Veilrunner",
-      "path": "packs/actions-test-library.db",
+      "path": "packs/actions-test-library",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -74,7 +74,25 @@
       "name": "unique-abilities",
       "label": "Unique Abilities",
       "system": "Veilrunner",
-      "path": "packs/unique-abilities.db",
+      "path": "packs/unique-abilities",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "talents-skills",
+      "label": "Talents & Skills Library",
+      "system": "Veilrunner",
+      "path": "packs/talents-skills",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "progression",
+      "label": "Progression Library",
+      "system": "Veilrunner",
+      "path": "packs/progression",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -83,7 +101,7 @@
       "name": "unique-actions",
       "label": "Unique Actions",
       "system": "Veilrunner",
-      "path": "packs/unique-actions.db",
+      "path": "packs/unique-actions",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -92,7 +110,7 @@
       "name": "unique-reactions",
       "label": "Unique Reactions",
       "system": "Veilrunner",
-      "path": "packs/unique-reactions.db",
+      "path": "packs/unique-reactions",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -101,7 +119,43 @@
       "name": "unique-traits",
       "label": "Unique Traits",
       "system": "Veilrunner",
-      "path": "packs/unique-traits.db",
+      "path": "packs/unique-traits",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "weapons",
+      "label": "Weapons Library",
+      "system": "Veilrunner",
+      "path": "packs/weapons",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "armor",
+      "label": "Armor & Shields Library",
+      "system": "Veilrunner",
+      "path": "packs/armor",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "ammunition",
+      "label": "Ammunition & Magazines Library",
+      "system": "Veilrunner",
+      "path": "packs/ammunition",
+      "type": "Item",
+      "private": false,
+      "flags": {}
+    },
+    {
+      "name": "equipment",
+      "label": "Equipment Library",
+      "system": "Veilrunner",
+      "path": "packs/equipment",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -163,10 +217,18 @@
           "biography"
         ],
         "filePathFields": {
-          "appearanceImage": ["IMAGE"],
-          "portraitImage": ["IMAGE"],
-          "conditions.*.img": ["IMAGE"],
-          "relationships.*.img": ["IMAGE"]
+          "appearanceImage": [
+            "IMAGE"
+          ],
+          "portraitImage": [
+            "IMAGE"
+          ],
+          "conditions.*.img": [
+            "IMAGE"
+          ],
+          "relationships.*.img": [
+            "IMAGE"
+          ]
         }
       },
       "npc": {
@@ -174,8 +236,12 @@
           "biography"
         ],
         "filePathFields": {
-          "appearanceImage": ["IMAGE"],
-          "portraitImage": ["IMAGE"]
+          "appearanceImage": [
+            "IMAGE"
+          ],
+          "portraitImage": [
+            "IMAGE"
+          ]
         }
       },
       "creature": {
@@ -217,23 +283,56 @@
     "Item": {
       "action": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "spell": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "skill": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
+      },
+      "talent": {
+        "htmlFields": [
+          "description",
+          "mechanics"
+        ]
+      },
+      "practice": {
+        "htmlFields": [
+          "description",
+          "mechanics"
+        ]
+      },
+      "trait": {
+        "htmlFields": [
+          "description",
+          "mechanics"
+        ]
+      },
+      "progression": {
+        "htmlFields": [
+          "description",
+          "mechanics"
+        ],
+        "filePathFields": {
+          "nodes.*.presentation.img": [
+            "IMAGE"
+          ]
+        }
       },
       "accessory": {
         "htmlFields": [
           "description.value",
-          "description.gm"
+          "description.gm",
+          "mechanics"
         ],
         "gmOnlyFields": [
           "description.gm"
@@ -241,13 +340,15 @@
       },
       "ability": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "armor": {
         "htmlFields": [
           "description.value",
-          "description.gm"
+          "description.gm",
+          "mechanics"
         ],
         "gmOnlyFields": [
           "description.gm"
@@ -255,29 +356,37 @@
       },
       "profession": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ],
         "filePathFields": {
-          "pageImage": ["IMAGE"]
+          "pageImage": [
+            "IMAGE"
+          ]
         }
       },
       "archetype": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "discipline": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ],
         "filePathFields": {
-          "pageImage": ["IMAGE"]
+          "pageImage": [
+            "IMAGE"
+          ]
         }
       },
       "treasure": {
         "htmlFields": [
           "description.value",
-          "description.gm"
+          "description.gm",
+          "mechanics"
         ],
         "gmOnlyFields": [
           "description.gm"
@@ -285,22 +394,26 @@
       },
       "species": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "origin": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "background": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "language": {
         "htmlFields": [
-          "description"
+          "description",
+          "mechanics"
         ]
       },
       "quality": {
@@ -309,45 +422,82 @@
           "mechanics"
         ]
       },
-      "perk": {
-        "htmlFields": [
-          "description",
-          "mechanics"
-        ]
-      },
-      "flaw": {
-        "htmlFields": [
-          "description",
-          "mechanics"
-        ]
-      },
       "weapon": {
-        "htmlFields": ["description.value", "description.gm"],
-        "gmOnlyFields": ["description.gm"]
+        "htmlFields": [
+          "description.value",
+          "description.gm",
+          "mechanics"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
       },
       "ammunition": {
-        "htmlFields": ["description.value", "description.gm"],
-        "gmOnlyFields": ["description.gm"]
+        "htmlFields": [
+          "description.value",
+          "description.gm",
+          "mechanics"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
       },
       "magazine": {
-        "htmlFields": ["description.value", "description.gm"],
-        "gmOnlyFields": ["description.gm"]
+        "htmlFields": [
+          "description.value",
+          "description.gm",
+          "mechanics"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
       },
       "shield": {
-        "htmlFields": ["description.value", "description.gm"],
-        "gmOnlyFields": ["description.gm"]
+        "htmlFields": [
+          "description.value",
+          "description.gm",
+          "mechanics"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
       },
       "consumable": {
-        "htmlFields": ["description.value", "description.gm"],
-        "gmOnlyFields": ["description.gm"]
+        "htmlFields": [
+          "description.value",
+          "description.gm",
+          "mechanics"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
       },
       "container": {
-        "htmlFields": ["description.value", "description.gm"],
-        "gmOnlyFields": ["description.gm"]
+        "htmlFields": [
+          "description.value",
+          "description.gm",
+          "mechanics"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
       },
       "equipment": {
-        "htmlFields": ["description.value", "description.gm"],
-        "gmOnlyFields": ["description.gm"]
+        "htmlFields": [
+          "description.value",
+          "description.gm",
+          "mechanics"
+        ],
+        "gmOnlyFields": [
+          "description.gm"
+        ]
+      }
+    },
+    "ActiveEffect": {
+      "condition": {
+        "htmlFields": [
+          "description"
+        ]
       }
     }
   }

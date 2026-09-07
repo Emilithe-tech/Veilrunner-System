@@ -1,0 +1,571 @@
+/* .vr-combat-carousel combat carousel object. */
+
+.vr-combat-carousel {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 100010;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: transparent;
+}
+
+.vr-combat-carousel.dragging {
+  user-select: none;
+}
+
+.vr-combat-carousel.phase-transition-in,
+.vr-combat-carousel.phase-transition-out {
+  pointer-events: none;
+}
+
+.vr-combat-carousel.phase-transition-in.phase-slide-forward {
+  animation: vr-carousel-slide-in-from-right 220ms ease-out both;
+}
+
+.vr-combat-carousel.phase-transition-out.phase-slide-forward {
+  animation: vr-carousel-slide-out-to-left 220ms ease-in both;
+}
+
+.vr-combat-carousel.phase-transition-in.phase-slide-backward {
+  animation: vr-carousel-slide-in-from-left 220ms ease-out both;
+}
+
+.vr-combat-carousel.phase-transition-out.phase-slide-backward {
+  animation: vr-carousel-slide-out-to-right 220ms ease-in both;
+}
+
+@keyframes vr-carousel-slide-in-from-right {
+  from { opacity: 0; transform: translateX(calc(-50% + 112px)); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+
+@keyframes vr-carousel-slide-out-to-left {
+  from { opacity: 1; transform: translateX(-50%); }
+  to { opacity: 0; transform: translateX(calc(-50% - 112px)); }
+}
+
+@keyframes vr-carousel-slide-in-from-left {
+  from { opacity: 0; transform: translateX(calc(-50% - 112px)); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
+
+@keyframes vr-carousel-slide-out-to-right {
+  from { opacity: 1; transform: translateX(-50%); }
+  to { opacity: 0; transform: translateX(calc(-50% + 112px)); }
+}
+
+.vr-combat-carousel-dragbar {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 2px;
+  pointer-events: auto;
+}
+
+.vr-combat-carousel-dragbar button,
+.vr-combat-carousel-controls button {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  border-radius: 6px;
+  background: rgba(8, 12, 17, 0.82);
+  color: var(--vr-text);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.vr-combat-carousel-dragbar button:hover,
+.vr-combat-carousel-controls button:hover {
+  border-color: rgba(34, 211, 238, 0.74);
+  color: #ffffff;
+  background: rgba(8, 145, 178, 0.35);
+}
+
+.vr-combat-carousel-dragbar button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
+.vr-combat-carousel-drag-handle {
+  cursor: grab;
+}
+
+.vr-combat-carousel.dragging .vr-combat-carousel-drag-handle {
+  cursor: grabbing;
+}
+
+.vr-combat-carousel-shell {
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content) auto;
+  align-items: start;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.vr-combat-carousel-controls {
+  display: grid;
+  gap: 4px;
+  padding-top: 6px;
+  pointer-events: auto;
+}
+
+.vr-combat-carousel-track {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 84px);
+  padding: 6px;
+  overflow-x: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+}
+
+.vr-combat-carousel.gm-compact .vr-combat-carousel-track {
+  gap: 4px;
+  padding: 3px;
+}
+
+.vr-combat-carousel.gm-compact .vr-combat-carousel-phase {
+  gap: 3px;
+  padding: 3px;
+}
+
+.vr-combat-carousel.gm-compact .vr-combat-carousel-phase-side {
+  gap: 2px;
+  padding: 1px;
+}
+
+.vr-combat-carousel-phase {
+  --vr-phase-color: #35c9f6;
+  --vr-phase-tint: rgba(53, 201, 246, 0.11);
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 5px;
+  flex: 0 0 auto;
+  min-height: calc(var(--vr-carousel-portrait-size, 64px) + 12px);
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--vr-phase-color) 62%, transparent);
+  border-radius: 7px;
+  background: var(--vr-phase-tint);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.vr-combat-carousel-phase.band-1 {
+  --vr-phase-color: #58d68d;
+  --vr-phase-tint: rgba(88, 214, 141, 0.11);
+}
+
+.vr-combat-carousel-phase.band-2 {
+  --vr-phase-color: #f4b942;
+  --vr-phase-tint: rgba(244, 185, 66, 0.11);
+}
+
+.vr-combat-carousel-phase.band-3 {
+  --vr-phase-color: #ef7e64;
+  --vr-phase-tint: rgba(239, 126, 100, 0.11);
+}
+
+.vr-combat-carousel-phase.neutral {
+  --vr-phase-color: #b4bcc8;
+  --vr-phase-tint: rgba(180, 188, 200, 0.1);
+}
+
+.vr-combat-carousel-phase.active-phase {
+  border-color: var(--vr-phase-color);
+  background: rgba(7, 11, 15, 0.9);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--vr-phase-color) 52%, transparent), 0 0 0 2px color-mix(in srgb, var(--vr-phase-color) 56%, transparent), 0 12px 28px rgba(0, 0, 0, 0.5);
+}
+
+.vr-combat-carousel-phase-side {
+  display: flex;
+  align-items: flex-start;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 4px;
+  min-width: max-content;
+  padding: 2px;
+  border-radius: 5px;
+  align-self: flex-start;
+}
+
+.vr-combat-carousel-phase-side.side-players {
+  background: rgba(65, 192, 255, 0.1);
+}
+
+.vr-combat-carousel-phase-side.side-enemies {
+  background: rgba(238, 101, 88, 0.11);
+}
+
+.vr-combat-carousel-phase-side.side-neutral {
+  background: rgba(180, 188, 200, 0.1);
+}
+
+.vr-combat-carousel-phase-side.active-turn {
+  background: rgba(2, 5, 8, 0.92);
+  box-shadow: inset 0 0 0 2px var(--vr-phase-color), inset 0 0 0 4px rgba(255, 255, 255, 0.08), 0 0 16px color-mix(in srgb, var(--vr-phase-color) 38%, transparent);
+}
+
+.vr-combat-carousel-phase-side.active-turn .vr-combat-carousel-side-break {
+  background: rgba(2, 5, 8, 0.96);
+  box-shadow: inset -2px 0 0 var(--vr-phase-color);
+}
+
+.vr-combat-carousel-identifier {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  flex: 0 0 34px;
+  min-height: var(--vr-carousel-portrait-size, 64px);
+  padding: 4px 3px;
+  border: 1px solid var(--vr-phase-color, rgba(34, 211, 238, 0.5));
+  border-radius: 7px;
+  background: rgba(8, 12, 17, 0.78);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
+  color: var(--vr-text);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.vr-combat-carousel-identifier.type-phase {
+  position: relative;
+  flex-basis: 46px;
+  min-width: 46px;
+  align-content: stretch;
+  align-self: flex-start;
+  box-sizing: border-box;
+  height: var(--vr-carousel-portrait-size, 64px);
+  min-height: var(--vr-carousel-portrait-size, 64px);
+  padding: 3px 2px 28px;
+  background: rgba(8, 12, 17, 0.86);
+}
+
+.vr-combat-carousel-identifier strong {
+  display: block;
+  max-width: calc(var(--vr-carousel-portrait-size, 64px) + 8px);
+  overflow: hidden;
+  font-size: max(8px, calc(var(--vr-carousel-text-size, 12px) - 3px));
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  writing-mode: vertical-rl;
+}
+
+.vr-combat-carousel-identifier.type-phase strong {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  max-width: none;
+  font-size: max(9px, calc(var(--vr-carousel-text-size, 12px) - 1px));
+  line-height: 1;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  transform-origin: center;
+  white-space: nowrap;
+  writing-mode: horizontal-tb;
+}
+
+.vr-combat-carousel-identifier span {
+  margin-top: 4px;
+  color: var(--vr-cyan);
+  font-size: max(8px, calc(var(--vr-carousel-text-size, 12px) - 4px));
+  font-weight: 800;
+  line-height: 1;
+}
+
+.vr-combat-carousel-identifier.type-phase span {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  left: 2px;
+  display: block;
+  margin-top: 0;
+  color: var(--vr-phase-color, var(--vr-cyan));
+  text-align: center;
+  white-space: nowrap;
+}
+
+.vr-combat-carousel-side-break {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  flex: 0 0 26px;
+  align-self: flex-start;
+  box-sizing: border-box;
+  height: var(--vr-carousel-portrait-size, 64px);
+  min-height: var(--vr-carousel-portrait-size, 64px);
+  color: var(--vr-text);
+  opacity: 1;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.vr-combat-carousel-side-break span {
+  display: block;
+  max-width: calc(var(--vr-carousel-portrait-size, 64px) + 8px);
+  overflow: hidden;
+  padding: 3px 2px;
+  border-inline: 2px solid var(--vr-phase-color, rgba(255, 255, 255, 0.45));
+  font-size: max(7px, calc(var(--vr-carousel-text-size, 12px) - 4px));
+  font-weight: 800;
+  line-height: 1;
+  text-overflow: ellipsis;
+  writing-mode: vertical-rl;
+}
+
+.vr-combat-carousel-phase-side.side-players .vr-combat-carousel-side-break span {
+  border-color: #41c0ff;
+  color: #b9eaff;
+}
+
+.vr-combat-carousel-phase-side.side-enemies .vr-combat-carousel-side-break span {
+  border-color: #ee6558;
+  color: #ffc5bd;
+}
+
+.vr-combat-carousel-phase-side.side-neutral .vr-combat-carousel-side-break span {
+  border-color: #b4bcc8;
+  color: #e2e7ef;
+}
+
+.vr-combat-carousel-card {
+  flex: 0 0 var(--vr-carousel-portrait-size, 64px);
+  width: var(--vr-carousel-portrait-size, 64px);
+  color: var(--vr-text);
+  font-size: var(--vr-carousel-text-size, 12px);
+}
+
+.vr-combat-carousel-portrait-frame {
+  position: relative;
+  width: var(--vr-carousel-portrait-size, 64px);
+  height: var(--vr-carousel-portrait-size, 64px);
+  overflow: hidden;
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  border-radius: 8px;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.36);
+  background: rgba(8, 12, 17, 0.82);
+  backdrop-filter: blur(8px);
+  color: var(--vr-text);
+  font-size: var(--vr-carousel-text-size, 12px);
+}
+
+.vr-combat-carousel-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.vr-combat-carousel-card.dead .vr-combat-carousel-portrait {
+  filter: grayscale(1) brightness(0.48);
+}
+
+.vr-combat-carousel-card.dead .vr-combat-carousel-portrait-frame {
+  border-color: rgba(239, 68, 68, 0.78);
+}
+
+.vr-combat-carousel-dead-indicator {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: rgba(112, 12, 18, 0.88);
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.vr-combat-carousel-dying-indicator {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  right: 0;
+  display: grid;
+  gap: 1px;
+  padding: 1px;
+  border: 0;
+  border-radius: 0 4px 4px 0;
+  background: rgba(25, 8, 11, 0.74);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 8px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.vr-combat-carousel-dying-indicator .active {
+  color: #fb7185;
+  filter: drop-shadow(0 0 3px rgba(251, 113, 133, 0.8));
+}
+
+.vr-combat-carousel-wounded-indicator {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  min-height: 22px;
+  padding: 1px;
+  border-radius: 0 4px 4px 0;
+  background: rgba(82, 52, 4, 0.78);
+  color: #fbbf24;
+  font-size: 10px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.vr-combat-carousel-wounded-indicator strong {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.vr-combat-carousel.portrait-circle .vr-combat-carousel-portrait-frame,
+.vr-combat-carousel.portrait-circle .vr-combat-carousel-portrait {
+  border-radius: 50%;
+}
+
+.vr-combat-carousel.portrait-rounded .vr-combat-carousel-portrait-frame,
+.vr-combat-carousel.portrait-rounded .vr-combat-carousel-portrait {
+  border-radius: 8px;
+}
+
+.vr-combat-carousel.portrait-square .vr-combat-carousel-portrait-frame,
+.vr-combat-carousel.portrait-square .vr-combat-carousel-portrait {
+  border-radius: 0;
+}
+
+.vr-combat-carousel-heading {
+  position: absolute;
+  inset: 0 0 auto;
+  min-width: 0;
+  padding: 4px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent);
+  pointer-events: none;
+}
+
+.vr-combat-carousel-heading strong {
+  overflow: hidden;
+  color: var(--vr-text);
+  font-size: max(9px, calc(var(--vr-carousel-text-size, 12px) - 1px));
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vr-combat-carousel-card.phase-active .vr-combat-carousel-portrait-frame {
+  border-color: rgba(244, 248, 255, 0.88);
+  box-shadow: 0 0 0 2px rgba(244, 248, 255, 0.45), 0 10px 26px rgba(0, 0, 0, 0.52);
+}
+
+.vr-combat-carousel-initiative {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 18px;
+  padding: 0 5px;
+  border: 1px solid rgba(245, 165, 36, 0.35);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #facc15;
+  font-size: max(10px, calc(var(--vr-carousel-text-size, 12px) - 1px));
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.vr-combat-carousel-resources {
+  display: grid;
+  gap: 2px;
+  width: var(--vr-carousel-portrait-size, 64px);
+  margin-top: 3px;
+  max-height: 90px;
+  opacity: 1;
+  overflow: hidden;
+  pointer-events: none;
+  transition: max-height 140ms ease, margin-top 140ms ease, opacity 140ms ease;
+}
+
+.vr-combat-carousel.bars-hover .vr-combat-carousel-resources {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+}
+
+.vr-combat-carousel.bars-hover .vr-combat-carousel-card:hover .vr-combat-carousel-resources,
+.vr-combat-carousel.bars-hover .vr-combat-carousel-card:focus-within .vr-combat-carousel-resources {
+  max-height: 90px;
+  margin-top: 3px;
+  opacity: 1;
+}
+
+.vr-combat-carousel-resource {
+  position: relative;
+  display: block;
+  height: max(12px, calc(var(--vr-carousel-text-size, 12px) + 2px));
+  overflow: hidden;
+  min-width: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vr-carousel-resource-color) 42%, transparent);
+}
+
+.vr-combat-carousel-resource-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--vr-carousel-resource-color);
+}
+
+.vr-combat-carousel-resource-number {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: max(9px, calc(var(--vr-carousel-text-size, 12px) - 2px));
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .vr-combat-carousel {
+    top: 8px;
+    width: calc(100vw - 16px);
+  }
+
+  .vr-combat-carousel-shell {
+    gap: 4px;
+  }
+
+  .vr-combat-carousel-controls button,
+  .vr-combat-carousel-dragbar button {
+    width: 22px;
+    height: 22px;
+  }
+}

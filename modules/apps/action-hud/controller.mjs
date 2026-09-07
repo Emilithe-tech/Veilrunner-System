@@ -253,7 +253,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     const action = actionFromProjection(view, target.dataset.actionId);
     if (!action) return;
     if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "This action is invalid.");
-    if ((action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.rankScaling?.enabled) return this.openComposer(action);
+    if ((action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.hasLevelSelection) return this.openComposer(action);
     const actionActor = action.assetActorUuid ? view.assets.find(asset => asset.uuid === action.assetActorUuid)?.actor ?? this.actor : this.actor;
     await executeHudAction(actionActor, action, { targetToken: view.targetTokens[0] ?? null });
     this.refresh(["self", "workspace", "economy", "target", "party"]);
@@ -276,7 +276,7 @@ export class VeilrunnerActionHud extends HandlebarsApplicationMixin(ApplicationV
     const action = actionFromProjection(view, target.dataset.actionId);
     if (!action) return;
     if (action.valid === false) return globalThis.ui?.notifications?.warn?.(action.errors?.[0] ?? "This action cannot be prepared.");
-    const configurable = (action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.rankScaling?.enabled;
+    const configurable = (action.generated && action.operation === "fire") || action.isSpell || action.composer?.length || action.enhancements?.length || action.augments?.length || action.hasLevelSelection;
     if (configurable) return this.openComposer(action, { preparing: true });
     await prepareHudAction(this.actor, action.id, {}, view.targetTokens);
     globalThis.ui?.notifications?.info?.(`${action.name} is prepared for your turn.`);

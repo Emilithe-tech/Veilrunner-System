@@ -1,7 +1,9 @@
 import { normalizeCart } from "./cart.mjs";
+import { itemHasCapability } from "../../../data/definitions/item-capabilities.mjs";
+import { prepareActorOwnedSnapshot } from "../../../data/definitions/provenance.mjs";
 
 const cleanItemSource = document => {
-  const source = document.toObject();
+  const source = prepareActorOwnedSnapshot(document, { sourceVersion: globalThis.game?.system?.version ?? "" });
   delete source._id; delete source.folder; delete source.sort; delete source.ownership;
   return source;
 };
@@ -30,9 +32,14 @@ export async function buildStorefrontCommit(options) {
   for (const line of normalizeCart(lines)) {
     const item = await provider.resolve(line.definitionId);
     if (!item) return { ...validation, valid: false, errors: [`Store item ${line.definitionId} could not be resolved.`], documents: [] };
+    if (item.system?.definitionId !== line.definitionId || !itemHasCapability(item, "marketSellable")) {
+      return { ...validation, valid: false, errors: [`Store item ${line.definitionId} no longer matches its canonical definition.`], documents: [] };
+    }
     const source = cleanItemSource(item);
+    if (source.system?.definitionId !== line.definitionId || !itemHasCapability(source, "marketSellable")) {
+      return { ...validation, valid: false, errors: [`Store item ${line.definitionId} returned an invalid owned snapshot.`], documents: [] };
+    }
     source.system ??= {}; source.system.quantity = Math.max(1, Number(source.system.quantity) || 1) * line.quantity;
-    source.system.definitionId = line.definitionId;
     const record = validation.records.get(line.definitionId);
     if (source.type === "weapon" && record?.weaponType) source.system.weaponType = record.weaponType;
     source.flags ??= {}; source.flags[game.system.id] = { ...(source.flags[game.system.id] ?? {}), storefront: { providerId: provider.id, definitionId: line.definitionId, options: line.options } };

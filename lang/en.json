@@ -15,6 +15,10 @@
       "action": "Action",
       "spell": "Spell",
       "skill": "Skill",
+      "talent": "Talent",
+      "practice": "Practice",
+      "trait": "Trait",
+      "progression": "Progression Graph",
       "accessory": "Accessory",
       "ability": "Ability",
       "armor": "Armor",
@@ -36,6 +40,9 @@
       "consumable": "Consumable",
       "container": "Container",
       "equipment": "Equipment"
+    },
+    "ActiveEffect": {
+      "condition": "Condition"
     }
   },
   "VEILRUNNER": {
@@ -662,7 +669,17 @@
     },
     "InventoryFilter": {
       "label": "Filters",
+      "heading": "Filter inventory",
       "all": "All Items"
+    },
+    "InventorySort": {
+      "Label": "Sort",
+      "TypeName": "Type + Name",
+      "NameAsc": "Name A-Z",
+      "NameDesc": "Name Z-A",
+      "WeightDesc": "Weight: High to Low",
+      "QuantityDesc": "Quantity: High to Low",
+      "Manual": "Manual Order"
     },
     "AttributeGroup": {
       "Physical": "Physical Attributes",
@@ -990,8 +1007,9 @@
     "LevelUpGlowColor": "Level-Up Glow Color",
     "PANIndicatorColors": "PAN Indicator Colors",
     "PANOff": "Off",
-    "PANOn": "On",
+    "PANOn": "Active",
     "PANInterference": "Interference",
+    "PANJammed": "Jammed",
     "NoPartyAssigned": "No party assigned.",
     "NoPartyMembers": "No party members in this folder.",
     "OpenPartyFolder": "Open Party",
@@ -1053,7 +1071,14 @@
     "SkillsAndProficiencies": "Skills and Proficiencies",
     "NoItems": "No items.",
     "CarryWeight": "Carry Weight",
+    "Encumbrance": {
+      "Good": "Good",
+      "Near": "Near Encumbered",
+      "Encumbered": "Encumbered"
+    },
     "InventorySearch": "Search inventory",
+    "InventorySearchCategory": "Search {category}",
+    "InventoryFilteredEmpty": "No items match this search.",
     "InventoryList": {
       "Item": "Item",
       "Quantity": "Qty",
@@ -1066,9 +1091,19 @@
     },
     "InventoryCard": {
       "Equip": "Equip",
+      "Unequip": "Unequip",
+      "Equipped": "Equipped",
+      "Grade": "Grade",
+      "Actions": "Item actions",
       "Throw": "Throw",
       "Use": "Use",
+      "MarkJunk": "Mark as Junk",
+      "UnmarkJunk": "Remove from Junk",
       "Details": "Details",
+      "Remove": "Remove",
+      "RemoveTitle": "Remove Item",
+      "RemoveConfirm": "Remove {name} from this character?",
+      "RemoveError": "Could not remove {name}.",
       "Close": "Close details"
     },
     "NoFavorites": "No favorites.",
@@ -1108,8 +1143,11 @@
     "ComingSoon": "Coming soon.",
     "PAN": {
       "Label": "PAN",
-      "On": "On",
-      "Off": "Off"
+      "Connected": "Connected",
+      "Active": "Active",
+      "Off": "Off",
+      "Interference": "Interference",
+      "Jammed": "Jammed"
     },
     "OpenCharacterGeneration": "Open Character Generation",
     "OpenCharacterGenerationHint": "Reopen the character generation menu for this hero.",

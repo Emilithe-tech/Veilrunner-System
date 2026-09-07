@@ -3,7 +3,7 @@ import { evaluateActionAvailability } from "./availability.mjs";
 import { currentMapPenalty, recordSuccessfulAttack, spendActionEconomy } from "./economy.mjs";
 import { getTargetIntelPresentation } from "./target-intel.mjs";
 import { effectMatches } from "./visibility.mjs";
-import { recordRecentAction } from "./preferences.mjs";
+import { getHudPreferences, recordRecentAction } from "./preferences.mjs";
 import { executeFirearmAction } from "../../items/firearms.mjs";
 import { systemId } from "./constants.mjs";
 import { resolveHudActionConfiguration } from "./resolver.mjs";
@@ -35,7 +35,7 @@ async function executeSource(actor, action, { selections, mapPenalty }) {
   }
   const item = action.source?.documentName === "Item" ? action.source : actor.items?.get?.(action.id);
   if (item?.system?.roll) return item.system.roll(actor, { composer: selections, resolvedAction: action, mapPenalty, skipHudExecution: true, skipResourceCommit: true, skipAvailability: true });
-  if (typeof action.source?.execute === "function") return action.source.execute({ actor, selections, mapPenalty });
+  if (typeof action.source?.execute === "function") return action.source.execute({ actor, selections, mapPenalty, resolvedAction: action.resolvedAction });
   globalThis.ui?.notifications?.warn?.(`${action.name} has no executable rule definition.`);
   return false;
 }
@@ -44,16 +44,12 @@ async function executeSource(actor, action, { selections, mapPenalty }) {
 export async function executeHudAction(actor, actionOrId, { selections = null, targetToken = [...(globalThis.game?.user?.targets ?? [])][0] ?? null } = {}) {
   const discovered = findAction(actor, actionOrId);
   if (!actor || !discovered) return { success: false, reason: "Action is no longer available." };
-  const action = resolveHudActionConfiguration(actor, discovered, selections ?? discovered.composerSelections ?? {});
-  if (!action.valid) {
-    const reason = action.errors[0] ?? "Action configuration is invalid.";
-    globalThis.ui?.notifications?.warn?.(reason);
-    return { success: false, reason, action };
-  }
   const target = targetToken?.actor ?? null;
   const targetPresentation = getTargetIntelPresentation(targetToken, { viewerActor: actor });
+  const action = resolveHudActionConfiguration(actor, discovered, selections ?? discovered.composerSelections ?? getHudPreferences(actor).remembered[discovered.id] ?? {}, { target, targetPresentation });
+  const contract = action.resolvedAction;
   const resolvedSelections = action.resolvedSelections ?? selections ?? {};
-  const availability = evaluateActionAvailability({ actor, action: { ...action, composerSelections: resolvedSelections }, target, targetPresentation, selections: resolvedSelections });
+  const availability = evaluateActionAvailability({ actor, action, target, targetPresentation, selections: resolvedSelections, resolvedAction: contract });
   if (!availability.available) {
     globalThis.ui?.notifications?.warn?.(availability.reason);
     return { success: false, reason: availability.reason, availability };
@@ -70,10 +66,10 @@ export async function executeHudAction(actor, actionOrId, { selections = null, t
   }
   if (output === false || output == null) return { success: false, reason: "Action was cancelled or did not complete." };
   const resourceUpdate = {};
-  for (const [key, cost] of Object.entries(action.costs ?? {})) if (Number(cost) > 0) resourceUpdate[`system.resources.${key}.value`] = Math.max(0, Number(actor.system?.resources?.[key]?.value ?? 0) - Number(cost));
+  for (const [key, cost] of Object.entries(contract.resourceCosts)) if (Number(cost) > 0) resourceUpdate[`system.resources.${key}.value`] = Math.max(0, Number(actor.system?.resources?.[key]?.value ?? 0) - Number(cost));
   if (Object.keys(resourceUpdate).length) await actor.update(resourceUpdate);
   await consumeEffects(actor, target, action.source?.system?.consumes ?? action.consumes ?? []);
-  if (!await spendActionEconomy(actor, action)) {
+  if (!await spendActionEconomy(actor, contract)) {
     globalThis.ui?.notifications?.error?.("The action completed, but its combat economy state could not be updated.");
     return { success: false, reason: "Combat economy update failed after action execution.", output };
   }

@@ -9,7 +9,7 @@ export default class SpeciesData extends foundry.abstract.TypeDataModel {
     return {
       ...itemIdentityFields(),
       size: new StringField({ required: true, blank: false, initial: "Medium" }),
-      persona: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      persona: new ArrayField(new StringField({ required: true, blank: false }), { initial: () => [] }),
       description: new HTMLField({ required: false, blank: true, initial: "" })
     };
   }

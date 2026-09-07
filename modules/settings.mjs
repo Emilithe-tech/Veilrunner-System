@@ -1,6 +1,7 @@
 import { ACTION_TRAIT_SEED } from "./data/item/action-tree.mjs";
 import { TalentTreeEditorMenu } from "./apps/character-creation.mjs";
 import { DEFAULT_HEALTH_BANDS, DEFAULT_INTEL_MODULES, DEFAULT_WEAPON_FAMILIES, EFFECT_DISCLOSURE } from "./apps/action-hud/constants.mjs";
+import { WORLD_CANONICAL_IDENTITY_SETTING } from "./migrations/world-canonical-identity.mjs";
 
 export const VEILRUNNER_SETTINGS = {
   allowPlayerDatapad: "allowPlayerDatapad",
@@ -35,7 +36,8 @@ export const VEILRUNNER_SETTINGS = {
   combatHudWeaponFamilies: "combatHudWeaponFamilies",
   combatHudPanConfig: "combatHudPanConfig",
   combatHudVisibilityModes: "combatHudVisibilityModes",
-  combatHudSaveFormula: "combatHudSaveFormula"
+  combatHudSaveFormula: "combatHudSaveFormula",
+  canonicalIdentityMigration: WORLD_CANONICAL_IDENTITY_SETTING
 };
 
 const QUEST_OBJECTIVE_VISIBILITY = {
@@ -128,8 +130,8 @@ export function registerSettings() {
 
   game.settings.registerMenu(sid, "talentTreeEditor", {
     name: "Configure Talents & Skills",
-    label: "Open Tree Editor",
-    hint: "Open the shared GM authoring interface for Skills and Magic tree nodes, layout, connections, and traits.",
+    label: "Open Read-only Canonical Canvas",
+    hint: "Inspect the canonical Progression graph and placement inventory. Mutation controls remain gated.",
     icon: "fa-solid fa-diagram-project",
     type: TalentTreeEditorMenu,
     restricted: true
@@ -138,6 +140,12 @@ export function registerSettings() {
   game.settings.register(sid, VEILRUNNER_SETTINGS.talentTreeCatalog, {
     name: "Talents & Skills Catalog", hint: "Shared GM-authored School, Practice, and Spell or Skill layout with global prerequisite paths.",
     scope: "world", config: false, type: Object, default: {}, restricted: true
+  });
+  game.settings.register(sid, VEILRUNNER_SETTINGS.canonicalIdentityMigration, {
+    name: "Canonical Identity Migration",
+    hint: "Internal retryable state for the V14 canonical identity migration.",
+    scope: "world", config: false, type: Object,
+    default: { version: 0, status: "pending" }, restricted: true
   });
   game.settings.register(sid, VEILRUNNER_SETTINGS.actionTraits, {
     name: "Action Traits", hint: "GM-managed Action and Ability trait registry.",

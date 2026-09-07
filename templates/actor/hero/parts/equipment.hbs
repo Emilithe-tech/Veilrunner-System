@@ -1,18 +1,18 @@
 <section class="equipment-panel">
-  <div class="panel-heading">
+  <div class="panel-heading equipment-panel-header">
     <button type="button" class="panel-icon-btn" data-action="toggleEquipment" title="{{localize 'VEILRUNNER.Collapse'}}" aria-label="{{localize 'VEILRUNNER.Collapse'}}">
       <i class="fa-solid fa-angles-left"></i>
     </button>
-  </div>
-  <div class="equip-subtabs">
-    <button type="button" class="{{#if (eq equipTab "equipped")}}active{{/if}}" data-action="setEquipTab" data-tab="equipped">
-      <i class="fa-solid fa-shirt"></i>
-      <span>{{localize 'VEILRUNNER.Equipment'}}</span>
-    </button>
-    <button type="button" class="{{#if (eq equipTab "appearance")}}active{{/if}}" data-action="setEquipTab" data-tab="appearance">
-      <i class="fa-solid fa-image-portrait"></i>
-      <span>{{localize 'VEILRUNNER.Appearance'}}</span>
-    </button>
+    <div class="equip-subtabs">
+      <button type="button" class="{{#if (eq equipTab "equipped")}}active{{/if}}" data-action="setEquipTab" data-tab="equipped">
+        <i class="fa-solid fa-shirt"></i>
+        <span>{{localize 'VEILRUNNER.Equipment'}}</span>
+      </button>
+      <button type="button" class="{{#if (eq equipTab "appearance")}}active{{/if}}" data-action="setEquipTab" data-tab="appearance">
+        <i class="fa-solid fa-image-portrait"></i>
+        <span>{{localize 'VEILRUNNER.Appearance'}}</span>
+      </button>
+    </div>
   </div>
 
   <div class="equipment-tab-body {{equipmentTabAnimationClass}}">
@@ -55,7 +55,7 @@
     </div>
   {{else}}
     <div class="appearance-view">
-      <span class="appearance-preview" style="--portrait-x: {{portraitCrop.x}}%; --portrait-y: {{portraitCrop.y}}%; --portrait-zoom: {{portraitCrop.zoom}}; --portrait-rotation: {{portraitCrop.rotation}}deg; --portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}};">
+      <span class="appearance-preview" style="--portrait-x: {{portraitCrop.x}}%; --portrait-y: {{portraitCrop.y}}%; --portrait-zoom: {{portraitCrop.zoom}}; --portrait-rotation: {{portraitCrop.rotation}}deg; --portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}}; --vr-appearance-background: {{#if sheetOptions.characterBackgroundColorEnabled}}{{sheetOptions.characterBackgroundColor}}{{else}}#06080d{{/if}};{{#if characterBackgroundImage}} --vr-appearance-background-image: url('{{characterBackgroundImage}}');{{/if}}">
         <img src="{{portraitImage}}" alt="{{actor.name}}" />
       </span>
       <button type="button" class="appearance-pick-btn" data-action="setAppearanceImage">

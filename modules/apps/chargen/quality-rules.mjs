@@ -1,3 +1,6 @@
+import { evaluateRequirements } from "../../rules/requirement-evaluator.mjs";
+import { qualityRequirements } from "../../data/item/legacy-quality-requirements.mjs";
+
 export const QUALITY_TIERS = Object.freeze(["Minor", "Moderate", "Significant", "Major", "Extreme"]);
 export const QUALITY_PILLARS = Object.freeze(["Physical", "Social", "Magical", "Technical"]);
 export const QUALITY_TIER_COSTS = Object.freeze({ Minor: 1, Moderate: 2, Significant: 3, Major: 4, Extreme: 5 });
@@ -71,14 +74,13 @@ export function evaluateQualityRequirements(entry, build = {}, audit = auditQual
   const failures = [];
   const requirements = entry?.requirements ?? {};
   const level = Math.max(1, Math.trunc(Number(build?.level) || 1));
-  if (Number(requirements.minimumLevel) > level) failures.push(`Requires Level ${Math.trunc(Number(requirements.minimumLevel))}.`);
   const selected = audit.selectedIds;
-  const requiredIds = list(requirements.requiredDefinitionIds).filter(Boolean);
-  const missingIds = requiredIds.filter(id => !selected.has(id));
-  if (missingIds.length) failures.push(`Requires: ${missingIds.join(", ")}.`);
-  const actorTags = new Set(list(build?.tags).map(key));
-  const missingTags = list(requirements.requiredTags).filter(tag => !actorTags.has(key(tag)));
-  if (missingTags.length) failures.push(`Requires tags: ${missingTags.join(", ")}.`);
+  const canonical = evaluateRequirements(qualityRequirements(requirements), {
+    actor: { type: "hero", system: { level, attributes: build.attributes ?? {}, traits: list(build.traits), tags: list(build.tags) },
+      items: [...selected].map(definitionId => ({ system: { definitionId } })) },
+    knowledge: "player"
+  });
+  if (!canonical.satisfied) failures.push(canonical.reason || "The definition's requirements are not satisfied.");
   return failures;
 }
 

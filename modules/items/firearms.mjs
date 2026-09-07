@@ -1,6 +1,7 @@
 import { isItemEquipped, alteredItemSystem } from "../rules/item-rules.mjs";
 import { applyItemWear } from "./durability.mjs";
-import { getDefinitionId, hasItemIntent, registerActorActionProvider } from "../data/item/identity.mjs";
+import { getDefinitionId } from "../data/item/identity.mjs";
+import { registerActorActionProvider } from "../actions/action-sources.mjs";
 import { evaluateActionAvailability } from "../apps/action-hud/availability.mjs";
 
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
@@ -57,14 +58,14 @@ export function isMagazineCompatible(weapon, magazine) {
 
 function firearms(actor) {
   return actor.items.filter(item => item.type === "weapon" && item.system?.weaponKind === "firearm"
-    && (hasItemIntent(item, "weapon") || !(item.system?.intents?.length)) && isItemEquipped(actor, item));
+    && isItemEquipped(actor, item));
 }
 
 export function firearmLoadedState(actor, weapon) {
   const mode = weapon.system?.firearm?.magazineMode ?? "none";
   if (mode === "none") return { mode, magazine: null, rounds: 1, capacity: 1, internal: {} };
   if (mode === "detachable") {
-    const magazine = actor.items.get(weapon.system?.firearm?.loadedMagazineId);
+    const magazine = actor?.items?.get(weapon.system?.firearm?.loadedMagazineId);
     return { mode, magazine, rounds: Math.max(0, Number(magazine?.system?.rounds) || 0), capacity: Math.max(0, Number(magazine?.system?.capacity) || 0) };
   }
   const internal = weapon.system?.firearm?.internal ?? {};
@@ -100,6 +101,8 @@ function generatedAction(weapon, operation, data = {}) {
     generated: true,
     weaponId: weapon.id,
     operation,
+    range: Math.max(0, Number(weapon.system?.range) || 0),
+    damageType: weapon.system?.damage?.type ?? "",
     img: weapon.img,
     name: `${labels[operation]} ${weapon.name}`,
     description: weapon.system?.description?.value ?? "",
@@ -115,6 +118,7 @@ function generatedAction(weapon, operation, data = {}) {
     cost: data.status ?? "",
     disabled: Boolean(data.disabled),
     disabledReason: data.disabledReason ?? "",
+    summary: weapon.system?.summary ?? "",
     composer: operation === "fire" ? [{ key: "fireMode", label: "Fire Mode", type: "select", choices: modes.map(mode => mode.id), required: true, defaultValue: modes[0].id }] : [],
     weaponComposer: operation === "fire" ? {
       weaponName: weapon.name, weaponType: weapon.system?.weaponType ?? "", attackFormula: weapon.system?.attack?.formula ?? "1d10",
@@ -125,18 +129,36 @@ function generatedAction(weapon, operation, data = {}) {
   };
 }
 
+/** The same firearm definition feeds owned HUD actions and source/owned Item sheets. */
+export function firearmActionForItem(weapon, actor = weapon?.actor) {
+  if (weapon?.type !== "weapon" || weapon.system?.weaponKind !== "firearm") return null;
+  const state = firearmLoadedState(actor, weapon);
+  const ammo = actor?.items?.get(state.magazine?.system?.ammoId ?? state.internal?.ammoId ?? "");
+  const context = actor?.getItemRuleContext?.({
+    selectors: ["attack", "firearm", `weapon:${weapon.id}`],
+    options: ["action:fire", "attack", `weapon:${weapon.id}`, ...(weapon.system.traits ?? []).map(trait => `trait:${trait}`), ...(ammo?.system?.traits ?? []).map(trait => `ammo-trait:${trait}`)],
+    activeItemIds: ammo ? [ammo.id] : []
+  });
+  const system = context ? alteredItemSystem(weapon, context.resolved) : weapon.system;
+  const action = generatedAction({ id: weapon.id, name: weapon.name, img: weapon.img, system }, "fire", {
+    rounds: state.rounds, capacity: state.capacity,
+    disabled: Boolean(actor && state.rounds <= 0),
+    disabledReason: state.mode === "detachable" && !state.magazine ? "No magazine loaded." : "The weapon is empty."
+  });
+  action.weaponComposer.ammoDamageModifier = Number(ammo?.system?.damage?.modifier) || 0;
+  action.effectiveSystem = system;
+  action.weaponComposer.extraDamageDice = (context?.resolved?.damageDice ?? [])
+    .filter(rule => ["all", "damage", "firearm", `weapon:${weapon.id}`].includes(rule.selector))
+    .map(rule => `${rule.diceNumber}d${rule.dieSize}`);
+  return action;
+}
+
 export function firearmActionsForActor(actor) {
   const actions = [];
   for (const weapon of firearms(actor)) {
     const state = firearmLoadedState(actor, weapon);
     const status = `${state.rounds}/${state.capacity}`;
-    actions.push(generatedAction(weapon, "fire", {
-      status,
-      rounds: state.rounds,
-      capacity: state.capacity,
-      disabled: state.rounds <= 0,
-      disabledReason: state.mode === "detachable" && !state.magazine ? "No magazine loaded." : "The weapon is empty."
-    }));
+    actions.push(firearmActionForItem(weapon, actor));
     if (state.mode === "detachable") {
       if (!state.magazine) {
         actions.push(generatedAction(weapon, "load", {

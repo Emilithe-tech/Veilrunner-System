@@ -10,6 +10,10 @@ import HazardData from "./data/actor/hazard.mjs";
 import ActionData from "./data/item/action.mjs";
 import SpellData from "./data/item/spell.mjs";
 import SkillData from "./data/item/skill.mjs";
+import TalentData from "./data/item/talent.mjs";
+import PracticeData from "./data/item/practice.mjs";
+import TraitData from "./data/item/trait.mjs";
+import ProgressionData from "./data/item/progression.mjs";
 import AccessoryData from "./data/item/accessory.mjs";
 import AbilityData from "./data/item/ability.mjs";
 import ArmorData from "./data/item/armor.mjs";
@@ -21,7 +25,7 @@ import SpeciesData from "./data/item/species.mjs";
 import OriginData from "./data/item/origin.mjs";
 import BackgroundData from "./data/item/background.mjs";
 import LanguageData from "./data/item/language.mjs";
-import QualityData, { FlawData, PerkData } from "./data/item/quality.mjs";
+import QualityData from "./data/item/quality.mjs";
 import WeaponData from "./data/item/weapon.mjs";
 import AmmunitionData from "./data/item/ammunition.mjs";
 import MagazineData from "./data/item/magazine.mjs";
@@ -29,6 +33,7 @@ import ShieldData from "./data/item/shield.mjs";
 import ConsumableData from "./data/item/consumable.mjs";
 import ContainerData from "./data/item/container.mjs";
 import EquipmentData from "./data/item/equipment.mjs";
+import ConditionData from "./data/active-effect/condition.mjs";
 import { VeilrunnerActor } from "./documents/actor.mjs";
 import { VeilrunnerItem } from "./documents/item.mjs";
 
@@ -57,6 +62,10 @@ export function registerConfig() {
     action: ActionData,
     spell: SpellData,
     skill: SkillData,
+    talent: TalentData,
+    practice: PracticeData,
+    trait: TraitData,
+    progression: ProgressionData,
     accessory: AccessoryData,
     ability: AbilityData,
     armor: ArmorData,
@@ -69,8 +78,6 @@ export function registerConfig() {
     background: BackgroundData,
     language: LanguageData,
     quality: QualityData,
-    perk: PerkData,
-    flaw: FlawData,
     weapon: WeaponData,
     ammunition: AmmunitionData,
     magazine: MagazineData,
@@ -78,6 +85,10 @@ export function registerConfig() {
     consumable: ConsumableData,
     container: ContainerData,
     equipment: EquipmentData
+  });
+
+  Object.assign(CONFIG.ActiveEffect.dataModels, {
+    condition: ConditionData
   });
 
   CONFIG.Actor.trackableAttributes = {

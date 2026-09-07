@@ -8,7 +8,7 @@ export default class BackgroundData extends foundry.abstract.TypeDataModel {
   static defineSchema() {
     return {
       ...itemIdentityFields(),
-      persona: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+      persona: new ArrayField(new StringField({ required: true, blank: false }), { initial: () => [] }),
       description: new HTMLField({ required: false, blank: true, initial: "" })
     };
   }

@@ -1,0 +1,9 @@
+{{#each actionGroups}}
+<section class="vr-item-panel"><h2 class="section-heading">{{label}}</h2><div class="vr-item-action-grid">
+  {{#each cards}}<article class="vr-item-action-card"><header><i class="{{icon}}" aria-hidden="true"></i><h3>{{label}}</h3><span class="vr-item-action-cost"><small>Cost</small><i class="fa-solid fa-angles-right" aria-hidden="true"></i>{{cost}}</span></header>
+    {{> "systems/veilrunner/templates/item/parts/rows.hbs" rows=rows}}
+    {{#if description}}<p class="vr-item-action-description">{{description}}</p>{{/if}}
+  </article>{{/each}}
+</div></section>
+{{else}}<p class="vr-item-empty">This item has no activated actions.</p>{{/each}}
+{{#if system.mechanics}}<section class="vr-item-panel"><h2 class="section-heading">Notes</h2><div class="vr-item-prose">{{{mechanicsHTML}}}</div></section>{{/if}}

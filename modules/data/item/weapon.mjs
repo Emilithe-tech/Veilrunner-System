@@ -49,7 +49,7 @@ export default class WeaponData extends foundry.abstract.TypeDataModel {
         required: true,
         blank: false,
         choices: Object.fromEntries(EQUIPMENT_SLOTS.map(slot => [slot, `VEILRUNNER.EquipmentSlot.${slot}`]))
-      }), { initial: ["mainHand"] }),
+      }), { initial: () => ["mainHand"] }),
       weaponType: new StringField({
         required: true,
         blank: false,
@@ -95,16 +95,16 @@ export default class WeaponData extends foundry.abstract.TypeDataModel {
           attackModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
           damageModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
           damageFormula: text(), rangeModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
-          traits: new ArrayField(text(), { initial: [] })
-        }), { initial: [] }),
+          traits: new ArrayField(text(), { initial: () => [] })
+        }), { initial: () => [] }),
         options: new ArrayField(new SchemaField({
           id: text("option"), label: text(), description: text(),
           actionAdjustment: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
           ammoAdjustment: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
           attackModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
           damageModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
-          traits: new ArrayField(text(), { initial: [] })
-        }), { initial: [] }),
+          traits: new ArrayField(text(), { initial: () => [] })
+        }), { initial: () => [] }),
         compatibility: compatibilitySchema()
       })
     };

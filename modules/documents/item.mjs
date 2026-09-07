@@ -1,14 +1,12 @@
 /** System Item. */
-import { defaultIntentsForItem, getDefinitionId, normalizeItemIntents } from "../data/item/identity.mjs";
+import { isOwnedActionItem } from "../actions/action-sources.mjs";
+import { assertDefinitionIdentityUpdate } from "../data/definitions/identity-update.mjs";
 
 export class VeilrunnerItem extends Item {
   /** @override */
   async _preCreate(data, options, user) {
     const allowed = await super._preCreate(data, options, user);
     if (allowed === false) return false;
-    if (getDefinitionId(this) && !(this.system?.intents?.length)) {
-      this.updateSource({ "system.intents": normalizeItemIntents(defaultIntentsForItem(this.type, this.system)) });
-    }
     if (this.img && this.img !== "icons/svg/item-bag.svg") return;
     const defaultImages = {
       armor: "icons/svg/shield.svg",
@@ -25,10 +23,16 @@ export class VeilrunnerItem extends Item {
     if (defaultImages[this.type]) this.updateSource({ img: defaultImages[this.type] });
   }
 
+  /** @override */
+  async _preUpdate(changes, options, user) {
+    assertDefinitionIdentityUpdate(this, changes);
+    return super._preUpdate(changes, options, user);
+  }
+
   /** Delegate roll. */
   async roll(...args) {
     if (typeof this.system?.roll !== "function") return null;
-    if (["action", "ability", "spell", "skill"].includes(this.type) && !args[0]?.skipHudExecution) {
+    if (isOwnedActionItem(this) && !args[0]?.skipHudExecution) {
       const { executeHudAction } = await import("../apps/action-hud/execution.mjs");
       return executeHudAction(this.actor, this.id, { selections: args[0]?.composer ?? null });
     }

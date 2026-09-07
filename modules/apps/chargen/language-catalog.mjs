@@ -1,3 +1,5 @@
+import { CanonicalDefinitionReader } from "../../data/definitions/canonical-reader.mjs";
+
 export const LANGUAGE_CATALOG_PACK = "Veilrunner.languages";
 
 const text = value => String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -27,21 +29,23 @@ export function queryLanguageCatalog(records = [], search = "") {
 }
 
 export class LanguageCatalogProvider {
-  constructor(packId = LANGUAGE_CATALOG_PACK) {
-    this.packId = packId;
+  constructor() {
+    this.packId = LANGUAGE_CATALOG_PACK;
     this.cache = null;
+    this.revision = 0;
   }
 
   async records() {
     if (this.cache) return this.cache;
-    const pack = globalThis.game?.packs?.get?.(this.packId);
-    if (!pack) return (this.cache = []);
-    const documents = await pack.getDocuments();
+    const revision = this.revision;
+    const reader = new CanonicalDefinitionReader(["language"], { capability: "chargenSelectable" });
+    const documents = await reader.documents();
+    if (revision !== this.revision) return this.records();
     this.cache = documents.map(normalizeLanguageRecord).filter(Boolean);
     return this.cache;
   }
 
-  invalidate() { this.cache = null; }
+  invalidate() { this.revision += 1; this.cache = null; }
 }
 
 export function registerLanguageCatalogInvalidation(provider, onInvalidate = null) {

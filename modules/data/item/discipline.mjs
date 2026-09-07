@@ -7,7 +7,7 @@ export default class DisciplineData extends foundry.abstract.TypeDataModel {
 
   static defineSchema() {
     const text = () => new StringField({ required: true, blank: true, initial: "" });
-    const textList = () => new ArrayField(new StringField({ required: true, blank: false }), { initial: [] });
+    const textList = () => new ArrayField(new StringField({ required: true, blank: false }), { initial: () => [] });
     return {
       ...itemIdentityFields(),
       professionId: text(),
@@ -20,7 +20,7 @@ export default class DisciplineData extends foundry.abstract.TypeDataModel {
       bonusSkill: text(),
       persona: textList(),
       tags: textList(),
-      abilities: new ArrayField(new SchemaField({ name: text(), type: text(), text: text() }), { initial: [] }),
+      abilities: new ArrayField(new SchemaField({ name: text(), type: text(), text: text() }), { initial: () => [] }),
       pageImage: text(),
       source: text(),
       sourcePage: text(),

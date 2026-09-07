@@ -1,0 +1,1603 @@
+/* Party sheet, party roster, and inline party journal objects. */
+
+.veilrunner.sheet.actor .party-view{
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 0;
+  min-height: 0;
+  padding-top: 12px;
+  border-top: 0;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .party-view::before{
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--vr-sheet-divider-strong), transparent);
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .party-heading{
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: var(--vr-text-dim);
+  margin-bottom: 0;
+}
+
+.veilrunner.sheet.actor .party-pan-status{
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(243, 244, 248, 0.72);
+  font: inherit;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.veilrunner.sheet.actor .party-pan-status:hover,
+.veilrunner.sheet.actor .party-pan-status:focus-visible{
+  filter: drop-shadow(0 0 4px rgba(174, 185, 197, 0.72));
+}
+
+.veilrunner.sheet.actor .party-pan-label{
+  flex: 0 0 auto;
+  color: var(--vr-theme-text, var(--vr-text));
+  letter-spacing: 0.1em;
+}
+
+.veilrunner.sheet.actor .party-pan-connected{
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  color: color-mix(in srgb, var(--vr-theme-text, var(--vr-text)) 68%, transparent);
+}
+
+.veilrunner.sheet.actor .party-pan-connected strong{
+  color: var(--vr-theme-text, var(--vr-text));
+  font-size: 0.72rem;
+}
+
+.veilrunner.sheet.actor .party-pan-state{
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.veilrunner.sheet.actor .party-pan-status[data-pan-state="active"] .party-pan-state{
+  color: var(--vr-pan-on, rgb(0 255 73));
+}
+
+.veilrunner.sheet.actor .party-pan-status[data-pan-state="off"] .party-pan-state{
+  color: var(--vr-pan-off, rgb(255 0 0));
+}
+
+.veilrunner.sheet.actor .party-pan-status[data-pan-state="interference"] .party-pan-state{
+  color: var(--vr-pan-interference, #fbbf24);
+}
+
+.veilrunner.sheet.actor .party-pan-status[data-pan-state="jammed"] .party-pan-state{
+  color: var(--vr-pan-jammed, #f43f5e);
+}
+
+.veilrunner.sheet.actor .party-pan-status > span{
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.veilrunner.sheet.actor .party-member{
+  position: relative;
+  display: flex;
+  direction: ltr;
+  gap: 10px;
+  padding: 0 8px 0 0;
+  border: 2px solid var(--vr-sheet-divider);
+  border-radius: 8px;
+  margin: 0;
+  min-height: 64px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.veilrunner.sheet.actor .party-member::before{
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  z-index: 2;
+  background: #a855f7;
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .party-member.pan-on::before,
+.veilrunner.sheet.actor .party-member.pan-active::before{
+  background: var(--vr-pan-on, rgb(0 255 73));
+}
+
+.veilrunner.sheet.actor .party-member.pan-interference::before{
+  background: var(--vr-pan-interference, #fbbf24);
+}
+
+.veilrunner.sheet.actor .party-member.pan-jammed::before{
+  background: var(--vr-pan-jammed, #f43f5e);
+}
+
+.veilrunner.sheet.actor .party-member.pan-off{
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+.veilrunner.sheet.actor .party-member::after{
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 52px;
+  width: 2px;
+  z-index: 2;
+  background: var(--vr-sheet-divider);
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .party-member-portrait{
+  position: relative;
+  flex: 0 0 52px;
+  align-self: stretch;
+  width: 52px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .party-member-portrait img{
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  object-position: center;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.veilrunner.sheet.actor .party-member-data{
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 1px;
+  padding: 1px 0 5px;
+  font-size: 0.64rem;
+  color: var(--vr-text-dim);
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .party-member-resources{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.veilrunner.sheet.actor .party-resource{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  line-height: 1.05;
+}
+
+.veilrunner.sheet.actor .party-resource-label{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--vr-text-dim);
+  line-height: 1;
+}
+
+.veilrunner.sheet.actor .party-resource-status{
+  display: block;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.veilrunner.sheet.actor .party-resource-status{
+  color: rgba(243, 244, 248, 0.72);
+  font-size: 0.62rem;
+  padding-left: 0;
+  text-align: right;
+  justify-self: end;
+}
+
+.veilrunner.sheet.actor .party-member-title{
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .party-member-data strong{
+  flex: 1;
+  color: var(--vr-text);
+  font-size: 0.76rem;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .party-member-name{
+  cursor: pointer;
+}
+
+.veilrunner.sheet.actor .party-member-sheet-open{
+  display: inline-grid;
+  flex: 0 0 14px;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  color: var(--vr-text-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  font-size: 0.65rem;
+}
+
+.veilrunner.sheet.actor .party-member-sheet-open:hover,
+.veilrunner.sheet.actor .party-member-sheet-open:focus-visible{
+  color: var(--vr-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.veilrunner.sheet.actor .party-member-data i{
+  width: 1em;
+}
+
+.veilrunner.sheet.actor .party-member-data .resource-icon{
+  width: 1em;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.veilrunner.sheet.actor .party-overview-card,
+.veilrunner.sheet.actor .party-drawer-section{
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.62), rgba(8, 12, 17, 0.5)),
+    rgba(255, 255, 255, 0.018);
+}
+
+.veilrunner.sheet.actor .party-overview-header,
+.veilrunner.sheet.actor .party-drawer-member,
+.veilrunner.sheet.actor .party-drawer-item{
+  display: grid;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 6px;
+  color: var(--vr-text);
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+}
+
+.veilrunner.sheet.actor .party-overview-header:hover,
+.veilrunner.sheet.actor .party-drawer-member:hover,
+.veilrunner.sheet.actor .party-drawer-item:hover{
+  border-color: rgba(34, 211, 238, 0.42);
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.veilrunner.sheet.actor .party-overview-header{
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px;
+}
+
+.veilrunner.sheet.actor .party-overview-header img,
+.veilrunner.sheet.actor .party-drawer-member img,
+.veilrunner.sheet.actor .party-drawer-item img{
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 5px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.veilrunner.sheet.actor .party-overview-header span,
+.veilrunner.sheet.actor .party-drawer-item span{
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .party-overview-header strong,
+.veilrunner.sheet.actor .party-drawer-item strong{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .party-overview-header small,
+.veilrunner.sheet.actor .party-drawer-member small,
+.veilrunner.sheet.actor .party-drawer-item small{
+  color: var(--vr-text-dim);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.veilrunner.sheet.actor .party-overview-stats{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.veilrunner.sheet.actor .party-overview-stats div{
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.veilrunner.sheet.actor .party-overview-stats span{
+  color: var(--vr-text-dim);
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .party-overview-stats strong{
+  overflow: hidden;
+  color: var(--vr-cyan);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+}
+
+.veilrunner.sheet.actor .party-drawer-section{
+  margin-top: 10px;
+}
+
+.veilrunner.sheet.actor .party-drawer-member{
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 6px;
+}
+
+.veilrunner.sheet.actor .party-drawer-member.current{
+  border-color: rgba(168, 85, 247, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.12);
+}
+
+.veilrunner.sheet.actor .party-drawer-member span{
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .party-drawer-currency{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .party-drawer-currency{
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.veilrunner.sheet.actor .party-drawer-currency span{
+  min-width: 0;
+  overflow: hidden;
+  color: var(--vr-text-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .party-drawer-currency strong{
+  color: #fbbf24;
+}
+
+.veilrunner.sheet.actor .party-drawer-item{
+  grid-template-columns: 34px minmax(0, 1fr) 2.5rem;
+  gap: 8px;
+  padding: 6px;
+}
+
+.veilrunner.sheet.actor .party-drawer-item em{
+  justify-self: end;
+  color: var(--vr-cyan);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.veilrunner.sheet.actor .party-empty{
+  color: var(--vr-text-dim);
+  padding: 18px 8px;
+  text-align: center;
+}
+
+.veilrunner.sheet.actor .party-member.pan-on::before{ background: var(--vr-pan-on, rgb(0 255 73)); }
+.veilrunner.sheet.actor .party-member.pan-off::before{ background: var(--vr-pan-off, rgb(255 0 0)); }
+.veilrunner.sheet.actor .party-member.pan-interference::before{ background: var(--vr-pan-interference, #fbbf24); }
+
+.vr-hidden-party-actor {
+  display: none !important;
+}
+
+.vr-party-folder-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 1.55rem;
+  width: 1.55rem;
+  height: 1.55rem;
+  margin-left: 0.25rem;
+  padding: 0;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 5px;
+  color: #67e8f9;
+  background: rgba(8, 12, 17, 0.58);
+  position: relative;
+  z-index: 20;
+}
+
+.vr-party-folder-btn:hover {
+  border-color: rgba(34, 211, 238, 0.75);
+  color: #ffffff;
+  background: rgba(8, 145, 178, 0.32);
+}
+
+.veilrunner.sheet.actor .party-member-list {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 4px;
+  direction: ltr;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: calc(100% - 28px);
+  overflow-y: hidden;
+  overflow-x: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  scrollbar-color: rgba(168, 85, 247, 0.72) rgba(255, 255, 255, 0.06);
+  scrollbar-width: thin;
+}
+
+.veilrunner.sheet.actor .party-member-list.is-scrollable {
+  overflow-y: auto;
+}
+
+.veilrunner.sheet.actor .party-member-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.veilrunner.sheet.actor .party-member-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+
+.veilrunner.sheet.actor .party-member-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.84), rgba(34, 211, 238, 0.62));
+  border-radius: 999px;
+}
+
+.veilrunner.sheet.actor .vr-party-block{
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.62), rgba(8, 12, 17, 0.5)),
+    rgba(255, 255, 255, 0.018);
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row,
+.veilrunner.sheet.actor .vr-party-stash-row{
+  display: grid;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 6px;
+  color: var(--vr-text);
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row:hover,
+.veilrunner.sheet.actor .vr-party-stash-row:hover{
+  border-color: rgba(34, 211, 238, 0.42);
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row img,
+.veilrunner.sheet.actor .vr-party-stash-row img{
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 5px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row small,
+.veilrunner.sheet.actor .vr-party-stash-row small{
+  color: var(--vr-text-dim);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.veilrunner.sheet.actor .vr-party-summary{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.veilrunner.sheet.actor .vr-party-summary div{
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.veilrunner.sheet.actor .vr-party-summary span{
+  color: var(--vr-text-dim);
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .vr-party-summary strong{
+  overflow: hidden;
+  color: var(--vr-cyan);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row span,
+.veilrunner.sheet.actor .vr-party-stash-row span{
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .vr-party-currency-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-sheet {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-header,
+.veilrunner.sheet.actor .vr-party-columns,
+.veilrunner.sheet.actor .vr-party-column {
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-header {
+  display: grid;
+  gap: 10px;
+}
+
+.veilrunner.sheet.actor .vr-party-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.veilrunner.sheet.actor .vr-party-identity {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-identity img {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.veilrunner.sheet.actor .vr-party-identity div { display: grid; min-width: 0; }
+
+.veilrunner.sheet.actor .vr-party-identity span {
+  color: var(--vr-text-dim);
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .vr-party-identity strong {
+  overflow: hidden;
+  color: var(--vr-text);
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .vr-party-columns {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.42fr) minmax(260px, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.veilrunner.sheet.actor .vr-party-column {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-column-panel {
+  align-content: start;
+}
+
+.veilrunner.sheet.actor .vr-party-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.veilrunner.sheet.actor .vr-party-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--vr-text-dim);
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .vr-party-tab span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .vr-party-tab:hover,
+.veilrunner.sheet.actor .vr-party-tab.active {
+  border-color: rgba(34, 211, 238, 0.36);
+  color: var(--vr-text);
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.veilrunner.sheet.actor .vr-party-block-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--vr-text-dim);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .vr-party-block-heading small {
+  flex: 0 0 auto;
+  color: var(--vr-text-dim);
+}
+
+.veilrunner.sheet.actor .vr-party-roster,
+.veilrunner.sheet.actor .vr-party-stash,
+.veilrunner.sheet.actor .vr-party-currencies {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row,
+.veilrunner.sheet.actor .vr-party-stash-row {
+  box-sizing: border-box;
+  grid-template-columns: 42px minmax(0, 1fr) max-content;
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row img {
+  width: 38px;
+  height: 38px;
+  justify-self: center;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.veilrunner.sheet.actor .vr-party-member-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .vr-party-member-text strong,
+.veilrunner.sheet.actor .vr-party-member-text em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .vr-party-member-text em {
+  color: var(--vr-text-dim);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.veilrunner.sheet.actor .vr-party-roster-row small {
+  align-self: center;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .vr-party-currency-row {
+  grid-template-columns: minmax(0, 1fr) 74px 28px;
+  gap: 6px;
+}
+
+.veilrunner.sheet.actor .vr-party-currency-row input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 6px;
+  color: var(--vr-text);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+@media (max-width: 640px) {
+  .veilrunner.sheet.actor .vr-party-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.veilrunner.sheet.actor .party-member-list{
+  scrollbar-color: color-mix(in srgb, var(--vr-ui-color) 72%, #8b5cf6) color-mix(in srgb, var(--vr-ui-color) 12%, #06070b);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus-visible,
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:focus,
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:focus-visible,
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay button:focus,
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay button:focus-visible{
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus-visible {
+  border-color: transparent !important;
+}
+
+/* Party and settings scrollbars deliberately share the same selected UI Style colors. */
+.veilrunner.sheet.actor .party-member-list {
+  scrollbar-color: color-mix(in srgb, var(--vr-ui-color) 72%, #b8c2d0) color-mix(in srgb, var(--vr-ui-color) 14%, #050609);
+}
+
+.veilrunner.sheet.actor .party-member-list::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--vr-ui-color) 14%, #050609);
+}
+
+.veilrunner.sheet.actor .party-member-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--vr-ui-color) 82%, #dce3ee),
+    color-mix(in srgb, var(--vr-ui-color) 56%, #303846)
+  );
+  border-color: color-mix(in srgb, var(--vr-ui-color) 36%, #050609);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--vr-ui-color) 42%, transparent);
+}
+
+/* Party sheets inherit the palette selected by the user who opens them. */
+.veilrunner.sheet.actor.basic {
+  --vr-ui-color: #101216;
+  --vr-vision-bg: #080910;
+  --vr-accent-soft: color-mix(in srgb, var(--vr-accent) 20%, transparent);
+  --vr-accent-glow: color-mix(in srgb, var(--vr-accent) 48%, transparent);
+  --vr-bg: color-mix(in srgb, var(--vr-ui-color) 12%, var(--vr-vision-bg));
+  --vr-panel: color-mix(in srgb, var(--vr-ui-color) 18%, var(--vr-vision-bg));
+  --vr-panel-alt: color-mix(in srgb, var(--vr-ui-color) 26%, var(--vr-vision-bg));
+  --vr-border: color-mix(in srgb, var(--vr-ui-color) 30%, rgba(255, 255, 255, 0.12));
+}
+
+.veilrunner.sheet.actor.basic .window-header,
+.veilrunner.sheet.actor.basic .window-content {
+  background-color: var(--vr-bg);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  min-height: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--vr-border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--vr-panel-alt), var(--vr-panel));
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary {
+  width: 100%;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--vr-text);
+  font-size: 1.12rem;
+  line-height: 1.2;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  min-height: 42px;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab span {
+  overflow: visible;
+  line-height: 1.1;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  width: 100%;
+  padding: 7px;
+  color: var(--vr-text);
+  text-align: left;
+  background: color-mix(in srgb, var(--vr-panel) 88%, transparent);
+  border: 1px solid var(--vr-border);
+  border-radius: 6px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member:hover {
+  border-color: var(--vr-accent);
+  background: color-mix(in srgb, var(--vr-accent) 10%, var(--vr-panel));
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-data,
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-title,
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-resources {
+  min-width: 0;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-roster .party-member-title small {
+  margin-left: auto;
+  color: var(--vr-text-dim);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-journal-panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--vr-border);
+  border-radius: 8px;
+  background: var(--vr-panel);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-journal-panel > i { color: var(--vr-accent); font-size: 1.4rem; }
+.veilrunner.sheet.actor.basic .vr-party-journal-panel strong { display: block; color: var(--vr-text); }
+.veilrunner.sheet.actor.basic .vr-party-journal-panel p { margin: 3px 0 0; color: var(--vr-text-dim); font-size: 0.78rem; }
+.veilrunner.sheet.actor.basic .vr-party-journal-panel button { padding: 7px 9px; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); border-radius: 6px; white-space: nowrap; }
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator::after{
+  content: "";
+  position: absolute;
+  right: 22%;
+  bottom: 0;
+  left: 22%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  box-shadow: 0 0 8px currentColor, 0 -10px 24px color-mix(in srgb, currentColor 24%, transparent);
+}
+
+/* Party-sheet structure: one title line, one stat row, no roster container. */
+.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet) {
+  min-height: 100%;
+  background: var(--vr-bg) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-sheet {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  margin: 0;
+  padding: 4px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-header {
+  display: block !important;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px !important;
+  overflow: visible;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-title-row {
+  display: block;
+  min-width: 0;
+  margin: 0 0 10px;
+  color: var(--vr-text);
+  font-size: 1.25rem;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-title-row strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100% !important;
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary > div {
+  min-width: 0;
+  padding: 8px;
+  background: var(--vr-panel) !important;
+  border-color: var(--vr-border) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-summary span,
+.veilrunner.sheet.actor.basic .vr-party-summary strong {
+  overflow: visible;
+  text-align: left;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-columns {
+  grid-template-columns: minmax(160px, .62fr) minmax(0, 1fr) !important;
+  gap: 14px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-column-members {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-column-members > .vr-party-block-heading {
+  padding: 0 0 6px;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch;
+  gap: 5px;
+  padding: 4px;
+  background: var(--vr-panel) !important;
+  border-color: var(--vr-border) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
+  place-items: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 5px 3px;
+  overflow: hidden;
+  color: var(--vr-text-dim);
+  background: transparent;
+  border-color: transparent;
+  text-align: center;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-tab i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-tab span { display: block; width: 100%; overflow: visible; font-size: .62rem; line-height: 1.05; text-align: center; text-overflow: clip; white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-tab:hover,
+.veilrunner.sheet.actor.basic .vr-party-tab.active { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); border-color: color-mix(in srgb, var(--vr-accent) 52%, var(--vr-border)); box-shadow: inset 0 -2px 0 var(--vr-accent), 0 0 10px color-mix(in srgb, var(--vr-accent) 24%, transparent); }
+
+@media (max-width: 540px) {
+  .veilrunner.sheet.actor.basic .vr-party-columns { grid-template-columns: 1fr !important; }
+}
+
+/* Isolated Party sheet. These classes intentionally do not share the hero-sheet party selectors. */
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { display: grid; align-content: start; gap: 14px; min-width: 0; padding: 14px; color: var(--vr-text); background: var(--vr-bg); }
+.veilrunner.sheet.actor.basic .vr-party-v2-header { display: grid; gap: 9px; min-width: 0; padding: 12px; border: 1px solid var(--vr-border); border-radius: 8px; background: var(--vr-panel); }
+.veilrunner.sheet.actor.basic .vr-party-v2-name { display: block; min-width: 0; overflow: hidden; color: var(--vr-text); font-size: 1.25rem; line-height: 1.2; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div { display: grid; gap: 3px; min-width: 0; padding: 8px; border: 1px solid var(--vr-border); border-radius: 6px; background: var(--vr-panel-alt); }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary span { color: var(--vr-text-dim); font-size: .63rem; font-weight: 800; line-height: 1.1; text-align: left; text-transform: uppercase; white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong { color: var(--vr-accent); font-size: 1rem; text-align: left; }
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { display: grid; grid-template-columns: minmax(175px, .58fr) minmax(0, 1fr); gap: 14px; min-width: 0; align-items: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-members, .veilrunner.sheet.actor.basic .vr-party-v2-panel { display: grid; gap: 8px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--vr-text); font-size: .76rem; font-weight: 800; text-align: left; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading button, .veilrunner.sheet.actor.basic .vr-party-v2-currency button { flex: 0 0 auto; width: 28px; height: 28px; padding: 0; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 46%, var(--vr-border)); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-roster { display: grid !important; grid-auto-rows: minmax(62px, auto); gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member { position: relative !important; display: grid !important; grid-template-columns: 44px minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; min-width: 0; min-height: 62px; margin: 0 !important; padding: 5px 0; color: var(--vr-text); text-align: left; background: transparent !important; border: 0 !important; border-radius: 0; box-shadow: none !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member:hover { background: color-mix(in srgb, var(--vr-accent) 8%, transparent) !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--vr-border); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-data { display: grid; min-width: 0; gap: 4px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title { display: flex; gap: 7px; min-width: 0; align-items: baseline; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title > span { display: grid; min-width: 0; gap: 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title em { overflow: hidden; color: var(--vr-text-dim); font-size: .72rem; font-style: normal; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title small { margin-left: auto; color: var(--vr-text-dim); font-size: .66rem; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-resources { display: flex; flex-wrap: wrap; gap: 3px 6px; color: var(--vr-text-dim); font-size: .65rem; line-height: 1; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-resources i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { display: flex; flex-wrap: wrap; gap: 4px 9px; color: var(--vr-text-dim); font-size: .7rem; line-height: 1.1; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; min-width: 0; padding: 4px; border: 1px solid var(--vr-border); border-radius: 8px; background: var(--vr-panel); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button { display: grid; grid-template-rows: auto auto; place-items: center; gap: 3px; min-width: 0; min-height: 56px; padding: 5px 3px; overflow: hidden; color: var(--vr-text-dim); background: transparent; border: 1px solid transparent; border-radius: 5px; font-size: .62rem; font-weight: 800; line-height: 1.05; text-align: center; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button span { display: block; overflow: visible; white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover, .veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); border-color: color-mix(in srgb, var(--vr-accent) 54%, var(--vr-border)); box-shadow: inset 0 -2px 0 var(--vr-accent), 0 0 10px color-mix(in srgb, var(--vr-accent) 24%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-card, .veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-block, .veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-journal-panel { display: grid; gap: 9px; min-width: 0; padding: 10px; border: 1px solid var(--vr-border); border-radius: 8px; background: var(--vr-panel); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency { display: grid; grid-template-columns: 28px 28px minmax(0, 1fr) 72px 28px; gap: 6px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency input { min-width: 0; height: 30px; color: var(--vr-text); background: var(--vr-bg); border: 1px solid var(--vr-border); border-radius: 5px; }
+@media (max-width: 540px) {
+  .veilrunner.sheet.actor.basic .vr-party-v2-header,
+  .veilrunner.sheet.actor.basic .vr-party-v2-layout { grid-template-columns: 1fr; }
+}
+
+/* Party sheet uses the hero category-switcher language: surfaces are open, controls carry the emphasis. */
+.veilrunner.sheet.actor.basic .vr-party-v2-header,
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div,
+.veilrunner.sheet.actor.basic .vr-party-v2-card,
+.veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-block,
+.veilrunner.sheet.actor.basic .vr-party-v2-panel > .vr-party-journal-panel {
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-header { gap: 12px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div { gap: 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary > div + div { border-left: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)) !important; padding-left: 10px; }
+.veilrunner.sheet.actor.basic .window-content { container-type: inline-size; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { border: 0; border-radius: 0; }
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs {
+  position: relative;
+  gap: 0;
+  padding: 0 var(--vr-category-pad-x, 12px);
+  border: 0;
+  border-inline: 1px solid var(--vr-border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vr-ui-color) 24%, #10131a), color-mix(in srgb, var(--vr-ui-color) 10%, #06070b)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03), inset 0 -1px 0 rgba(0, 0, 0, .28);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button {
+  position: relative;
+  z-index: 1;
+  min-height: 48px;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  transition: color 180ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+/* The tab indicator supplies the selected state; suppress Foundry's separate
+   persistent button-focus frame after selecting a tab. */
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button::after {
+  content: "";
+  position: absolute;
+  right: 18%;
+  bottom: 0;
+  left: 18%;
+  height: 2px;
+  background: transparent;
+  border-radius: 99px;
+  opacity: 0;
+  transform: scaleX(.35);
+  transition: opacity 180ms ease, transform 220ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active {
+  background: radial-gradient(85% 70% at 50% 100%, color-mix(in srgb, var(--vr-accent) 22%, transparent), transparent 70%) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active::after {
+  background: linear-gradient(90deg, transparent, var(--vr-accent), transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 82%, transparent), 0 -10px 24px color-mix(in srgb, var(--vr-accent) 22%, transparent);
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  left: var(--vr-category-pad-x, 12px);
+  width: calc((100% - var(--vr-category-pad-x, 12px) - var(--vr-category-pad-x, 12px)) / 3);
+  height: auto;
+  border-inline: 1px solid color-mix(in srgb, var(--vr-accent) 18%, transparent);
+  border-radius: 0;
+  background:
+    radial-gradient(85% 70% at 50% 100%, color-mix(in srgb, var(--vr-accent) 22%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-accent) 8%, transparent), color-mix(in srgb, #22d3ee 4%, transparent));
+  box-shadow:
+    inset 0 -2px 0 color-mix(in srgb, var(--vr-accent) 72%, transparent),
+    0 0 24px color-mix(in srgb, var(--vr-accent) 16%, transparent);
+  transform: translateX(calc(var(--party-tab-offset) * 100%));
+  transition: transform .26s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+.veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator { color: var(--vr-accent); }
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button::after {
+  opacity: 0 !important;
+}
+
+/* Party controls share the hero sheet's lift-and-press interaction language. */
+.veilrunner.sheet.actor.basic button {
+  transition:
+    color .18s ease,
+    background-color .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease,
+    transform .18s cubic-bezier(.2, .8, .2, 1);
+}
+
+.veilrunner.sheet.actor.basic button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.veilrunner.sheet.actor.basic button:active:not(:disabled) {
+  transform: translateY(0) scale(.97);
+  transition-duration: .08s;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button > i,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label {
+  transition: color .18s ease, filter .18s ease, transform .18s ease;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover > i,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active > i {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--vr-accent) 68%, transparent));
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .veilrunner.sheet.actor.basic button,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button::after,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button > i,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tab-indicator {
+    transition: none;
+  }
+
+  .veilrunner.sheet.actor.basic button:hover:not(:disabled),
+  .veilrunner.sheet.actor.basic button:active:not(:disabled),
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button:hover > i,
+  .veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active > i {
+    transform: none;
+  }
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-currency input {
+  border: 0;
+  border-bottom: 1px solid var(--vr-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Party currency and inventory tables share scan-friendly headers and alternating rows. */
+.veilrunner.sheet.actor.basic .vr-party-v2-list-head { position: sticky; top: 0; z-index: 2; display: grid; align-items: center; min-height: 28px; padding: 0 7px; color: var(--vr-text); background: var(--vr-panel-alt); border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 48%, var(--vr-border)); font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head { grid-template-columns: 28px 28px minmax(0, 1fr) 72px 28px; gap: 6px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head button { width: 28px; height: 28px; padding: 0; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 46%, var(--vr-border)); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-head, .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { grid-template-columns: minmax(0, 1fr) 42px 58px; gap: 7px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-list-head span:not(:first-child), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-head span:not(:first-child), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row span:not(:first-child) { text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-scroll-list { display: grid; grid-auto-rows: 40px; align-content: start; min-height: 0; overflow-y: auto; scrollbar-color: color-mix(in srgb, var(--vr-accent) 70%, #dce3ee) color-mix(in srgb, var(--vr-ui-color) 14%, #050609); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency, .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { min-width: 0; min-height: 0; height: 40px; padding: 4px 7px; border-bottom: 1px solid color-mix(in srgb, var(--vr-border) 70%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency:nth-child(odd), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:nth-child(odd) { background: color-mix(in srgb, var(--vr-ui-color) 9%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency:nth-child(even), .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:nth-child(even) { background: color-mix(in srgb, var(--vr-ui-color) 18%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { display: grid; align-items: center; width: 100%; color: var(--vr-text); text-align: left; background-clip: padding-box; border-inline: 0; border-top: 0; border-radius: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-row:hover { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-search { display: flex; align-items: center; min-width: 0; height: 30px; padding: 0 8px; color: var(--vr-text-dim); background: var(--vr-panel-alt); border: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); border-radius: 4px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-search:focus-within { color: var(--vr-accent); border-color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-search input { min-width: 0; width: 100%; height: 28px; padding: 0 0 0 7px; color: var(--vr-text); background: transparent; border: 0; border-radius: 0; outline: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-filter { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-height: 30px; color: var(--vr-text-dim); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-filter select { width: min(142px, 58%); min-width: 90px; height: 28px; padding: 0 24px 0 7px; color: var(--vr-text); background: var(--vr-panel-alt); border: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); border-radius: 4px; font: inherit; letter-spacing: normal; text-transform: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-panel-toolbar { min-height: 30px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-head { grid-template-columns: minmax(0, 1fr) 36px; gap: 7px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-head span:last-child { text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-list { grid-auto-rows: 48px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 20px; align-items: center; gap: 7px; width: 100%; min-width: 0; height: 48px; padding: 5px 7px; color: var(--vr-text); text-align: left; background: transparent; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--vr-border) 70%, transparent); border-radius: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:nth-child(odd) { background: color-mix(in srgb, var(--vr-ui-color) 9%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:nth-child(even) { background: color-mix(in srgb, var(--vr-ui-color) 18%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row:hover { color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 16%, transparent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row > i:first-child { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row > i:last-child { color: var(--vr-text-dim); font-size: .7rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row span { display: grid; min-width: 0; gap: 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row strong, .veilrunner.sheet.actor.basic .vr-party-v2-journal-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-row small { color: var(--vr-text-dim); font-size: .72rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-card { position: relative; overflow: hidden; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay { position: absolute; z-index: 4; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; background: var(--vr-bg); border-left: 1px solid var(--vr-border); animation: vr-party-journal-slide-in .24s ease-out both; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay.is-closing { pointer-events: none; animation: vr-party-journal-slide-out .24s ease-in both; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 9px 12px; color: var(--vr-text); background: color-mix(in srgb, var(--vr-ui-color) 18%, var(--vr-panel)); border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 48%, var(--vr-border)); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay > header strong { overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-overlay > header button { flex: 0 0 auto; width: 30px; height: 30px; padding: 0; color: var(--vr-text); background: color-mix(in srgb, var(--vr-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--vr-accent) 46%, var(--vr-border)); border-radius: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-pages { min-height: 0; padding: 14px; overflow: auto; scrollbar-color: color-mix(in srgb, var(--vr-accent) 70%, #dce3ee) color-mix(in srgb, var(--vr-ui-color) 14%, #050609); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page { color: var(--vr-text); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page + .vr-party-v2-journal-page { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--vr-border); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page h3 { margin: 0 0 10px; color: var(--vr-text); }
+.veilrunner.sheet.actor.basic .vr-party-v2-journal-page .journal-page-content { line-height: 1.5; }
+@keyframes vr-party-journal-slide-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes vr-party-journal-slide-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(28px); } }
+
+/* Fill and adapt to the resizable Party window; only the list body scrolls. */
+.veilrunner.sheet.actor.basic .window-content:has(.vr-party-sheet-v2),
+.veilrunner.sheet.actor.basic .window-content:has(.vr-party-sheet-v2) [data-application-part="body"],
+.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet-v2),
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { height: 100% !important; min-height: 0; }
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-rows: auto minmax(0, 1fr); }
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { height: 100%; min-height: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-height: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-card { grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-height: 0; }
+
+/* Party sheet's spacious default presentation. */
+.veilrunner.sheet.actor.basic .vr-party-v2-members {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-member {
+  padding: 7px !important;
+  border: 1px solid var(--vr-border) !important;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vr-panel) 78%, transparent) !important;
+}
+
+.veilrunner.sheet.actor.basic .vr-party-v2-roster-header { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 14px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-name { font-size: 1.65rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary span { font-size: .72rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong { font-size: 1.12rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { font-size: 1.08rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title strong { font-size: 1.06rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-title small { font-size: .76rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-resources { font-size: .75rem; gap: 5px 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { font-size: .75rem; gap: 5px 9px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; min-width: 0; padding: 5px 0 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail span { display: flex; align-items: center; justify-content: flex-start; gap: 6px; min-width: 0; min-height: 28px; padding-inline: 8px; color: var(--vr-text); background: color-mix(in srgb, var(--vr-ui-color) 14%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 46%, transparent); text-align: left; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail i { flex: 0 0 auto; color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-tracked-rail strong { min-width: 0; overflow: hidden; font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button { font-size: .72rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button { grid-template-columns: 20px minmax(0, 1fr); grid-template-rows: 1fr; align-items: center; justify-items: start; gap: 6px; padding: 5px 10px; text-align: left; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button > i { grid-column: 1; grid-row: 1; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label { display: grid; grid-column: 2; grid-row: 1; gap: 1px; min-width: 0; line-height: 1.05; }
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button .vr-party-v2-tab-label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-list-head { font-size: .74rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency input, .veilrunner.sheet.actor.basic .vr-party-v2-inventory-row { font-size: .9rem; }
+
+.vr-party-v2-icon-prompt { display: grid; gap: 8px; min-width: 260px; color: var(--vr-text, #f8fafc); }
+.vr-party-v2-icon-prompt label { display: grid; gap: 6px; font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+.vr-party-v2-icon-prompt input { min-height: 32px; color: var(--vr-text, #f8fafc); background: color-mix(in srgb, var(--vr-ui-color, #101216) 30%, #050609); border: 1px solid color-mix(in srgb, var(--vr-accent, #67e8f9) 42%, #334155); border-radius: 5px; }
+
+/* Keep the header metrics above the matching right-hand panel. */
+.veilrunner.sheet.actor.basic .vr-party-v2-header { grid-template-columns: minmax(175px, .58fr) minmax(0, 1fr); align-items: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { align-self: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy { display: none; }
+
+/* Party identity and member cards scale with the denser four-line roster data. */
+.veilrunner.sheet.actor.basic .vr-party-v2-header,
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { grid-template-columns: 360px minmax(0, 1fr); }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity > img,
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button { width: 58px; height: 58px; min-height: 58px; padding: 0; overflow: hidden; background: var(--vr-panel-alt); border: 1px solid var(--vr-border); border-radius: 6px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button { cursor: pointer; }
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button img { width: 100%; height: 100%; object-fit: cover; border: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity .vr-party-v2-name { white-space: normal; }
+.veilrunner.sheet.actor.basic .vr-party-v2-roster { grid-auto-rows: minmax(82px, auto); }
+.veilrunner.sheet.actor.basic .vr-party-v2-member { grid-template-columns: 54px minmax(0, 1fr); min-height: 82px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { width: 52px; height: 52px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth > span:last-child { text-align: right; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary span,
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong,
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-icon { display: grid; place-items: center; width: 28px; height: 30px; color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-icon input { display: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-track-button { color: var(--vr-text-dim) !important; background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-track-button:hover,
+.veilrunner.sheet.actor.basic .vr-party-v2-track-button.is-tracked { color: var(--vr-accent) !important; background: color-mix(in srgb, var(--vr-accent) 12%, transparent) !important; border-color: color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)) !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head > span:nth-child(3),
+.veilrunner.sheet.actor.basic .vr-party-v2-currency > input:nth-child(3) { text-align: left !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-currency-head > span:nth-child(4),
+.veilrunner.sheet.actor.basic .vr-party-v2-currency > input:nth-child(4) { text-align: right !important; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong { display: inline-flex; align-items: center; justify-content: flex-start; gap: 5px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary strong i { color: var(--vr-accent); }
+.veilrunner.sheet.actor.basic .vr-party-v2-member { align-items: stretch; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member img { align-self: stretch; width: 52px; height: 100%; min-height: 68px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-data { grid-template-rows: auto auto minmax(0, 1fr); align-content: stretch; height: 100%; }
+.veilrunner.sheet.actor.basic .vr-party-v2-member-wealth { align-self: end; }
+
+/* Keep the party sheet's two columns: the tab workspace starts at the top right. */
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-columns: 360px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: start; }
+.veilrunner.sheet.actor.basic .vr-party-v2-header { display: contents; }
+.veilrunner.sheet.actor.basic .vr-party-v2-layout { display: contents; }
+.veilrunner.sheet.actor.basic .vr-party-v2-header > .vr-party-v2-summary { display: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; min-width: 0; padding: 5px 0 2px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy > div { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; min-height: 28px; padding: 0 8px; background: color-mix(in srgb, var(--vr-ui-color) 14%, transparent); border: 0; border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 46%, transparent); border-radius: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy span { display: block; width: auto; height: auto; min-width: 0; overflow: visible; font-size: .66rem; text-overflow: clip; white-space: nowrap; }
+.veilrunner.sheet.actor.basic .vr-party-v2-summary-legacy strong { display: inline-flex; flex: 0 0 auto; width: auto; height: auto; font-size: .8rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-inventory-value::after { content: attr(data-short-label); }
+@container (min-width: 760px) {
+  .veilrunner.sheet.actor.basic .vr-party-v2-inventory-value::after { content: attr(data-full-label); }
+}
+.veilrunner.sheet.actor.basic .vr-party-v2-members { grid-column: 1; grid-row: 1; align-self: start; padding-right: 14px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-column: 2; grid-row: 1 / span 2; grid-template-rows: auto auto minmax(0, 1fr); align-self: stretch; }
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2::after { content: ""; z-index: 1; grid-column: 1; grid-row: 1 / span 2; align-self: stretch; justify-self: end; width: 1px; background: color-mix(in srgb, var(--vr-accent) 42%, var(--vr-border)); box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 18%, transparent); pointer-events: none; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { margin-top: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-roster { margin-top: 0; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity { grid-template-columns: 1.65rem minmax(0, 1fr); gap: 8px; }
+.veilrunner.sheet.actor.basic .vr-party-v2-identity > img,
+.veilrunner.sheet.actor.basic .vr-party-v2-image-button { width: 1.65rem; height: 1.65rem; min-height: 1.65rem; }
+.veilrunner.sheet.actor.basic .vr-party-v2-name,
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { font-size: .9rem; font-weight: 800; }
+.veilrunner.sheet.actor.basic .vr-party-v2-name { text-transform: uppercase; }
+.veilrunner.sheet.actor.basic input.vr-party-v2-name { width: 100%; min-width: 0; height: auto; padding: 0; color: var(--vr-text); font: inherit; line-height: 1.2; text-transform: uppercase; background: transparent; border: 0; border-bottom: 1px solid transparent; border-radius: 0; }.veilrunner.sheet.actor.basic input.vr-party-v2-name:hover, .veilrunner.sheet.actor.basic input.vr-party-v2-name:focus { border-bottom-color: color-mix(in srgb, var(--vr-accent) 62%, transparent); outline: 0; }
+.veilrunner.sheet.actor.basic .window-header [data-action="togglePartyEditMode"] { order: -1; margin-right: auto; color: var(--vr-text-dim); }
+.veilrunner.sheet.actor.basic .window-header [data-action="togglePartyEditMode"].active,
+.veilrunner.sheet.actor.basic .window-header [data-action="togglePartyEditMode"]:hover { color: var(--vr-accent); }
+.vr-party-member-context-menu { position: fixed; z-index: 1000001; display: grid; min-width: 150px; margin: 0; padding: 4px; list-style: none; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.vr-party-member-context-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 28px; padding: 5px 8px; color: var(--vr-text, #f4f4f5); text-align: left; background: transparent; border: 0; border-radius: 3px; }
+.vr-party-member-context-menu button:hover:not(:disabled) { background: rgba(168,85,247,.2); }
+.vr-party-member-context-menu button:disabled { color: var(--vr-text-dim, #858995); cursor: default; }
+.vr-party-member-context-submenu { position: relative; }
+.vr-party-member-context-submenu > div { position: absolute; top: -4px; left: calc(100% - 1px); display: none; min-width: 150px; padding: 4px; background: #101116; border: 1px solid var(--vr-accent, #a855f7); border-radius: 5px; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+.vr-party-member-context-submenu:hover > div, .vr-party-member-context-submenu:focus-within > div { display: grid; }
+.veilrunner.sheet.actor.basic .vr-party-v2-heading { white-space: nowrap; }
+@media (max-width: 540px) {
+  .veilrunner.sheet.actor.basic .vr-party-sheet-v2 { grid-template-columns: 1fr; }
+  .veilrunner.sheet.actor.basic .vr-party-v2-identity,
+  .veilrunner.sheet.actor.basic .vr-party-v2-members,
+  .veilrunner.sheet.actor.basic .vr-party-v2-panel { grid-column: 1; grid-row: auto; }
+  .veilrunner.sheet.actor.basic .vr-party-v2-members { padding-right: 0; }
+  .veilrunner.sheet.actor.basic .vr-party-sheet-v2::after { display: none; }
+  .veilrunner.sheet.actor.basic .vr-party-v2-heading { margin-top: 0; }
+}
+
+/* Foundry's Basic Actor form can shrink its child to min-content. Party sheets must fill the application body. */
+.veilrunner.sheet.actor.basic .window-content { position: relative; overflow: auto; }
+.veilrunner.sheet.actor.basic .window-content:has(.vr-party-sheet-v2) { overflow: hidden; }
+.veilrunner.sheet.actor.basic .window-content [data-application-part="body"] { display: block !important; width: 100% !important; min-width: 0 !important; }
+.veilrunner.sheet.actor.basic .vr-basic-sheet:has(.vr-party-sheet-v2) { position: absolute !important; inset: 0 !important; display: block !important; width: auto !important; min-width: 0 !important; height: auto !important; margin: 0 !important; box-sizing: border-box; overflow: hidden; }
+.veilrunner.sheet.actor.basic .vr-party-sheet-v2, .veilrunner.sheet.actor.basic .vr-party-v2-header, .veilrunner.sheet.actor.basic .vr-party-v2-layout, .veilrunner.sheet.actor.basic .vr-party-v2-panel, .veilrunner.sheet.actor.basic .vr-party-v2-members { width: 100% !important; max-width: none !important; box-sizing: border-box; }
+
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active,
+.veilrunner.sheet.actor.basic .vr-party-v2-tabs button.active:hover{
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Character-sheet PAN and drawers continue the parent sheet instead of nesting panels. */
+.veilrunner.sheet.actor.hero .party-view{
+  gap: 0;
+  padding: 8px 0 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.hero .party-view::before{
+  background: linear-gradient(90deg, var(--vr-tech-divider), color-mix(in srgb, var(--vr-accent) 32%, var(--vr-tech-divider)), transparent);
+}
+
+.veilrunner.sheet.actor.hero .party-heading{
+  min-height: 26px;
+  color: var(--vr-theme-text, #ffffff);
+  font-size: 0.68rem;
+}
+
+.veilrunner.sheet.actor.hero .party-pan-status{
+  color: var(--vr-theme-text, #ffffff);
+  text-shadow: none;
+}
+
+.veilrunner.sheet.actor.hero .party-member-list{
+  gap: 0;
+  padding: 0;
+}
+
+.veilrunner.sheet.actor.hero .party-member{
+  gap: 8px;
+  min-height: 54px;
+  padding: 0 6px 0 0;
+  border: 0 !important;
+  border-bottom: 1px solid var(--vr-tech-divider) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, var(--vr-tech-control) 74%, transparent) !important;
+  color: var(--vr-theme-control-text, #ffffff);
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.hero .party-member:hover,
+.veilrunner.sheet.actor.hero .party-member:focus-within{
+  background: color-mix(in srgb, var(--vr-accent) 7%, var(--vr-tech-control-hover)) !important;
+}
+
+.veilrunner.sheet.actor.hero .party-member::before{
+  width: 3px;
+}
+
+.veilrunner.sheet.actor.hero .party-member::after{
+  left: 44px;
+  width: 1px;
+  background: var(--vr-tech-divider);
+}
+
+.veilrunner.sheet.actor.hero .party-member-portrait{
+  flex-basis: 44px;
+  width: 44px;
+}
+
+.veilrunner.sheet.actor.hero .party-member-data{
+  gap: 2px;
+  padding: 4px 0;
+  color: var(--vr-theme-control-text, #ffffff);
+  font-size: 0.6rem;
+}
+
+.veilrunner.sheet.actor.hero .party-member-data strong{
+  color: var(--vr-theme-control-text, #ffffff);
+  font-size: 0.7rem;
+}
+
+.veilrunner.sheet.actor.hero .party-resource-label,
+.veilrunner.sheet.actor.hero .party-resource-status{
+  color: color-mix(in srgb, var(--vr-theme-control-text, #ffffff) 72%, transparent);
+  font-size: 0.58rem;
+}
+
+.veilrunner.sheet.actor.hero .party-member-sheet-open{
+  flex-basis: 20px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid transparent;
+  color: color-mix(in srgb, var(--vr-theme-control-text, #ffffff) 70%, transparent);
+}
+
+.veilrunner.sheet.actor.hero .party-member-sheet-open:hover,
+.veilrunner.sheet.actor.hero .party-member-sheet-open:focus-visible{
+  border-color: color-mix(in srgb, var(--vr-accent) 54%, var(--vr-tech-border));
+  background: color-mix(in srgb, var(--vr-accent) 10%, var(--vr-tech-control-hover));
+  color: var(--vr-accent);
+}
+
+.veilrunner.sheet.actor.hero :is(.party-drawer-section, .skill-category){
+  padding: 8px 0;
+  border: 0 !important;
+  border-bottom: 1px solid var(--vr-tech-divider) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor.hero :is(.party-drawer-member, .party-drawer-item, .party-drawer-currency){
+  border: 0 !important;
+  border-left: 2px solid color-mix(in srgb, var(--vr-accent) 52%, var(--vr-tech-divider)) !important;
+  border-bottom: 1px solid var(--vr-tech-divider) !important;
+  border-radius: 0 3px 3px 0 !important;
+  background: var(--vr-tech-control) !important;
+  color: var(--vr-theme-control-text, #ffffff) !important;
+}

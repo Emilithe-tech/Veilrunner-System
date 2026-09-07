@@ -87,7 +87,19 @@ export async function replaceHudPreferences(actor, preferences = {}, user = glob
   const normalized = normalizeHudPreferences(preferences);
   if (!actor || !user?.setFlag) return normalized;
   const all = globalThis.foundry?.utils?.deepClone?.(user.getFlag(systemId(), FLAG) ?? {}) ?? { ...(user.getFlag(systemId(), FLAG) ?? {}) };
-  all[actorKey(actor)] = normalized;
+  // setFlag merges nested objects. Explicit deletion keys are needed to remove
+  // remembered choices that are absent from the restored preferences.
+  const replacement = (before, after) => {
+    const result = { ...after };
+    for (const [key, value] of Object.entries(before ?? {})) {
+      if (!Object.hasOwn(after, key)) result[`-=${key}`] = null;
+      else if (value && after[key] && typeof value === "object" && typeof after[key] === "object" && !Array.isArray(value) && !Array.isArray(after[key])) {
+        result[key] = replacement(value, after[key]);
+      }
+    }
+    return result;
+  };
+  all[actorKey(actor)] = replacement(all[actorKey(actor)], normalized);
   await user.setFlag(systemId(), FLAG, all);
   return normalized;
 }

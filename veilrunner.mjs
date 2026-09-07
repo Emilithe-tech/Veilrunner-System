@@ -12,12 +12,8 @@ import { registerCombatCarousel } from "./modules/apps/combat-carousel.mjs";
 import { registerActionHud } from "./modules/apps/action-hud/controller.mjs";
 import { registerItemCreateDialogGroups } from "./modules/apps/item-create-dialog.mjs";
 import { registerSettings } from "./modules/settings.mjs";
-import { migrateOfficialCompendiumDefinitions } from "./modules/data/item/identity.mjs";
-import { migrateTalentTreeItemsToCompendia } from "./modules/apps/chargen/talent-tree-items.mjs";
-import { migrateActionItemsToCompactFormat } from "./modules/data/item/action-migration.mjs";
-import { migrateSpeciesSizes } from "./modules/data/item/species-size-migration.mjs";
-import { migrateTalentTreeCatalogLayout } from "./modules/data/talent-tree.mjs";
-import { registerActorActionSync } from "./modules/data/item/actor-action-sync.mjs";
+import { initializeProgressionCatalog } from "./modules/data/progression/catalog-provider.mjs";
+import { registerProgressionAuthoringRuntime } from "./modules/data/progression/runtime-authoring.mjs";
 
 const PARTY_SHEET_PARTIALS = [
   "systems/veilrunner/templates/actor/party/parts/party.hbs",
@@ -77,7 +73,6 @@ Hooks.once("init", async () => {
   registerCombatCarousel();
   registerActionHud();
   registerItemCreateDialogGroups();
-  registerActorActionSync();
 
   const { DocumentSheetConfig } = foundry.applications.apps;
   const sid = game.system.id;
@@ -97,7 +92,7 @@ Hooks.once("init", async () => {
   DocumentSheetConfig.registerSheet(foundry.documents.Item, sid, VeilrunnerItemSheet, {
     types: [
       "action", "spell", "skill", "accessory", "ability", "armor", "archetype", "profession", "discipline", "treasure", "species", "origin", "background", "language",
-      "quality", "perk", "flaw", "weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"
+      "quality", "talent", "practice", "trait", "progression", "weapon", "ammunition", "magazine", "shield", "consumable", "container", "equipment"
     ],
     makeDefault: true,
     label: "VEILRUNNER.SheetLabel.item"
@@ -106,16 +101,23 @@ Hooks.once("init", async () => {
 
 Hooks.once("ready", async () => {
   try {
-    const treeLayout = await migrateTalentTreeCatalogLayout();
-    if (treeLayout.migrated) console.info("Veilrunner | Talent-tree coordinates migrated to the 3840x2160 canvas.", treeLayout);
-    await migrateOfficialCompendiumDefinitions();
-    const actionMigration = await migrateActionItemsToCompactFormat();
-    if (actionMigration.world || actionMigration.actors || actionMigration.packs) console.info("Veilrunner | Actions migrated to compact authoring format.", actionMigration);
-    const result = await migrateTalentTreeItemsToCompendia();
-    if (!result.missingPacks.length && (result.migrated || result.actors)) console.info("Veilrunner | Talent-tree Items migrated to compendia.", result);
-    const speciesSizes = await migrateSpeciesSizes();
-    if (speciesSizes.migrated) console.info(`Veilrunner | Added Medium size to ${speciesSizes.migrated} Species definitions.`);
+    await initializeProgressionCatalog();
+    console.info("Veilrunner | Canonical progression catalog loaded.");
   } catch (error) {
-    console.error("Veilrunner | Item migration failed", error);
+    console.error("Veilrunner | Canonical progression catalog failed to load", error);
+    globalThis.ui?.notifications?.error?.("Canonical Progression data is unavailable. Character Generation is temporarily disabled.");
+  }
+
+  if (game.user?.isGM) {
+    try {
+      const runtime = registerProgressionAuthoringRuntime();
+      console.info("Veilrunner | Canonical progression authoring services registered (mutation controls remain gated).", runtime.readiness());
+    } catch (error) {
+      console.error("Veilrunner | Canonical progression authoring services could not be registered", error);
+      globalThis.ui?.notifications?.error?.("Canonical Progression authoring services are unavailable. Player-facing progression remains read-only.");
+    }
   }
 });
+
+// Content migrations are explicit, versioned maintenance operations. Startup
+// reads canonical definitions and never assigns identities or rewrites packs.

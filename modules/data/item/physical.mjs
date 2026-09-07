@@ -7,6 +7,7 @@ const {
   StringField
 } = foundry.data.fields;
 import { itemIdentityFields, migrateItemIdentityData } from "./identity.mjs";
+import { mechanicalRuleFields } from "../definitions/semantic-fields.mjs";
 
 export const PHYSICAL_ITEM_TYPES = Object.freeze([
   "weapon", "ammunition", "magazine", "armor", "accessory", "shield",
@@ -123,6 +124,7 @@ const whole = (initial = 0, min = 0) => new NumberField({
 
 export function ruleElementSchema() {
   return new SchemaField({
+    ...mechanicalRuleFields(),
     key: new StringField({
       required: true,
       blank: false,
@@ -133,7 +135,7 @@ export function ruleElementSchema() {
     enabled: new BooleanField({ required: true, initial: true }),
     requiresEquipped: new BooleanField({ required: true, initial: true }),
     priority: new NumberField({ required: true, integer: true, initial: 20, nullable: false }),
-    predicate: new ArrayField(text(), { initial: [] }),
+    predicate: new ArrayField(text(), { initial: () => [] }),
     selector: text("all"),
     path: text(),
     mode: new StringField({ required: true, blank: false, initial: "add" }),
@@ -146,7 +148,7 @@ export function ruleElementSchema() {
     damageType: text(),
     amount: whole(),
     uuid: text(),
-    choices: new ArrayField(text(), { initial: [] }),
+    choices: new ArrayField(text(), { initial: () => [] }),
     selection: text(),
     target: text("self"),
     adjustment: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
@@ -171,14 +173,14 @@ export function physicalItemFields() {
       initial: "common",
       choices: Object.fromEntries(ITEM_RARITIES.map(rarity => [rarity.slug, rarity.name]))
     }),
-    traits: new ArrayField(text(), { initial: [] }),
+    traits: new ArrayField(text(), { initial: () => [] }),
     favorite: new BooleanField({ required: true, initial: false }),
     identified: new BooleanField({ required: true, initial: true }),
     requiredSlots: new ArrayField(new StringField({
       required: true,
       blank: false,
       choices: Object.fromEntries(EQUIPMENT_SLOTS.map(slot => [slot, `VEILRUNNER.EquipmentSlot.${slot}`]))
-    }), { initial: [] }),
+    }), { initial: () => [] }),
     containerId: text(),
     durability: new SchemaField({
       value: whole(),
@@ -187,7 +189,7 @@ export function physicalItemFields() {
       wearAmount: whole(1),
       wearProgress: whole()
     }),
-    rules: new ArrayField(ruleElementSchema(), { initial: [] }),
+    rules: new ArrayField(ruleElementSchema(), { initial: () => [] }),
     hudActions: new ArrayField(new SchemaField({
       id: text(),
       name: text(),
@@ -195,10 +197,10 @@ export function physicalItemFields() {
       category: text("item-actions"),
       actionType: text("standard"),
       actions: whole(1),
-      traits: new ArrayField(text(), { initial: [] }),
+      traits: new ArrayField(text(), { initial: () => [] }),
       requiresTarget: new BooleanField({ required: true, initial: false }),
       resourceCosts: new SchemaField({ mana: whole(), stamina: whole(), health: whole() })
-    }), { initial: [] }),
+    }), { initial: () => [] }),
     description: new SchemaField({
       value: new HTMLField({ required: false, blank: true, initial: "" }),
       gm: new HTMLField({ required: false, blank: true, initial: "" })
@@ -210,11 +212,11 @@ export function compatibilitySchema() {
   return new SchemaField({
     flexible: new BooleanField({ required: true, initial: false }),
     caliber: text(),
-    ammoTypes: new ArrayField(text(), { initial: [] }),
-    allowDefinitionIds: new ArrayField(text(), { initial: [] }),
-    blockDefinitionIds: new ArrayField(text(), { initial: [] }),
-    allow: new ArrayField(text(), { initial: [] }),
-    block: new ArrayField(text(), { initial: [] })
+    ammoTypes: new ArrayField(text(), { initial: () => [] }),
+    allowDefinitionIds: new ArrayField(text(), { initial: () => [] }),
+    blockDefinitionIds: new ArrayField(text(), { initial: () => [] }),
+    allow: new ArrayField(text(), { initial: () => [] }),
+    block: new ArrayField(text(), { initial: () => [] })
   });
 }
 

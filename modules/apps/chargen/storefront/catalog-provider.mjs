@@ -1,8 +1,11 @@
-import { getDefinitionId, hasItemIntent, normalizeDefinitionId, resolveDefinition } from "../../../data/item/identity.mjs";
+import { getDefinitionId, normalizeDefinitionId } from "../../../data/item/identity.mjs";
+import { itemHasCapability, itemTypesWithCapability } from "../../../data/definitions/item-capabilities.mjs";
+import { CompendiumRouter } from "../../../data/definitions/compendium-router.mjs";
+import { DefinitionIndex } from "../../../data/definitions/definition-index.mjs";
 import { WEAPON_TYPE_GROUPS, itemRarityData, normalizeWeaponType } from "../../../data/item/physical.mjs";
 
 const entriesOf = context => Array.isArray(context) ? context : context?.entries ?? [];
-const documentsIn = collection => Array.isArray(collection?.contents) ? collection.contents : Array.from(collection ?? []);
+const documentsIn = collection => Array.isArray(collection?.contents) ? collection.contents : Array.from(collection?.values?.() ?? collection ?? []);
 const normalizeFolderToken = value => String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 function folderById(pack, id) {
@@ -34,15 +37,12 @@ export function compendiumWeaponClassification(item, pack = null) {
   return { group: group.key, type };
 }
 
-function generatedWeaponDefinitionId(item) {
-  const slug = String(item?.name ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return slug ? `veilrunner.weapon.${slug}` : "";
-}
-
-function isItemsCompendium(pack) {
-  if (pack?.documentName !== "Item") return false;
-  return [pack.title, pack.metadata?.label, pack.metadata?.name, pack.collection?.split(".").at(-1)]
-    .some(value => normalizeFolderToken(value) === "items");
+export class StorefrontCatalogError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = "StorefrontCatalogError";
+    this.code = code;
+  }
 }
 
 export class CatalogProvider {
@@ -50,18 +50,22 @@ export class CatalogProvider {
   #compendiumDocuments = new Map();
   #compendiumLoading = null;
   #revision = 0;
-  constructor(context) { this.context = context ?? { id: "veilrunner.store", entries: [] }; }
+  constructor(context, { game = globalThis.game } = {}) {
+    this.context = context ?? { id: "veilrunner.store", entries: [] };
+    this.game = game;
+  }
   get id() { return this.context.id; }
   entries() {
-    const configured = entriesOf(this.context).filter(entry => entry?.definitionId);
-    const configuredIds = new Set(configured.map(entry => normalizeDefinitionId(entry.definitionId)));
-    // World Items are immediately useful during authoring. Canonical store
-    // entries still override their price/availability when they exist.
-    const discovered = documentsIn(game.items?.contents).map(item => ({
-      definitionId: getDefinitionId(item), price: item.system?.price, currency: item.system?.currency,
-      availability: "available", autoDiscover: true
-    })).filter(entry => entry.definitionId && !configuredIds.has(normalizeDefinitionId(entry.definitionId)));
-    return [...configured, ...discovered, ...(this.#compendiumEntries ?? [])];
+    // Store configuration controls offers, never the mechanical definition source.
+    const configured = entriesOf(this.context).filter(entry => entry?.definitionId && !entry.source).map(entry => ({
+      definitionId: normalizeDefinitionId(entry.definitionId), price: entry.price, currency: entry.currency,
+      availability: entry.availability ?? "available", stock: entry.stock, options: entry.options,
+      storeCategory: entry.storeCategory
+    }));
+    const entries = new Map((this.#compendiumEntries ?? []).map(entry => [entry.definitionId, entry]));
+    for (const entry of configured) entries.set(entry.definitionId, { ...entries.get(entry.definitionId),
+      ...Object.fromEntries(Object.entries(entry).filter(([, value]) => value !== undefined)) });
+    return [...entries.values()];
   }
   invalidate() {
     this.#revision += 1;
@@ -76,29 +80,42 @@ export class CatalogProvider {
     const loading = (async () => {
       const discovered = [];
       const compendiumDocuments = new Map();
-      const existing = new Set(this.entries().map(entry => normalizeDefinitionId(entry.definitionId)));
-      for (const pack of documentsIn(globalThis.game?.packs).filter(isItemsCompendium)) {
-        const items = await pack.getDocuments?.() ?? [];
-        for (const item of items) {
-          if (item?.type !== "weapon") continue;
-          const classification = compendiumWeaponClassification(item, pack);
-          if (!classification) continue;
-          const definitionId = getDefinitionId(item) || generatedWeaponDefinitionId(item);
-          const normalizedId = normalizeDefinitionId(definitionId);
-          if (!normalizedId || existing.has(normalizedId) || compendiumDocuments.has(normalizedId)) continue;
-          const entry = {
-            definitionId: normalizedId,
-            price: item.system?.price,
-            currency: item.system?.currency,
-            availability: "available",
-            autoDiscover: true,
-            compendiumWeapon: true,
-            weaponGroup: classification.group,
-            weaponType: classification.type
-          };
-          discovered.push(entry);
-          compendiumDocuments.set(normalizedId, item);
+      const systemId = this.game?.system?.id ?? "Veilrunner";
+      const packs = documentsIn(this.game?.packs);
+      const router = new CompendiumRouter({ systemId, packs });
+      const collections = new Set(itemTypesWithCapability("marketSellable").map(type => router.route(type, { strict: true }).collection));
+      const canonicalPacks = [...collections].map(collection => {
+        const pack = packs.find(pack => pack.collection === collection);
+        if (!pack || pack.documentName !== "Item" || (pack.metadata?.packageName ?? pack.metadata?.system) !== systemId) {
+          throw new StorefrontCatalogError("pack-identity-mismatch", `Canonical market pack ${collection} is unavailable or has an unexpected identity.`);
         }
+        if (pack.visible === false || pack.testUserPermission?.(this.game?.user, "OBSERVER") === false) {
+          throw new StorefrontCatalogError("pack-unreadable", `Canonical market pack ${collection} is not readable.`);
+        }
+        return pack;
+      });
+      const definitions = new DefinitionIndex({ game: { system: this.game?.system, packs: canonicalPacks }, systemId, router });
+      const records = await definitions.records();
+      const audit = definitions.audit();
+      if (audit.invalid.length || audit.unassigned.length || audit.duplicates.length) {
+        throw new StorefrontCatalogError("invalid-canonical-identities", "Canonical market definitions contain missing, invalid, or duplicate identities.");
+      }
+      for (const record of records) {
+        if (!itemHasCapability(record.type, "marketSellable")) continue;
+        if (router.route(record.type, { strict: true }).collection !== record.packCollection) {
+          throw new StorefrontCatalogError("definition-route-mismatch", `Market definition ${record.definitionId} is in the wrong canonical pack.`);
+        }
+        const item = await definitions.resolve(record.definitionId);
+        if (getDefinitionId(item) !== record.definitionId || item?.type !== record.type || (item?.id ?? item?._id) !== record.documentId
+          || item?.uuid !== `Compendium.${record.packCollection}.Item.${record.documentId}`) {
+          throw new StorefrontCatalogError("definition-identity-mismatch", `Market definition ${record.definitionId} no longer matches its index.`);
+        }
+        const pack = canonicalPacks.find(pack => pack.collection === record.packCollection);
+        const classification = item.type === "weapon" ? compendiumWeaponClassification(item, pack) : null;
+        discovered.push({ definitionId: record.definitionId, price: item.system?.price, currency: item.system?.currency,
+          availability: "available", weaponGroup: classification?.group ?? "",
+          weaponType: normalizeWeaponType(item.system?.weaponType) || classification?.type || "" });
+        compendiumDocuments.set(record.definitionId, { document: item, record });
       }
       return { discovered, compendiumDocuments };
     })().then(result => {
@@ -120,14 +137,15 @@ export class CatalogProvider {
   entry(definitionId) { return this.entries().find(entry => normalizeDefinitionId(entry.definitionId) === normalizeDefinitionId(definitionId)) ?? null; }
   async resolve(definitionId) {
     await this.catalogEntries();
-    const discovered = this.#compendiumDocuments.get(normalizeDefinitionId(definitionId));
-    if (discovered) return discovered;
-    const entry = this.entry(definitionId);
-    if (entry?.source) {
-      const source = structuredClone(entry.source);
-      return { ...source, toObject: () => structuredClone(source) };
+    const id = normalizeDefinitionId(definitionId);
+    const cached = this.#compendiumDocuments.get(id);
+    if (!cached) return null;
+    const { document, record } = cached;
+    if (getDefinitionId(document) !== id || document.type !== record.type || (document.id ?? document._id) !== record.documentId
+      || document.uuid !== `Compendium.${record.packCollection}.Item.${record.documentId}` || !itemHasCapability(document, "marketSellable")) {
+      throw new StorefrontCatalogError("definition-identity-mismatch", `Market definition ${id} has changed. Refresh the catalog.`);
     }
-    return resolveDefinition(definitionId);
+    return document;
   }
 }
 
@@ -193,7 +211,7 @@ export class CatalogIndex {
     const revision = this.#revision;
     const loading = this.#provider.catalogEntries().then(entries => Promise.all(entries.map(async entry => {
       const item = await this.#provider.resolve(entry.definitionId);
-      return item && (entry.compendiumWeapon || getDefinitionId(item) === normalizeDefinitionId(entry.definitionId)) && (entry.autoDiscover || hasItemIntent(item, "market-sellable"))
+      return item && getDefinitionId(item) === normalizeDefinitionId(entry.definitionId) && itemHasCapability(item, "marketSellable")
         ? catalogRecord(item, entry) : null;
     }))).then(records => {
       if (revision !== this.#revision) {
@@ -212,11 +230,11 @@ export class CatalogIndex {
   }
 }
 
-/** Attach only once; compendium/world updates make normalized store records stale. */
+/** Attach only once; compendium updates make normalized store records stale. */
 export function registerCatalogInvalidation(index, onInvalidate = null) {
   let refreshQueued = false;
   const invalidate = item => {
-    if (!(item?.pack || (!item?.parent && getDefinitionId(item)))) return;
+    if (!item?.pack) return;
     index.invalidate();
     if (refreshQueued || typeof onInvalidate !== "function") return;
     refreshQueued = true;

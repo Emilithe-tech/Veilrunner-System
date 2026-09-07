@@ -1,21 +1,19 @@
 import { QUALITY_PILLARS, QUALITY_TIERS, evaluateQualitySelection, qualitySelectionId, tierCost } from "./quality-rules.mjs";
+import { CanonicalDefinitionReader } from "../../data/definitions/canonical-reader.mjs";
+import { qualityRequirements } from "../../data/item/legacy-quality-requirements.mjs";
 
 export const QUALITY_CATALOG_PACK = "Veilrunner.qualities-perks";
 const text = value => String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 const list = value => Array.isArray(value) ? value.map(entry => String(entry ?? "").trim()).filter(Boolean) : [];
 
 export function normalizeQualityRecord(document = {}) {
+  if (document.type !== "quality") return null;
   const system = document.system ?? document._source?.system ?? {};
   const definitionId = String(system.definitionId ?? "").trim();
   const name = String(document.name ?? "").trim();
-  const kind = ["perk", "flaw"].includes(document.type) ? document.type : system.kind;
+  const kind = system.kind;
   if (!definitionId || !name || !["perk", "flaw"].includes(kind) || !QUALITY_TIERS.includes(system.tier) || !QUALITY_PILLARS.includes(system.pillar)) return null;
-  const requirements = {
-    text: text(system.requirements?.text),
-    minimumLevel: Math.max(0, Math.trunc(Number(system.requirements?.minimumLevel) || 0)),
-    requiredDefinitionIds: list(system.requirements?.requiredDefinitionIds),
-    requiredTags: list(system.requirements?.requiredTags)
-  };
+  const requirements = qualityRequirements(system.requirements);
   const record = {
     id: definitionId,
     definitionId,
@@ -30,7 +28,7 @@ export function normalizeQualityRecord(document = {}) {
     description: text(system.description),
     mechanics: text(system.mechanics),
     requirements,
-    requirementsText: requirements.text,
+    requirementsText: text(requirements.description),
     tags: list(system.tags),
     recommendationTags: list(system.recommendationTags),
     effects: Array.from(document.effects ?? []).map(effect => String(effect?.name ?? effect?.label ?? "")).filter(Boolean)
@@ -78,16 +76,17 @@ export function queryQualityCatalog(records = [], query = {}, build = {}) {
 }
 
 export class QualityCatalogProvider {
-  constructor(packId = QUALITY_CATALOG_PACK) { this.packId = packId; this.cache = null; }
+  constructor() { this.packId = QUALITY_CATALOG_PACK; this.cache = null; this.revision = 0; }
   async records() {
     if (this.cache) return this.cache;
-    const pack = globalThis.game?.packs?.get?.(this.packId);
-    if (!pack) return (this.cache = []);
-    const documents = await pack.getDocuments();
+    const revision = this.revision;
+    const reader = new CanonicalDefinitionReader(["quality"], { capability: "chargenSelectable" });
+    const documents = await reader.documents();
+    if (revision !== this.revision) return this.records();
     this.cache = documents.map(normalizeQualityRecord).filter(Boolean);
     return this.cache;
   }
-  invalidate() { this.cache = null; }
+  invalidate() { this.revision += 1; this.cache = null; }
 }
 
 export function registerQualityCatalogInvalidation(provider, onInvalidate = null) {

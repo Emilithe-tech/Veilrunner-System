@@ -1,0 +1,229 @@
+/* Physical-item rarity, trait, and equipment-slot objects. */
+
+.veilrunner.sheet.item .vr-physical-item {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.item .vr-physical-item{
+  gap: 8px;
+}
+
+/* Shared physical-item rarity presentation. The color is supplied by the
+   authoritative rarity catalog as --vr-item-rarity. */
+.veilrunner.sheet.item .vr-item-sheet[data-rarity] .vr-basic-header {
+  border-color: var(--vr-item-rarity);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vr-item-rarity) 24%, transparent);
+}
+.veilrunner.sheet.item .vr-item-sheet[data-rarity] .vr-basic-img,
+.veilrunner.sheet.item .vr-item-sheet[data-rarity] .vr-basic-identity input[name="name"],
+.veilrunner.sheet.item .vr-item-sheet[data-rarity] .vr-rarity-select {
+  border-color: var(--vr-item-rarity);
+}
+.veilrunner.sheet.item .vr-item-sheet[data-rarity] .vr-basic-identity input[name="name"],
+.veilrunner.sheet.item .vr-item-sheet[data-rarity] .vr-rarity-select {
+  color: var(--vr-item-rarity);
+}
+
+.veilrunner.sheet.actor .inventory-grid-card[data-rarity] {
+  border-color: var(--vr-item-rarity);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vr-item-rarity) 28%, transparent);
+}
+.veilrunner.sheet.actor .inventory-grid-card[data-rarity] .inventory-grid-card-name {
+  color: var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .inventory-weapon-table-row[data-rarity] {
+  border-bottom-color: color-mix(in srgb, var(--vr-item-rarity) 72%, transparent);
+  box-shadow: inset 3px 0 0 var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .inventory-weapon-table-row[data-rarity] .inventory-weapon-item span {
+  color: var(--vr-item-rarity);
+  font-weight: 700;
+}
+.veilrunner.sheet.actor .inventory-weapon-table-row[data-rarity] .inventory-weapon-item img,
+.veilrunner.sheet.actor .action-row.inventory-item-row[data-rarity] .action-icon img {
+  border-color: var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .action-row.inventory-item-row[data-rarity] {
+  border-bottom-color: color-mix(in srgb, var(--vr-item-rarity) 72%, transparent);
+  box-shadow: inset 3px 0 0 var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .action-row.inventory-item-row[data-rarity] .action-name {
+  color: var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .inventory-details-panel[data-rarity] {
+  border-left-color: var(--vr-item-rarity);
+  box-shadow: -14px 0 28px rgba(0, 0, 0, 0.42), inset 3px 0 0 var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .inventory-details-panel[data-rarity] header img {
+  border-color: var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .inventory-details-panel[data-rarity] h2 {
+  color: var(--vr-item-rarity);
+}
+.veilrunner.sheet.actor .equip-slot.filled[data-rarity] .slot-box,
+.veilrunner.sheet.actor .quick-slot.filled[data-rarity] {
+  border-color: var(--vr-item-rarity);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--vr-item-rarity) 38%, transparent);
+}
+
+/* Physical Item details: sortable traits and the shared equipment-slot roster. */
+.veilrunner.sheet.item .vr-physical-item > .vr-item-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.veilrunner.sheet.item .vr-trait-builder {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.veilrunner.sheet.item .vr-trait-builder .vr-item-section-heading > div {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.veilrunner.sheet.item .vr-trait-builder [data-physical-trait-input] {
+  min-width: 180px;
+}
+.veilrunner.sheet.item .vr-trait-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 42px;
+  padding: 8px;
+  border: 1px dashed var(--vr-item-border);
+  border-radius: 7px;
+  transition: border-color .14s ease, background .14s ease, box-shadow .14s ease;
+}
+.veilrunner.sheet.item .vr-trait-chip-list.drag-over {
+  border-color: var(--vr-item-rarity, var(--vr-item-focus));
+  background: color-mix(in srgb, var(--vr-item-rarity, #22d3ee) 10%, transparent);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--vr-item-rarity, #22d3ee) 24%, transparent);
+}
+.veilrunner.sheet.item .vr-trait-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 3px 5px 3px 8px;
+  border: 1px solid color-mix(in srgb, var(--vr-item-rarity, var(--vr-item-border)) 65%, var(--vr-item-border));
+  border-radius: 999px;
+  color: var(--vr-item-text);
+  background: var(--vr-item-panel-alt);
+  cursor: grab;
+}
+.veilrunner.sheet.item .vr-trait-chip:active { cursor: grabbing; }
+.veilrunner.sheet.item .vr-trait-chip > i { color: var(--vr-item-muted); font-size: .7rem; }
+.veilrunner.sheet.item .vr-trait-chip button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--vr-item-muted);
+  background: transparent;
+}
+.veilrunner.sheet.item .vr-trait-chip button:hover { color: #fff; background: #b91c1c; }
+.veilrunner.sheet.item .vr-trait-catalog-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  color: var(--vr-item-text);
+  font-weight: 700;
+}
+.veilrunner.sheet.item .vr-trait-catalog-heading small {
+  color: var(--vr-item-muted);
+  font-size: .68rem;
+  font-weight: 400;
+}
+.veilrunner.sheet.item .vr-trait-catalog-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 150px;
+  min-height: 42px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--vr-item-border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--vr-item-panel-alt) 70%, transparent);
+}
+.veilrunner.sheet.item .vr-trait-catalog-entry {
+  display: inline-grid;
+  grid-template-columns: 14px auto auto;
+  gap: 6px;
+  align-items: center;
+  width: auto;
+  min-height: 28px;
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--vr-item-border);
+  border-radius: 999px;
+  color: var(--vr-item-muted);
+  background: var(--vr-item-panel-alt);
+  cursor: grab;
+}
+.veilrunner.sheet.item .vr-trait-catalog-entry:hover,
+.veilrunner.sheet.item .vr-trait-catalog-entry.selected {
+  border-color: var(--vr-item-rarity, var(--vr-item-focus));
+  color: var(--vr-item-text);
+  background: color-mix(in srgb, var(--vr-item-rarity, #22d3ee) 12%, var(--vr-item-panel-alt));
+}
+.veilrunner.sheet.item .vr-trait-catalog-entry > i { font-size: .65rem; }
+.veilrunner.sheet.item .vr-trait-catalog-entry > b {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: var(--vr-item-muted);
+  background: rgba(0, 0, 0, .25);
+  font-size: .62rem;
+  text-align: center;
+}
+
+.veilrunner.sheet.item .vr-item-slot-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 92px minmax(150px, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+.veilrunner.sheet.item .vr-item-slot-column { display: grid; gap: 7px; }
+.veilrunner.sheet.item .vr-item-slot-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid var(--vr-item-border);
+  border-radius: 7px;
+  color: var(--vr-item-muted);
+  background: var(--vr-item-panel-alt);
+  cursor: pointer;
+}
+.veilrunner.sheet.item .vr-item-slot-column.right .vr-item-slot-choice {
+  grid-template-columns: auto auto minmax(0, 1fr);
+  text-align: right;
+}
+.veilrunner.sheet.item .vr-item-slot-column.right .vr-item-slot-choice > span { grid-column: 3; grid-row: 1; }
+.veilrunner.sheet.item .vr-item-slot-column.right .vr-item-slot-choice > input { grid-column: 2; grid-row: 1; }
+.veilrunner.sheet.item .vr-item-slot-column.right .vr-item-slot-choice > i { grid-column: 1; grid-row: 1; }
+.veilrunner.sheet.item .vr-item-slot-choice.selected {
+  border-color: var(--vr-item-rarity, var(--vr-item-focus));
+  color: var(--vr-item-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vr-item-rarity, #22d3ee) 22%, transparent);
+}
+.veilrunner.sheet.item .vr-item-slot-choice.selected > i { color: var(--vr-item-rarity, #22d3ee); }
+.veilrunner.sheet.item .vr-item-slot-choice.controlled { cursor: default; }
+.veilrunner.sheet.item .vr-item-slot-choice input { width: 16px; height: 16px; margin: 0; }
+.veilrunner.sheet.item .vr-item-slot-silhouette {
+  display: grid;
+  place-items: center;
+  min-height: 250px;
+  color: color-mix(in srgb, var(--vr-item-rarity, var(--vr-item-muted)) 42%, var(--vr-item-muted));
+  font-size: 5rem;
+  opacity: .7;
+}

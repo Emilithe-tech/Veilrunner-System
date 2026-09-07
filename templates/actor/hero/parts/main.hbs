@@ -2,6 +2,29 @@
   {{> "systems/veilrunner/templates/actor/hero/parts/drawer-handles.hbs"}}
   <div class="hero-row">
     <div class="hero-column">
+      <section class="sidecar-identity" aria-label="{{localize 'VEILRUNNER.Section.character'}}">
+        <input class="name-input" type="text" name="name" value="{{actor.name}}"
+               placeholder="{{localize 'VEILRUNNER.Name'}}" />
+        <div class="sidecar-discipline-row">
+          <span class="identity-discipline-icon sidecar-discipline-icon" aria-label="{{localize 'VEILRUNNER.Discipline'}}">{{disciplineInitial}}</span>
+          <strong class="sidecar-discipline-name">{{#if system.discipline}}{{system.discipline}}{{else}}{{localize 'VEILRUNNER.Discipline'}}{{/if}}</strong>
+        </div>
+        <div class="header-resolve-track" aria-label="{{localize 'VEILRUNNER.Resolve'}}">
+          <span class="header-resolve-label">{{localize 'VEILRUNNER.Resolve'}}</span>
+          <div class="header-resolve-icons">
+            {{#each resolvePoints}}
+              <button type="button"
+                      class="header-resolve-pip {{#if active}}active{{/if}}"
+                      data-action="setStatusTrack"
+                      data-track="resolve"
+                      data-value="{{value}}"
+                      title="{{localize 'VEILRUNNER.Resolve'}} {{value}}">
+              </button>
+            {{/each}}
+          </div>
+        </div>
+        <div class="sidecar-identity-separator-line" aria-hidden="true"></div>
+      </section>
       <div class="hero-image-frame">
         <div class="hero-image" style="--portrait-x: {{portraitCrop.x}}%; --portrait-y: {{portraitCrop.y}}%; --portrait-zoom: {{portraitCrop.zoom}}; --portrait-rotation: {{portraitCrop.rotation}}deg; --portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}};{{#if characterBackgroundImage}} background: url('{{characterBackgroundImage}}') center / cover no-repeat !important;{{/if}}">
           <img src="{{portraitImage}}" alt="{{actor.name}}" />
@@ -186,14 +209,17 @@
       {{#if showPartyList}}
       <section class="party-view">
         <div class="party-heading">
-          <button type="button" class="party-pan-status {{#if panActive}}on{{else}}off{{/if}}" data-action="togglePan" title="{{localize 'VEILRUNNER.PAN.Label'}} {{panStatus}}">
-            <i class="fa-solid fa-tower-broadcast"></i>
-            <span>{{localize 'VEILRUNNER.PAN.Label'}} {{panStatus}}</span>
+          <button type="button" class="party-pan-status" data-action="togglePan" data-pan-state="{{panState}}"
+                  title="{{localize 'VEILRUNNER.PAN.Label'}} {{panConnectedCount}} {{localize 'VEILRUNNER.PAN.Connected'}} {{panStatus}}"
+                  aria-pressed="{{#if panLinked}}true{{else}}false{{/if}}">
+            <span class="party-pan-label">{{localize 'VEILRUNNER.PAN.Label'}}</span>
+            <span class="party-pan-connected"><strong data-pan-connected-count>{{panConnectedCount}}</strong> {{localize 'VEILRUNNER.PAN.Connected'}}</span>
+            <span class="party-pan-state" data-pan-state-label>{{panStatus}}</span>
           </button>
         </div>
         <div class="party-member-list">
           {{#each partyMembers as |member|}}
-            <article class="party-member pan-{{member.panState}}">
+            <article class="party-member pan-{{member.panState}}" data-party-member-id="{{member.id}}">
               <span class="party-member-portrait">
                 <img src="{{member.img}}" alt="{{member.name}}" />
               </span>
@@ -206,25 +232,25 @@
                 </div>
                 <div class="party-member-resources">
                   {{#if member.showHealth}}
-                  <span class="party-resource">
+                  <span class="party-resource" data-party-resource="health">
                     <span class="party-resource-label"><i class="fa-solid fa-heart-pulse resource-icon health"></i> {{localize 'VEILRUNNER.Health'}}</span>
                     <span class="party-resource-status" title="{{member.health}}">{{member.health}}</span>
                   </span>
                   {{/if}}
                   {{#if member.showArmor}}
-                  <span class="party-resource">
+                  <span class="party-resource" data-party-resource="armor">
                     <span class="party-resource-label"><i class="fa-solid fa-shield-halved resource-icon armor"></i> {{localize 'VEILRUNNER.Armor'}}</span>
                     <span class="party-resource-status" title="{{member.armor}}">{{member.armor}}</span>
                   </span>
                   {{/if}}
                   {{#if member.showShields}}
-                  <span class="party-resource">
+                  <span class="party-resource" data-party-resource="shields">
                     <span class="party-resource-label"><i class="fa-solid fa-shield resource-icon shields"></i> {{localize 'VEILRUNNER.Shields'}}</span>
                     <span class="party-resource-status" title="{{member.shields}}">{{member.shields}}</span>
                   </span>
                   {{/if}}
                   {{#if member.showBarriers}}
-                  <span class="party-resource">
+                  <span class="party-resource" data-party-resource="barriers">
                     <span class="party-resource-label"><i class="fa-solid fa-hexagon resource-icon barriers"></i> {{localize 'VEILRUNNER.Barriers'}}</span>
                     <span class="party-resource-status" title="{{member.barriers}}">{{member.barriers}}</span>
                   </span>
@@ -244,7 +270,7 @@
       {{> "systems/veilrunner/templates/actor/hero/parts/top-nav.hbs"}}
 
       {{#if subNavList}}
-      <nav class="sub-nav-row {{#if (and (eq section "inventory") hasInventoryFilters)}}has-filter-row{{/if}}">
+      <nav class="sub-nav-row {{#if (eq section "inventory")}}has-filter-row inventory-sub-nav{{/if}}">
         <div class="nav-indicator" style="--nav-width: {{subTabIndicatorWidth}}%; --nav-offset: {{subTabIndicatorOffset}}%;"></div>
         {{#if (eq section "character")}}
           <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "stats")}}active{{/if}}"
@@ -336,41 +362,87 @@
         {{/if}}
       </nav>
       {{#if (eq section "inventory")}}
-        <div class="inventory-filter-row {{#if inventoryFiltersOpen}}open{{/if}}">
-          <button type="button" class="inventory-filter-toggle {{#if inventoryFiltersOpen}}active{{/if}}"
-             data-action="toggleInventoryFilters" aria-expanded="{{#if inventoryFiltersOpen}}true{{else}}false{{/if}}">
-            <i class="fa-solid fa-filter"></i>
-            <span>{{localize 'VEILRUNNER.InventoryFilter.label'}}</span>
-            <i class="fa-solid fa-chevron-right filter-toggle-chevron"></i>
-          </button>
-          <span class="inventory-layout-controls" role="group" aria-label="{{localize 'VEILRUNNER.InventoryLayout.label'}}">
-            <button type="button" class="inventory-filter-btn inventory-layout-btn {{#if (eq inventoryLayout 'grid')}}active{{/if}}"
-               data-action="setInventoryLayout" data-layout="grid" title="{{localize 'VEILRUNNER.InventoryLayout.grid'}}">
-              <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
-              <span>{{localize 'VEILRUNNER.InventoryLayout.grid'}}</span>
-            </button>
-            <button type="button" class="inventory-filter-btn inventory-layout-btn {{#if (eq inventoryLayout 'list')}}active{{/if}}"
-               data-action="setInventoryLayout" data-layout="list" title="{{localize 'VEILRUNNER.InventoryLayout.list'}}">
-              <i class="fa-solid fa-list" aria-hidden="true"></i>
-              <span>{{localize 'VEILRUNNER.InventoryLayout.list'}}</span>
-            </button>
-          </span>
+        <div class="inventory-toolbar {{#if hasInventoryFilters}}has-inventory-filters{{else}}no-inventory-filters{{/if}}">
           <label class="inventory-search-field">
             <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-            <input type="search" value="{{inventorySearch}}" data-inventory-search placeholder="{{localize 'VEILRUNNER.InventorySearch'}}" aria-label="{{localize 'VEILRUNNER.InventorySearch'}}" />
+            <input type="search" value="{{inventorySearch}}" data-inventory-search placeholder="{{inventorySearchPlaceholder}}" aria-label="{{inventorySearchPlaceholder}}" />
           </label>
-          <div class="inventory-filter-drawer {{#if inventoryFiltersOpen}}open{{/if}}">
-            <nav class="inventory-weapon-filters" aria-label="{{localize 'VEILRUNNER.InventoryFilter.label'}}">
-              {{#each inventoryMainFilters as |filter|}}
-                <button type="button" class="inventory-filter-btn inventory-main-filter {{#if filter.active}}active{{/if}}"
-                   data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
-                   title="{{localize filter.label}}" aria-label="{{localize filter.label}}">
-                  {{#if filter.icon}}<i class="{{filter.icon}}" aria-hidden="true"></i>{{/if}}
-                  <span>{{localize filter.label}}</span>
-                </button>
+          {{#if hasInventoryFilters}}
+            <button type="button" class="inventory-filter-toggle {{#if inventoryFiltersOpen}}active{{/if}} {{#unless inventoryFilterIsDefault}}has-filter{{/unless}}"
+               data-action="toggleInventoryFilters" aria-expanded="{{#if inventoryFiltersOpen}}true{{else}}false{{/if}}"
+               aria-controls="inventory-filter-popover-{{actor.id}}">
+              <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              <span>{{localize 'VEILRUNNER.InventoryFilter.label'}}</span>
+              {{#unless inventoryFilterIsDefault}}<small>{{inventoryFilterLabel}}</small>{{/unless}}
+            </button>
+          {{/if}}
+          <label class="inventory-sort-control">
+            <span>{{localize 'VEILRUNNER.InventorySort.Label'}}</span>
+            <select data-inventory-sort aria-label="{{localize 'VEILRUNNER.InventorySort.Label'}}">
+              {{#each inventorySortOptions as |option|}}
+                <option value="{{option.key}}" {{#if option.active}}selected{{/if}}>{{localize option.label}}</option>
               {{/each}}
-            </nav>
+            </select>
+          </label>
+          <span class="inventory-layout-controls" role="group" aria-label="{{localize 'VEILRUNNER.InventoryLayout.label'}}">
+            <button type="button" class="inventory-layout-btn {{#if (eq inventoryLayout 'list')}}active{{/if}}"
+               data-action="setInventoryLayout" data-layout="list" title="{{localize 'VEILRUNNER.InventoryLayout.list'}}" aria-label="{{localize 'VEILRUNNER.InventoryLayout.list'}}">
+              <i class="fa-solid fa-list" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="inventory-layout-btn {{#if (eq inventoryLayout 'grid')}}active{{/if}}"
+               data-action="setInventoryLayout" data-layout="grid" title="{{localize 'VEILRUNNER.InventoryLayout.grid'}}" aria-label="{{localize 'VEILRUNNER.InventoryLayout.grid'}}">
+              <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+            </button>
+          </span>
+          {{#if hasInventoryFilters}}
+          <div id="inventory-filter-popover-{{actor.id}}" class="inventory-filter-popover {{#if inventoryFiltersOpen}}open{{/if}}"
+               role="dialog" aria-label="{{localize 'VEILRUNNER.InventoryFilter.label'}}" aria-hidden="{{#if inventoryFiltersOpen}}false{{else}}true{{/if}}">
+            <div class="inventory-filter-popover-heading">
+              <span>{{localize 'VEILRUNNER.InventoryFilter.heading'}}</span>
+              <small>{{inventoryFilterLabel}}</small>
+            </div>
+            {{#if inventoryUsesWeaponGroupLayout}}
+              <nav class="inventory-weapon-filters is-weapon-group-layout" aria-label="{{localize 'VEILRUNNER.InventoryFilter.label'}}">
+                {{#with inventoryWeaponFilterAll as |filter|}}
+                  <button type="button" class="inventory-filter-btn inventory-main-filter inventory-filter-reset {{#if filter.active}}active{{/if}}"
+                     data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                     title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                    <i class="{{filter.icon}}" aria-hidden="true"></i><span>{{localize filter.label}}</span>
+                  </button>
+                {{/with}}
+                <div class="inventory-filter-column inventory-filter-column-left">
+                  {{#each inventoryWeaponFilterLeft as |filter|}}
+                    <button type="button" class="inventory-filter-btn inventory-main-filter {{#if filter.active}}active{{/if}}"
+                       data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                       title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                      <i class="{{filter.icon}}" aria-hidden="true"></i><span>{{localize filter.label}}</span>
+                    </button>
+                  {{/each}}
+                </div>
+                <div class="inventory-filter-column inventory-filter-column-right">
+                  {{#each inventoryWeaponFilterRight as |filter|}}
+                    <button type="button" class="inventory-filter-btn inventory-main-filter {{#if filter.active}}active{{/if}}"
+                       data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                       title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                      <i class="{{filter.icon}}" aria-hidden="true"></i><span>{{localize filter.label}}</span>
+                    </button>
+                  {{/each}}
+                </div>
+              </nav>
+            {{else}}
+              <nav class="inventory-weapon-filters" aria-label="{{localize 'VEILRUNNER.InventoryFilter.label'}}">
+                {{#each inventoryMainFilters as |filter|}}
+                  <button type="button" class="inventory-filter-btn inventory-main-filter {{#if filter.active}}active{{/if}}"
+                     data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                     title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                    {{#if filter.icon}}<i class="{{filter.icon}}" aria-hidden="true"></i>{{/if}}
+                    <span>{{localize filter.label}}</span>
+                  </button>
+                {{/each}}
+              </nav>
+            {{/if}}
           </div>
+          {{/if}}
         </div>
       {{/if}}
       {{/if}}
@@ -383,8 +455,11 @@
                 <h1>Attributes</h1>
                 <div class="attribute-groups">
                   {{#each attributeGroups as |group|}}
-                    <section class="attribute-group">
-                      <h2 class="attribute-group-heading">{{group.heading}}</h2>
+                    <section class="attribute-group attribute-group-{{group.key}}">
+                      <h2 class="attribute-group-heading">
+                        <span class="attribute-group-icon" aria-hidden="true"><i class="{{group.icon}}"></i></span>
+                        <span>{{group.heading}}</span>
+                      </h2>
                       <div class="attribute-grid">
                         {{#each group.attributes as |attr|}}
                           <label class="attribute-row">
@@ -431,6 +506,7 @@
             </div>
           {{else if (eq subTabs.character "progression")}}
             <div class="overview-panel">
+              <h1 class="cohesive-section-heading">{{localize 'VEILRUNNER.Progression'}}</h1>
               <div class="progression-card">
                 <div class="progression-summary-grid">
                   <div class="progression-stat progression-stat-level">
@@ -796,6 +872,7 @@
             </div>
           {{else if (eq subTabs.character "biography")}}
             <div class="bio-content">
+              <h1 class="cohesive-section-heading">{{localize 'VEILRUNNER.Biography'}}</h1>
               {{#if biography}}{{{biography}}}{{else}}
                 <p class="empty-row">{{localize 'VEILRUNNER.NoBiography'}}</p>
               {{/if}}
@@ -825,7 +902,7 @@
                 <div class="actions-card-grid">
                   {{#each actionWorkspace.items as |item|}}
                     <article class="actions-card {{#if item.generated}}generated-weapon-action{{/if}}" data-item-id="{{item.id}}" {{#if item.generated}}data-weapon-id="{{item.weaponId}}" data-weapon-action="{{item.operation}}"{{/if}}>
-                      <span class="actions-card-count">{{item.actionCount}}</span>
+                      <span class="actions-card-count">{{#if item.economyLabel}}{{item.economyLabel}}{{else}}{{item.actionCount}}{{/if}}</span>
                       <span class="actions-card-type">{{item.typeLabel}}</span>
                       <img src="{{item.img}}" alt="" />
                       <h3>{{item.name}}</h3>
@@ -855,7 +932,7 @@
                   </div>
                   {{#each actionWorkspace.items as |item|}}
                     <article class="actions-list-row {{#if item.generated}}generated-weapon-action{{/if}}" data-item-id="{{item.id}}" {{#if item.generated}}data-weapon-id="{{item.weaponId}}" data-weapon-action="{{item.operation}}"{{/if}}>
-                      <span class="actions-list-count">{{item.actionCount}}</span>
+                      <span class="actions-list-count">{{#if item.economyLabel}}{{item.economyLabel}}{{else}}{{item.actionCount}}{{/if}}</span>
                       <strong>{{item.name}}</strong>
                       <span class="actions-list-damage" title="{{item.damageTooltip}}">
                         {{#if item.damageValue}}<strong>{{item.damageValue}}</strong>{{/if}}
@@ -882,63 +959,111 @@
 
         {{else if (eq section "inventory")}}
           {{#if (eq inventoryLayout "grid")}}
-            <div class="inventory-card-grid">
-              {{#each inventoryItems as |item|}}
-                <article class="inventory-grid-card inventory-item-row draggable" data-item-id="{{item.id}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
-                  <div class="inventory-grid-card-image">
-                    <img src="{{item.img}}" alt="" />
-                    <strong>{{item.quantity}}</strong>
-                  </div>
-                  <div class="inventory-grid-card-name" title="{{item.name}}">{{item.name}}</div>
-                  <span class="inventory-grid-card-type">{{item.typeLabel}}</span>
-                  <div class="inventory-grid-card-actions">
-                    {{#if item.canEquip}}
-                      <button type="button" data-action="equipInventoryItem" title="{{localize 'VEILRUNNER.InventoryCard.Equip'}}"><i class="fa-solid fa-shirt"></i><span>{{localize 'VEILRUNNER.InventoryCard.Equip'}}</span></button>
-                    {{/if}}
-                    <button type="button" data-action="throwInventoryItem" title="{{localize 'VEILRUNNER.InventoryCard.Throw'}}"><i class="fa-solid fa-hand-fist"></i><span>{{localize 'VEILRUNNER.InventoryCard.Throw'}}</span></button>
-                    <button type="button" data-action="useInventoryItem" title="{{localize 'VEILRUNNER.InventoryCard.Use'}}"><i class="fa-solid fa-bolt"></i><span>{{localize 'VEILRUNNER.InventoryCard.Use'}}</span></button>
-                    <button type="button" data-action="showInventoryItemDetails" title="{{localize 'VEILRUNNER.InventoryCard.Details'}}"><i class="fa-solid fa-circle-info"></i><span>{{localize 'VEILRUNNER.InventoryCard.Details'}}</span></button>
-                  </div>
-                </article>
-              {{else}}
-                <p class="empty-row">{{localize 'VEILRUNNER.NoItems'}}</p>
-              {{/each}}
-            </div>
-          {{else if hasInventoryWeaponSections}}
-            <div class="inventory-weapon-section-list inventory-layout-{{inventoryLayout}}">
-              {{#each inventoryWeaponSections as |section|}}
-                <section class="inventory-weapon-section">
-                  <h2>
-                    <span>{{localize section.label}}</span>
-                    <span>{{localize 'VEILRUNNER.InventoryList.Quantity'}}</span>
-                    <span>{{localize 'VEILRUNNER.InventoryList.Weight'}}</span>
-                  </h2>
-                  <div class="inventory-weapon-table" role="table" aria-label="{{localize section.label}}">
-                    {{#each section.items as |item|}}
-                      <div class="inventory-weapon-table-row inventory-item-row draggable" role="row" data-item-id="{{item.id}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
-                        <span class="inventory-weapon-item" role="cell"><img src="{{item.img}}" alt="" /><span>{{item.name}}</span></span>
-                        <span role="cell">{{item.quantity}}</span>
-                        <span role="cell">{{item.weight}} kg</span>
-                      </div>
+            <div class="inventory-group-list inventory-grid-groups">
+              {{#each inventoryGroups as |group|}}
+                <section class="inventory-family-section {{#if group.collapsed}}is-collapsed{{/if}}">
+                  <button type="button" class="inventory-family-heading" data-action="toggleInventoryGroup" data-collapse-key="{{group.collapseKey}}" aria-expanded="{{#if group.expanded}}true{{else}}false{{/if}}">
+                    <span><i class="{{group.icon}}" aria-hidden="true"></i><strong>{{group.label}}</strong><small>{{group.count}}</small></span>
+                    <i class="fa-solid fa-chevron-{{#if group.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                  </button>
+                  <div class="inventory-family-content">
+                    {{#each group.subtypes as |subtype|}}
+                      <section class="inventory-subtype-section {{#if subtype.collapsed}}is-collapsed{{/if}}" data-item-count="{{subtype.entryCount}}">
+                        <button type="button" class="inventory-subtype-heading" data-action="toggleInventoryGroup" data-collapse-key="{{subtype.collapseKey}}" aria-expanded="{{#if subtype.expanded}}true{{else}}false{{/if}}">
+                          <span><strong>{{subtype.label}}</strong><small>{{subtype.count}}</small></span>
+                          <i class="fa-solid fa-chevron-{{#if subtype.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                        </button>
+                        <div class="inventory-card-grid">
+                          {{#each subtype.items as |item|}}
+                            <article class="inventory-grid-card inventory-item-row draggable {{#if item.equipped}}is-equipped{{/if}} {{#if item.isJunk}}is-junk{{/if}}" data-item-id="{{item.id}}" data-item-ids="{{item.itemIds}}" data-stack-quantity="{{item.quantity}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
+                              <div class="inventory-grid-card-image">
+                                <img src="{{item.img}}" alt="" />
+                                <strong class="inventory-grid-card-quantity" title="{{localize 'VEILRUNNER.InventoryList.Quantity'}}">{{item.quantity}}</strong>
+                              </div>
+                              <div class="inventory-grid-card-body">
+                                <div class="inventory-grid-card-title-row">
+                                  {{#if item.isJunk}}<span class="inventory-junk-badge">{{localize 'VEILRUNNER.InventoryCategory.junk'}}</span>{{/if}}
+                                  <div class="inventory-grid-card-name" title="{{item.name}}">{{item.name}}</div>
+                                </div>
+                                <span class="inventory-grid-card-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.grade}}</span>
+                                <span class="inventory-grid-card-quality"><em>{{item.rarity.name}}</em></span>
+                                <div class="inventory-grid-card-meta">
+                                  <span><i class="fa-solid fa-weight-hanging" aria-hidden="true"></i>{{item.weight}} kg</span>
+                                </div>
+                              </div>
+                              {{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}
+                            </article>
+                          {{/each}}
+                        </div>
+                      </section>
                     {{/each}}
                   </div>
                 </section>
+              {{else}}
+                <p class="empty-row inventory-empty-state" data-inventory-base-empty>{{localize 'VEILRUNNER.NoItems'}}</p>
               {{/each}}
+              <p class="empty-row inventory-empty-state" data-inventory-filtered-empty hidden>{{localize 'VEILRUNNER.InventoryFilteredEmpty'}}</p>
             </div>
           {{else}}
-            <ul class="action-list">
-              {{#each inventoryItems as |item|}}
-                <li class="action-row inventory-item-row draggable" data-item-id="{{item.id}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
-                  <span class="action-icon"><img src="{{item.img}}" alt="" /></span>
-                  <div class="action-text">
-                    <span class="action-name">{{item.name}}</span>
-                    <span class="action-sub">{{item.typeLabel}}</span>
+            <div class="inventory-group-list inventory-list-groups">
+              <div class="inventory-list-columns" aria-hidden="true">
+                <span>{{localize 'VEILRUNNER.InventoryList.Item'}}</span>
+                <span>{{localize 'VEILRUNNER.InventoryList.Quantity'}}</span>
+                <span>{{localize 'VEILRUNNER.InventoryList.Weight'}}</span>
+                <span></span>
+              </div>
+              {{#each inventoryGroups as |group|}}
+                <section class="inventory-family-section {{#if group.collapsed}}is-collapsed{{/if}}">
+                  <button type="button" class="inventory-family-heading" data-action="toggleInventoryGroup" data-collapse-key="{{group.collapseKey}}" aria-expanded="{{#if group.expanded}}true{{else}}false{{/if}}">
+                    <span><i class="{{group.icon}}" aria-hidden="true"></i><strong>{{group.label}}</strong><small>{{group.count}}</small></span>
+                    <i class="fa-solid fa-chevron-{{#if group.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                  </button>
+                  <div class="inventory-family-content">
+                      {{#each group.subtypes as |subtype|}}
+                        <section class="inventory-subtype-section {{#if subtype.collapsed}}is-collapsed{{/if}}" data-item-count="{{subtype.entryCount}}">
+                          <button type="button" class="inventory-subtype-heading" data-action="toggleInventoryGroup" data-collapse-key="{{subtype.collapseKey}}" aria-expanded="{{#if subtype.expanded}}true{{else}}false{{/if}}">
+                            <span><strong>{{subtype.label}}</strong><small>{{subtype.count}}</small></span>
+                            <i class="fa-solid fa-chevron-{{#if subtype.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                          </button>
+                          <div class="inventory-list-items">
+                              {{#each subtype.items as |item|}}
+                                <article class="inventory-list-row inventory-item-row draggable {{#if item.equipped}}is-equipped{{/if}} {{#if item.isJunk}}is-junk{{/if}}" data-item-id="{{item.id}}" data-item-ids="{{item.itemIds}}" data-stack-quantity="{{item.quantity}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
+                                  <span class="inventory-list-item-main"><img src="{{item.img}}" alt="" />{{#if item.isJunk}}<span class="inventory-junk-badge">{{localize 'VEILRUNNER.InventoryCategory.junk'}}</span>{{/if}}<span><strong>{{item.name}}</strong><small class="inventory-list-item-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.grade}}</small><small class="inventory-list-item-quality"><em>{{item.rarity.name}}</em></small></span>{{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}</span>
+                                  <span>{{item.quantity}}</span>
+                                  <span>{{item.weight}} kg</span>
+                                  <details class="inventory-item-menu">
+                                    <summary title="{{localize 'VEILRUNNER.InventoryCard.Actions'}}" aria-label="{{localize 'VEILRUNNER.InventoryCard.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></summary>
+                                    <div>
+                                      {{#if item.canEquip}}
+                                        {{#if item.equipped}}
+                                          <button type="button" data-action="unequipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Unequip'}}</button>
+                                        {{else}}
+                                          <button type="button" data-action="equipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Equip'}}</button>
+                                        {{/if}}
+                                      {{/if}}
+                                      <button type="button" data-action="useInventoryItem"><i class="fa-solid fa-bolt"></i>{{localize 'VEILRUNNER.InventoryCard.Use'}}</button>
+                                      <button type="button" data-action="throwInventoryItem"><i class="fa-solid fa-hand-fist"></i>{{localize 'VEILRUNNER.InventoryCard.Throw'}}</button>
+                                      {{#if item.isJunkMarked}}
+                                        <button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.UnmarkJunk'}}</button>
+                                      {{else}}
+                                        {{#unless item.isJunk}}<button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.MarkJunk'}}</button>{{/unless}}
+                                      {{/if}}
+                                      <button type="button" data-action="showInventoryItemDetails"><i class="fa-solid fa-circle-info"></i>{{localize 'VEILRUNNER.InventoryCard.Details'}}</button>
+                                      <button type="button" class="remove" data-action="removeInventoryItem"><i class="fa-solid fa-trash"></i>{{localize 'VEILRUNNER.InventoryCard.Remove'}}</button>
+                                    </div>
+                                  </details>
+                                </article>
+                              {{/each}}
+                          </div>
+                        </section>
+                      {{/each}}
                   </div>
-                </li>
+                </section>
               {{else}}
-                <li class="empty-row">{{localize 'VEILRUNNER.NoItems'}}</li>
+                <p class="empty-row inventory-empty-state" data-inventory-base-empty>{{localize 'VEILRUNNER.NoItems'}}</p>
               {{/each}}
-            </ul>
+              <p class="empty-row inventory-empty-state" data-inventory-filtered-empty hidden>{{localize 'VEILRUNNER.InventoryFilteredEmpty'}}</p>
+            </div>
           {{/if}}
 
         {{else if (eq section "datapad")}}
@@ -1049,26 +1174,14 @@
           {{/if}}
 
         {{/if}}
-        {{#if inventoryDetailsOpen}}
-          <aside class="inventory-details-panel" aria-label="{{inventoryDetails.name}}" data-rarity="{{inventoryDetails.rarity.slug}}" data-rarity-tier="{{inventoryDetails.rarity.tier}}" style="--vr-item-rarity: {{inventoryDetails.rarity.color}};">
-            <header>
-              <img src="{{inventoryDetails.img}}" alt="" />
-              <div><h2>{{inventoryDetails.name}}</h2><span>{{inventoryDetails.typeLabel}}</span></div>
-              <button type="button" data-action="closeInventoryItemDetails" title="{{localize 'VEILRUNNER.InventoryCard.Close'}}"><i class="fa-solid fa-xmark"></i></button>
-            </header>
-            <dl>
-              <div><dt>{{localize 'VEILRUNNER.InventoryList.Quantity'}}</dt><dd>{{inventoryDetails.quantity}}</dd></div>
-              <div><dt>{{localize 'VEILRUNNER.InventoryList.Weight'}}</dt><dd>{{inventoryDetails.weight}} kg</dd></div>
-            </dl>
-            <div class="inventory-details-description">{{{inventoryDetails.description}}}</div>
-          </aside>
-        {{/if}}
       </div>
       {{#if (eq section "inventory")}}
-        <footer class="inventory-carry-footer" aria-label="Carry Weight: {{inventoryCarryWeightKg}} kg / {{inventoryCarryCapacityKg}} kg">
+        <footer class="inventory-carry-footer" data-encumbrance-state="{{inventoryEncumbranceState}}"
+                aria-label="{{localize 'VEILRUNNER.CarryWeight'}}: {{inventoryCarryWeightKg}} kg / {{inventoryCarryCapacityKg}} kg — {{inventoryEncumbranceLabel}}">
           <span>{{localize 'VEILRUNNER.CarryWeight'}}</span>
-          <span class="inventory-carry-meter" style="--inventory-carry-percent: {{inventoryCarryWeightPercent}}%"></span>
+          <span class="inventory-carry-meter" style="--inventory-carry-percent: {{inventoryCarryWeightPercent}}%" aria-hidden="true"></span>
           <strong>{{inventoryCarryWeightKg}} kg / {{inventoryCarryCapacityKg}} kg</strong>
+          <span class="inventory-encumbrance-status"><i class="fa-solid fa-circle" aria-hidden="true"></i>{{inventoryEncumbranceLabel}}</span>
         </footer>
       {{/if}}
     </div>

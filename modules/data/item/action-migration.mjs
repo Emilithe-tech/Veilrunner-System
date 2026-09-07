@@ -3,6 +3,12 @@ import { migrateActionSystemData } from "./action-formula.mjs";
 const ACTION_ITEM_TYPES = new Set(["action", "ability", "spell", "skill"]);
 const MIGRATED_KEYS = ["actionMode", "activationKind", "actionType", "category", "actions", "damageFormula", "baseSpellDamage", "spellDamagePerLevel", "favorite"];
 
+export function isBundledSystemItemPack(pack, systemId) {
+  return pack?.documentName === "Item" && (
+    pack.metadata?.packageName === systemId || String(pack.collection ?? "").startsWith(`${systemId}.`)
+  );
+}
+
 export function actionMigrationUpdate(item) {
   if (!ACTION_ITEM_TYPES.has(item?.type)) return null;
   const current = item._source?.system ?? item.system?.toObject?.() ?? item.system ?? {};
@@ -23,12 +29,13 @@ export function actionMigrationUpdate(item) {
   return changed ? update : null;
 }
 
-/** GM-only, idempotent persistence migration for world, embedded, and system-pack actions. */
+/** GM-only, idempotent migration; locked system-pack work remains deferred. */
 export async function migrateActionItemsToCompactFormat() {
-  if (!game.user?.isGM) return { world: 0, actors: 0, packs: 0 };
+  if (!game.user?.isGM) return { world: 0, actors: 0, packs: 0, deferredPacks: [] };
   let world = 0;
   let actors = 0;
   let packs = 0;
+  const deferredPacks = [];
 
   const worldUpdates = Array.from(game.items ?? []).map(actionMigrationUpdate).filter(Boolean);
   if (worldUpdates.length) {
@@ -43,13 +50,20 @@ export async function migrateActionItemsToCompactFormat() {
     actors += updates.length;
   }
 
-  for (const pack of game.packs.filter(entry => entry.documentName === "Item" && entry.metadata?.system === game.system.id)) {
+  for (const pack of game.packs.filter(entry => isBundledSystemItemPack(entry, game.system.id))) {
     const documents = await pack.getDocuments();
     const updates = documents.map(actionMigrationUpdate).filter(Boolean);
     if (!updates.length) continue;
+    // Startup never grants itself a pack-write permission or unlocks canonical content.
+    if (pack.locked !== false) {
+      deferredPacks.push({ collection: pack.collection, documents: updates.length,
+        reason: pack.locked === true ? "locked" : "lock-state-unavailable" });
+      continue;
+    }
     await pack.documentClass.updateDocuments(updates, { pack: pack.collection });
     packs += updates.length;
   }
 
-  return { world, actors, packs };
+  if (deferredPacks.length) console.warn("Veilrunner | Compact action migration deferred for non-writable compendia; sources and locks unchanged.", deferredPacks);
+  return { world, actors, packs, deferredPacks };
 }

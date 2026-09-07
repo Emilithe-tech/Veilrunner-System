@@ -8,6 +8,7 @@ import { getHudPreferences } from "./preferences.mjs";
 import { getPanState, panFidelity, qualitativeHealth } from "./pan.mjs";
 import { visibleEffects } from "./visibility.mjs";
 import { projectedResourceCosts, resolveHudActionConfiguration } from "./resolver.mjs";
+import { resolveHudActionContract } from "./action-contract.mjs";
 import { getHudUndoHistory, getHudUndoRecord } from "./undo.mjs";
 
 const number = value => Math.max(0, Number(value) || 0);
@@ -49,14 +50,15 @@ function orderedByIds(actions, ids) {
 }
 
 function projectAction(actor, action, target, targetPresentation, pinned) {
-  const availability = action?.valid === false
-    ? { state: "unsatisfied", available: false, reason: action.errors?.[0] ?? "This configuration is invalid." }
-    : evaluateActionAvailability({ actor, action, target, targetPresentation });
-  return { ...action, pinned, availability, mapPenalty: action.attack ? currentMapPenalty(actor, action.traits) : null };
-}
-
-function previewFor(actor, action, selections = {}) {
-  return projectedResourceCosts(actor, resolveHudActionConfiguration(actor, action, selections));
+  const remembered = getHudPreferences(actor).remembered[action.id];
+  if (!action.resolvedAction && remembered && Object.keys(remembered).length) {
+    action = resolveHudActionConfiguration(actor, action, remembered, { target, targetPresentation });
+  }
+  const resolvedAction = action.resolvedAction ?? resolveHudActionContract(actor, action, { target, targetPresentation });
+  const availability = evaluateActionAvailability({ actor, action, target, targetPresentation, resolvedAction });
+  return { ...action, resolvedAction, timing: resolvedAction.timing, economy: resolvedAction.economy,
+    actionCount: resolvedAction.economy.actions, costs: resolvedAction.resourceCosts,
+    pinned, availability, mapPenalty: action.attack ? currentMapPenalty(actor, action.traits) : null };
 }
 
 export function projectMovementTrack(economy) {
@@ -141,13 +143,15 @@ export function buildHudProjection(actor, state = {}) {
     if (entry.combatId && entry.combatId !== String(globalThis.game?.combat?.id ?? "")) return [];
     const source = rawActions.find(action => action.id === entry.actionId);
     if (!source) return [];
-    const resolved = resolveHudActionConfiguration(actor, source, entry.selections);
+    const resolved = resolveHudActionConfiguration(actor, source, entry.selections, { target, targetPresentation });
     const projected = projectAction(actor, resolved, target, targetPresentation, preferences.pins.includes(source.id));
     const plannedTargetUuids = entry.targets.map(planned => planned.uuid).sort();
     const targetsMatch = plannedTargetUuids.length === currentTargetUuids.length && plannedTargetUuids.every((uuid, index) => uuid === currentTargetUuids[index]);
     return [{ ...projected, preparedId: entry.id, selections: entry.selections, plannedTargets: entry.targets, plannedTargetCount: entry.targets.length, plannedTargetNames: entry.targets.map(planned => planned.name).join(", "), selectedTargetCount: currentTargetUuids.length, targetsMatch }];
   });
   const composerAction = rawActions.find(action => action.id === state.composerActionId) ?? null;
+  const composerSelections = state.composerSelections ?? preferences.remembered?.[composerAction?.id] ?? {};
+  const composerResolved = composerAction ? resolveHudActionConfiguration(actor, composerAction, composerSelections, { target, targetPresentation }) : null;
   const resources = actor.system?.resources ?? {};
   const familyDefinitions = globalThis.game?.settings?.get?.(globalThis.game.system.id, "combatHudWeaponFamilies") ?? [];
   const weaponFilter = state.weaponFilter ?? "all";
@@ -187,7 +191,7 @@ export function buildHudProjection(actor, state = {}) {
     activeDomain,
     query,
     preferences,
-    composer: composerAction ? { action: projectAction(actor, resolveHudActionConfiguration(actor, composerAction, state.composerSelections ?? preferences.remembered?.[composerAction.id] ?? {}), target, targetPresentation, preferences.pins.includes(composerAction.id)), preview: previewFor(actor, composerAction, state.composerSelections ?? preferences.remembered?.[composerAction.id] ?? {}), selections: state.composerSelections ?? preferences.remembered?.[composerAction.id] ?? {} } : null,
+    composer: composerResolved ? { action: projectAction(actor, composerResolved, target, targetPresentation, preferences.pins.includes(composerAction.id)), preview: projectedResourceCosts(actor, composerResolved), selections: composerSelections } : null,
     saves: ["fortitude", "willpower", "reflex"].map(key => ({ key, label: key[0].toUpperCase() + key.slice(1), value: number(actor.system?.saves?.[key]) }))
   };
 }

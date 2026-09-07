@@ -1,8 +1,9 @@
 import { actionTreeSchema } from "./action-tree.mjs";
-import { isItemEquipped } from "../../rules/item-rules.mjs";
+import { prepareActionEffectDocument } from "../../rules/effect-boundary.mjs";
 import { evaluateActionAvailability } from "../../apps/action-hud/availability.mjs";
-import { hasItemIntent, itemIdentityFields, migrateItemIdentityData } from "./identity.mjs";
+import { itemIdentityFields, migrateItemIdentityData } from "./identity.mjs";
 import { migrateActionSystemData } from "./action-formula.mjs";
+import { canonicalDefinitionExtensionFields } from "../definitions/semantic-fields.mjs";
 
 const { StringField, NumberField, BooleanField, HTMLField, ArrayField, SchemaField } = foundry.data.fields;
 
@@ -41,8 +42,6 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
       favorite: new BooleanField({ required: true, initial: false }),
       actions: new NumberField({ required: true, integer: true, min: 0, initial: 1, nullable: false }),
       damageType: new StringField({ required: true, blank: true, initial: "" }),
-      currentLevel: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false }),
-      maxLevel: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false }),
       damageDice: new NumberField({ required: true, integer: true, min: 0, initial: 0, nullable: false }),
       damageDie: new NumberField({ required: true, integer: true, min: 2, initial: 6, nullable: false }),
       damageLevelInterval: new NumberField({ required: true, integer: true, min: 1, initial: 3, nullable: false }),
@@ -50,56 +49,37 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
       cost: new StringField({ required: true, blank: true, initial: "" }),
       rollFormula: new StringField({ required: true, blank: true, initial: "" }),
       selector: new StringField({ required: true, blank: true, initial: "action" }),
-      requiredItemTypes: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
-      requiredItemTraits: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
-      requiredDefinitionIds: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
-      requiredItemIntents: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
       requiresTarget: new BooleanField({ required: true, initial: false }),
       summary: new StringField({ required: true, blank: true, initial: "" }),
-      requiredEffects: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
-      requiredTargetEffects: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
       composer: new ArrayField(new SchemaField({
         key: new StringField({ required: true, blank: false, initial: "option" }),
         label: new StringField({ required: true, blank: true, initial: "" }),
-        choices: new ArrayField(new StringField({ required: true, blank: false }), { initial: [] }),
+        choices: new ArrayField(new StringField({ required: true, blank: false }), { initial: () => [] }),
         required: new BooleanField({ required: true, initial: false })
-      }), { initial: [] }),
+      }), { initial: () => [] }),
       description: new HTMLField({ required: false, blank: true, initial: "" }),
-      ...actionTreeSchema()
+      ...actionTreeSchema(),
+      ...canonicalDefinitionExtensionFields()
     };
   }
 
   static migrateData(source) {
-    return migrateActionSystemData(migrateItemIdentityData(super.migrateData(source)), { complete: false });
+    source = migrateActionSystemData(migrateItemIdentityData(super.migrateData(source)), { complete: false });
+    if (source?.rules !== undefined && !Array.isArray(source.rules)) source.rules = [];
+    return source;
   }
 
   /** Roll action. */
   async roll(actor, options = {}) {
     const item = this.parent;
+    const resolved = options.resolvedAction?.resolvedAction ?? null;
     if (!options.skipAvailability) {
       const availability = evaluateActionAvailability({ actor, action: options.composer ? { ...item, composerSelections: options.composer } : item, target: [...(game.user?.targets ?? [])][0]?.actor ?? null });
       if (!availability.available) return ui.notifications.warn(availability.reason);
     }
     const modifierNames = (options.resolvedAction?.selectedSpellModifiers ?? []).map(modifier => `${modifier.label}${modifier.count > 1 ? ` x${modifier.count}` : ""}`);
-    const name = foundry.utils.escapeHTML(`${item.name}${modifierNames.length ? ` — ${modifierNames.join(", ")}` : ""}`);
-    const equippedItems = actor.items.filter(document => isItemEquipped(actor, document));
-    const requiredTypes = item.system?.requiredItemTypes ?? [];
-    const requiredTraits = item.system?.requiredItemTraits ?? [];
-    const requiredDefinitionIds = item.system?.requiredDefinitionIds ?? [];
-    const requiredIntents = item.system?.requiredItemIntents ?? [];
-    if (requiredTypes.length && !requiredTypes.some(type => equippedItems.some(document => document.type === type))) {
-      return ui.notifications.warn(`${item.name} requires an equipped ${requiredTypes.join(" or ")}.`);
-    }
-    if (requiredTraits.length && !requiredTraits.every(trait => equippedItems.some(document => document.system?.traits?.includes(trait)))) {
-      return ui.notifications.warn(`${item.name} requires equipped item traits: ${requiredTraits.join(", ")}.`);
-    }
-    if (requiredDefinitionIds.length && !requiredDefinitionIds.every(definitionId => equippedItems.some(document => document.system?.definitionId === definitionId))) {
-      return ui.notifications.warn(`${item.name} requires equipped definitions: ${requiredDefinitionIds.join(", ")}.`);
-    }
-    if (requiredIntents.length && !requiredIntents.every(intent => equippedItems.some(document => hasItemIntent(document, intent)))) {
-      return ui.notifications.warn(`${item.name} requires equipped item capabilities: ${requiredIntents.join(", ")}.`);
-    }
-    const costs = options.skipResourceCommit ? {} : item.system?.resourceCosts ?? {};
+    const name = foundry.utils.escapeHTML(`${resolved?.name ?? item.name}${modifierNames.length ? ` — ${modifierNames.join(", ")}` : ""}`);
+    const costs = options.skipResourceCommit ? {} : resolved?.resourceCosts ?? item.system?.resourceCosts ?? {};
     const updates = {};
     for (const key of ["mana", "stamina", "health"]) {
       const cost = Math.max(0, Number(costs[key]) || 0);
@@ -109,7 +89,7 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
     }
     if (Object.keys(updates).length) await actor.update(updates);
     const applied = [];
-    for (const effect of item.system?.effects ?? []) {
+    for (const effect of resolved?.effects ?? item.system?.effects ?? []) {
       const targetActors = effect.scope === "area"
         ? [...(game.user?.targets ?? [])].map(token => token.actor).filter(Boolean)
         : [actor];
@@ -118,34 +98,35 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
         continue;
       }
       if (!effect.target || !String(effect.value ?? "").trim()) continue;
-      const key = String(effect.target).startsWith("system.") ? String(effect.target) : `system.${effect.target}`;
+      const preparedEffect = prepareActionEffectDocument(item, effect, { systemId: game.system.id });
+      if (!preparedEffect.valid) {
+        ui.notifications.warn(`${item.name} has an invalid effect: ${preparedEffect.errors.join(" ")}`);
+        continue;
+      }
       for (const target of targetActors) {
-        await target.createEmbeddedDocuments("ActiveEffect", [{
-          name: item.name, img: item.img, origin: item.uuid,
-          changes: [{ key, mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: String(effect.value), priority: 20 }],
-          flags: { [game.system.id]: { duration: String(effect.duration ?? ""), scope: effect.scope, notes: String(effect.notes ?? "") } }
-        }]);
+        await target.createEmbeddedDocuments("ActiveEffect", [preparedEffect.data]);
         applied.push(target.name);
       }
     }
-    const selector = String(item.system?.selector || "action");
-    const formula = String(item.system?.rollFormula || "").trim();
+    const selector = String(resolved?.roll.selector ?? item.system?.selector ?? "action");
+    const formula = String(resolved?.roll.formula ?? item.system?.rollFormula ?? "").trim();
     let roll = null;
     let rollData = actor.getRollData();
     if (formula) {
       const context = actor.getItemRuleContext?.({
         selectors: [selector, "action", `action:${item.id}`],
-        options: ["action:roll", `action:${item.id}`, `action:category:${item.system?.category ?? "actions"}`, ...(item.system?.traits ?? []).map(trait => `trait:${trait}`), ...Object.entries(options.composer ?? {}).map(([key, value]) => `action:${item.id}:choice:${key}:${value}`)]
+        options: ["action:roll", `action:${item.id}`, `action:category:${item.system?.category ?? "actions"}`, ...(resolved?.traits ?? item.system?.traits ?? []).map(trait => `trait:${trait}`), ...Object.entries(resolved?.selections ?? options.composer ?? {}).map(([key, value]) => `action:${item.id}:choice:${key}:${value}`)]
       });
       const modifier = (context?.modifiers?.total ?? 0) + (selector === "attack" ? Number(options.mapPenalty ?? 0) : 0);
       rollData = context?.rollData ?? rollData;
       roll = await new Roll(`${formula}${modifier ? ` + ${modifier}` : ""}`, rollData).evaluate();
     }
-    const damageFormula = String(options.resolvedAction?.damageFormula ?? "").trim();
+    const damageFormula = String(resolved?.damage.formula ?? options.resolvedAction?.damageFormula ?? "").trim();
+    const damageType = resolved?.damage.type ?? item.system?.damageType ?? "";
     const damage = damageFormula ? await new Roll(damageFormula, rollData).evaluate() : null;
     if (roll && damage) await damage.toMessage({
       speaker: ChatMessage.getSpeaker({ actor }),
-      flavor: `${name} | ${item.system?.damageType ? `${foundry.utils.escapeHTML(item.system.damageType)} ` : ""}Damage`
+      flavor: `${name} | ${damageType ? `${foundry.utils.escapeHTML(damageType)} ` : ""}Damage`
     });
     if (roll) return roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor }),
@@ -153,7 +134,7 @@ export default class ActionData extends foundry.abstract.TypeDataModel {
     });
     if (damage) return damage.toMessage({
       speaker: ChatMessage.getSpeaker({ actor }),
-      flavor: `${name} | ${item.system?.damageType ? `${foundry.utils.escapeHTML(item.system.damageType)} ` : ""}Damage`
+      flavor: `${name} | ${damageType ? `${foundry.utils.escapeHTML(damageType)} ` : ""}Damage`
     });
     return ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),

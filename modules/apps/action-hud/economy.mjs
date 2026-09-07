@@ -1,4 +1,5 @@
 import { number, systemId } from "./constants.mjs";
+import { normalizeActionEconomy, normalizeActionTiming } from "../../actions/resolved-action.mjs";
 
 const whole = value => Math.max(0, Math.floor(number(value)));
 
@@ -83,10 +84,10 @@ export async function spendActionEconomy(actor, action, combat = globalThis.game
   const economy = await ensureCombatEconomy(actor, combat);
   if (!economy) return true;
   if (!canUpdate(economy.combatant)) return false;
-  const system = action?.system ?? action ?? {};
-  const type = system.actionType ?? action?.actionType ?? "standard";
-  const reaction = type === "reaction";
-  const cost = ["free", "passive"].includes(type) ? 0 : reaction ? 1 : whole(system.actions ?? action?.actionCount ?? 1);
+  const timing = normalizeActionTiming(action);
+  const costContract = normalizeActionEconomy(action, timing);
+  const reaction = timing.type === "reaction";
+  const cost = reaction ? costContract.reactions : costContract.actions;
   const pool = reaction ? "reactions" : "actions";
   if (cost > economy[pool]) return false;
   const next = { key: economy.key || economyCycleKey(combat), actions: economy.actions, reactions: economy.reactions, movement: economy.movement, attacks: economy.attacks };

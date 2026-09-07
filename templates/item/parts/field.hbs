@@ -1,0 +1,12 @@
+{{#if hidden}}{{#if @root.editable}}<input type="hidden" name="{{name}}" value="{{value}}" />{{/if}}
+{{else}}{{#if array}}
+<details class="vr-item-collection" {{#if rows.length}}open{{/if}}><summary>{{label}} <span>{{rows.length}}</span></summary>
+  {{#if @root.editable}}<input type="hidden" name="{{marker}}" value="1" />{{/if}}
+  {{#each rows}}<div class="vr-item-array-row">{{> "systems/veilrunner/templates/item/parts/field.hbs" field}}{{#if @root.editable}}<button type="button" class="vr-item-icon-button vr-item-remove" data-sheet-action="arrayRemove" data-path="{{parentPath}}" data-index="{{index}}" aria-label="Remove {{field.label}}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>{{/if}}</div>{{/each}}
+  {{#if @root.editable}}<button type="button" class="vr-item-add" data-sheet-action="arrayAdd" data-path="{{path}}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Add {{label}}</button>{{/if}}
+</details>
+{{else}}{{#if object}}<div class="vr-item-field-group"><h3>{{label}}</h3>{{#each fields}}{{> "systems/veilrunner/templates/item/parts/field.hbs"}}{{/each}}</div>
+{{else}}<label class="vr-item-field"><span>{{label}}</span>
+{{#if select}}<select name="{{name}}">{{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>
+{{else}}{{#if boolean}}<input type="checkbox" name="{{name}}" {{#if checked}}checked{{/if}} />{{else}}<input type="{{inputType}}" name="{{name}}" value="{{value}}" {{#if min}}min="{{min}}"{{/if}} step="{{step}}" />{{/if}}{{/if}}
+</label>{{/if}}{{/if}}{{/if}}

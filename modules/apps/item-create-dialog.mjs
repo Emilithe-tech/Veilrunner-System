@@ -15,12 +15,12 @@ export const ITEM_CREATE_TYPE_GROUPS = Object.freeze([
   Object.freeze({
     id: "characterBuilding",
     label: "VEILRUNNER.ItemTypeGroups.characterBuilding",
-    types: Object.freeze(["accessory", "archetype", "background", "discipline", "flaw", "language", "origin", "perk", "profession", "species"])
+    types: Object.freeze(["accessory", "archetype", "background", "discipline", "language", "origin", "profession", "quality", "species"])
   }),
   Object.freeze({
     id: "other",
     label: "VEILRUNNER.ItemTypeGroups.other",
-    types: Object.freeze(["ability", "action", "skill", "spell"])
+    types: Object.freeze(["ability", "action", "practice", "progression", "skill", "spell", "talent", "trait"])
   })
 ]);
 
@@ -34,7 +34,7 @@ export const ITEM_CREATE_TYPE_GROUPS = Object.freeze([
  */
 export function groupedItemTypeOptions(options, locale = "en") {
   const available = new Map(options.map(option => [String(option.value), option]));
-  const hidden = new Set(available.has("perk") && available.has("flaw") ? ["quality"] : []);
+  const hidden = new Set(available.has("quality") ? ["perk", "flaw"] : []);
   const assigned = new Set();
   const groups = [];
 

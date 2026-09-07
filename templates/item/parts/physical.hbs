@@ -20,15 +20,15 @@
             {{#each itemRarities as |rarity|}}<option value="{{rarity.slug}}" style="color: {{rarity.color}};" {{#if (eq ../system.rarity rarity.slug)}}selected{{/if}}>Tier {{rarity.tier}} — {{rarity.name}}</option>{{/each}}
           </select>
         </label>
-        {{#if isCompatibilityHost}}<label class="wide">Allowed Definition IDs <input type="text" name="{{#if isPhysicalWeapon}}system.firearm.compatibility{{else}}system.compatibility{{/if}}.allowDefinitionIdsText" value="{{compatibilityAllowDefinitionIdsText}}" placeholder="veilrunner.ammunition.example" /></label><label class="wide">Blocked Definition IDs <input type="text" name="{{#if isPhysicalWeapon}}system.firearm.compatibility{{else}}system.compatibility{{/if}}.blockDefinitionIdsText" value="{{compatibilityBlockDefinitionIdsText}}" placeholder="veilrunner.ammunition.example" /></label>{{/if}}
+        <p class="hint wide">Choose allowed and blocked definitions in Mechanics.</p>
         <label class="vr-check"><input type="checkbox" name="system.identified" {{checked system.identified}} />{{localize 'VEILRUNNER.PhysicalItem.identified'}}</label>
         <label class="vr-check"><input type="checkbox" name="system.favorite" {{checked system.favorite}} />HUD Favorite</label>
-        <label>{{localize 'VEILRUNNER.PhysicalItem.containerId'}}<input type="text" name="system.containerId" value="{{system.containerId}}" placeholder="Embedded Item ID" /></label>
+        {{> "systems/veilrunner/templates/item/parts/contract-field.hbs" (lookup contractEditors "containerId")}}
       </div>
   <details class="vr-item-advanced-contracts">
     <summary>Granted HUD Actions</summary>
     <p>Optional data-driven actions supplied while this item is equipped.</p>
-    <textarea name="system.hudActionsJson" rows="7">{{physicalHudActionsJson}}</textarea>
+    {{> "systems/veilrunner/templates/item/parts/contract-field.hbs" (lookup contractEditors "hudActions")}}
   </details>
 </section>
 
@@ -39,7 +39,7 @@
         <label>{{localize 'VEILRUNNER.WeaponItem.handedness'}}<select name="system.handedness"><option value="one" {{#if (eq system.handedness "one")}}selected{{/if}}>{{localize 'VEILRUNNER.Handedness.one'}}</option><option value="two" {{#if (eq system.handedness "two")}}selected{{/if}}>{{localize 'VEILRUNNER.Handedness.two'}}</option></select></label>
         <label>{{localize 'VEILRUNNER.WeaponItem.actions'}}<input type="number" name="system.actions" value="{{system.actions}}" min="0" /></label>
         <label>{{localize 'VEILRUNNER.WeaponItem.attackFormula'}}<input type="text" name="system.attack.formula" value="{{system.attack.formula}}" /></label>
-        <label>{{localize 'VEILRUNNER.WeaponItem.attackSelector'}}<input type="text" name="system.attack.selector" value="{{system.attack.selector}}" /></label>
+        {{> "systems/veilrunner/templates/item/parts/contract-field.hbs" (lookup contractEditors "attack.selector")}}
         <label>{{localize 'VEILRUNNER.WeaponItem.range'}}<input type="number" name="system.range" value="{{system.range}}" min="0" /></label>
         <label>{{localize 'VEILRUNNER.WeaponItem.baseDamage'}}<input type="text" name="system.damage.base" value="{{system.damage.base}}" placeholder="1d10" /></label>
         <label>{{localize 'VEILRUNNER.WeaponItem.damageMax'}}<input type="text" name="system.damage.max" value="{{system.damage.max}}" placeholder="4d10" /></label>
@@ -55,7 +55,7 @@
           <label>{{localize 'VEILRUNNER.Firearm.ammoTypes'}}<input type="text" name="system.firearm.compatibility.ammoTypesText" value="{{compatibilityAmmoTypesText}}" /></label>
           <label>{{localize 'VEILRUNNER.Firearm.allow'}}<input type="text" name="system.firearm.compatibility.allowText" value="{{compatibilityAllowText}}" /></label>
           <label>{{localize 'VEILRUNNER.Firearm.block'}}<input type="text" name="system.firearm.compatibility.blockText" value="{{compatibilityBlockText}}" /></label>
-        </div><details class="vr-item-advanced-contracts"><summary>HUD Fire Modes</summary><p>Optional data-driven firing modes. An empty list derives Single Shot from the weapon.</p><textarea name="system.firearm.fireModesJson" rows="7">{{firearmModesJson}}</textarea></details><details class="vr-item-advanced-contracts"><summary>HUD Firearm Options</summary><p>Optional toggle options with authored AP, ammunition, attack, damage, and trait adjustments.</p><textarea name="system.firearm.optionsJson" rows="7">{{firearmOptionsJson}}</textarea></details></section>
+        </div><details class="vr-item-advanced-contracts"><summary>HUD Fire Modes</summary><p>Optional data-driven firing modes. An empty list derives Single Shot from the weapon.</p>{{> "systems/veilrunner/templates/item/parts/contract-field.hbs" (lookup contractEditors "firearm.fireModes")}}</details><details class="vr-item-advanced-contracts"><summary>HUD Firearm Options</summary><p>Optional toggle options with authored AP, ammunition, attack, damage, and trait adjustments.</p>{{> "systems/veilrunner/templates/item/parts/contract-field.hbs" (lookup contractEditors "firearm.options")}}</details></section>
       {{/if}}
     {{/if}}
 
@@ -174,36 +174,6 @@
   {{/if}}
 
   {{#if physicalTabRules}}
-    <section class="vr-item-panel vr-rule-builder">
-      <div class="vr-item-section-heading"><h3>{{localize 'VEILRUNNER.PhysicalItem.rules'}}</h3><div><select data-physical-rule-key>{{#each ruleElementKeys as |key|}}<option value="{{key}}">{{localize (concat "VEILRUNNER.RuleElement." key)}}</option>{{/each}}</select><button type="button" class="vr-item-icon-btn" data-action="addPhysicalRule" title="{{localize 'VEILRUNNER.Add'}}"><i class="fa-solid fa-plus"></i></button></div></div>
-      {{#each physicalRules as |rule|}}
-        <article class="vr-rule-element {{#unless rule.validation.valid}}invalid{{/unless}}">
-          <header><strong>{{localize (concat "VEILRUNNER.RuleElement." rule.key)}}</strong><button type="button" class="vr-item-icon-btn" data-action="removePhysicalRule" data-index="{{@index}}"><i class="fa-solid fa-trash"></i></button></header>
-          <input type="hidden" name="system.rules.{{@index}}.key" value="{{rule.key}}" />
-          <div class="vr-item-field-grid">
-            <label>{{localize 'VEILRUNNER.RuleFields.label'}}<input name="system.rules.{{@index}}.label" value="{{rule.label}}" /></label>
-            <label>{{localize 'VEILRUNNER.RuleFields.priority'}}<input type="number" name="system.rules.{{@index}}.priority" value="{{rule.priority}}" /></label>
-            <label class="vr-check"><input type="checkbox" name="system.rules.{{@index}}.enabled" {{checked rule.enabled}} />{{localize 'VEILRUNNER.RuleFields.enabled'}}</label>
-            <label class="vr-check"><input type="checkbox" name="system.rules.{{@index}}.requiresEquipped" {{checked rule.requiresEquipped}} />{{localize 'VEILRUNNER.RuleFields.requiresEquipped'}}</label>
-            <label class="wide">{{localize 'VEILRUNNER.RuleFields.predicate'}}<input name="system.rules.{{@index}}.predicateText" value="{{rule.predicateText}}" /></label>
-            {{#if rule.isActiveEffectLike}}
-              <label>{{localize 'VEILRUNNER.RuleFields.path'}}<input name="system.rules.{{@index}}.path" value="{{rule.path}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.mode'}}<select name="system.rules.{{@index}}.mode">{{#each (array "add" "multiply" "override" "upgrade" "downgrade") as |mode|}}<option value="{{mode}}" {{#if (eq ../rule.mode mode)}}selected{{/if}}>{{mode}}</option>{{/each}}</select></label><label>{{localize 'VEILRUNNER.RuleFields.value'}}<input name="system.rules.{{@index}}.value" value="{{rule.value}}" /></label>
-            {{/if}}
-            {{#if rule.isFlatModifier}}
-              <label>{{localize 'VEILRUNNER.RuleFields.selector'}}<input name="system.rules.{{@index}}.selector" value="{{rule.selector}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.value'}}<input name="system.rules.{{@index}}.value" value="{{rule.value}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.type'}}<input name="system.rules.{{@index}}.type" value="{{rule.type}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.slug'}}<input name="system.rules.{{@index}}.slug" value="{{rule.slug}}" /></label>
-            {{/if}}
-            {{#if rule.isRollOption}}<label>{{localize 'VEILRUNNER.RuleFields.option'}}<input name="system.rules.{{@index}}.option" value="{{rule.option}}" /></label>{{/if}}
-            {{#if rule.isDamageDice}}<label>{{localize 'VEILRUNNER.RuleFields.selector'}}<input name="system.rules.{{@index}}.selector" value="{{rule.selector}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.diceNumber'}}<input type="number" name="system.rules.{{@index}}.diceNumber" value="{{rule.diceNumber}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.dieSize'}}<input type="number" name="system.rules.{{@index}}.dieSize" value="{{rule.dieSize}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.damageType'}}<input name="system.rules.{{@index}}.damageType" value="{{rule.damageType}}" /></label>{{/if}}
-            {{#if (or rule.isResistance rule.isWeakness)}}<label>{{localize 'VEILRUNNER.RuleFields.damageType'}}<input name="system.rules.{{@index}}.damageType" value="{{rule.damageType}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.amount'}}<input type="number" name="system.rules.{{@index}}.amount" value="{{rule.amount}}" min="0" /></label>{{/if}}
-            {{#if rule.isChoiceSet}}<label class="wide">{{localize 'VEILRUNNER.RuleFields.choices'}}<input name="system.rules.{{@index}}.choicesText" value="{{rule.choicesText}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.selection'}}<select name="system.rules.{{@index}}.selection"><option value=""></option>{{#each rule.choices as |choice|}}<option value="{{choice}}" {{#if (eq ../rule.selection choice)}}selected{{/if}}>{{choice}}</option>{{/each}}</select></label><label>{{localize 'VEILRUNNER.RuleFields.slug'}}<input name="system.rules.{{@index}}.slug" value="{{rule.slug}}" /></label>{{/if}}
-            {{#if rule.isGrantItem}}<label class="wide">{{localize 'VEILRUNNER.RuleFields.uuid'}}<input name="system.rules.{{@index}}.uuid" value="{{rule.uuid}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.duration'}}<input name="system.rules.{{@index}}.duration" value="{{rule.duration}}" /></label>{{/if}}
-            {{#if rule.isItemAlteration}}<label>{{localize 'VEILRUNNER.RuleFields.target'}}<input name="system.rules.{{@index}}.target" value="{{rule.target}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.path'}}<input name="system.rules.{{@index}}.path" value="{{rule.path}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.mode'}}<select name="system.rules.{{@index}}.mode">{{#each (array "add" "multiply" "override" "upgrade" "downgrade") as |mode|}}<option value="{{mode}}" {{#if (eq ../rule.mode mode)}}selected{{/if}}>{{mode}}</option>{{/each}}</select></label><label>{{localize 'VEILRUNNER.RuleFields.value'}}<input name="system.rules.{{@index}}.value" value="{{rule.value}}" /></label>{{/if}}
-            {{#if rule.isDegreeOfSuccess}}<label>{{localize 'VEILRUNNER.RuleFields.selector'}}<input name="system.rules.{{@index}}.selector" value="{{rule.selector}}" /></label><label>{{localize 'VEILRUNNER.RuleFields.adjustment'}}<input type="number" name="system.rules.{{@index}}.adjustment" value="{{rule.adjustment}}" /></label>{{/if}}
-            <label class="wide">{{localize 'VEILRUNNER.RuleFields.notes'}}<input name="system.rules.{{@index}}.notes" value="{{rule.notes}}" /></label>
-          </div>
-          {{#unless rule.validation.valid}}<p class="vr-rule-error">{{#each rule.validation.errors as |error|}}{{error}} {{/each}}</p>{{/unless}}
-        </article>
-      {{else}}<p class="empty-row">{{localize 'VEILRUNNER.PhysicalItem.noRules'}}</p>{{/each}}
-    </section>
+    <section class="vr-item-panel">{{> "systems/veilrunner/templates/item/parts/contract-field.hbs" (lookup contractEditors "rules")}}</section>
   {{/if}}
 </div>

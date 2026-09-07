@@ -1,4 +1,8 @@
 import { EQUIPMENT_SLOTS } from "../data/item/physical.mjs";
+import { itemHasCapability } from "../data/definitions/item-capabilities.mjs";
+import { itemTypesWithCapability } from "../data/definitions/item-capabilities.mjs";
+import { CanonicalDefinitionReader } from "../data/definitions/canonical-reader.mjs";
+import { prepareActorOwnedSnapshot } from "../data/definitions/provenance.mjs";
 import { equipmentBySlot, equippedSlotsForItem, itemRequiredSlots, resolveActorItemRules } from "../rules/item-rules.mjs";
 import { evaluateActionAvailability } from "../apps/action-hud/availability.mjs";
 import { spendActionEconomy } from "../apps/action-hud/economy.mjs";
@@ -28,7 +32,7 @@ export function equipmentAssignments(equipment = {}) {
 }
 
 export function itemAcceptsEquipmentSlot(item, slot) {
-  return EQUIPMENT_SLOTS.includes(slot) && itemRequiredSlots(item).includes(slot);
+  return itemHasCapability(item, "equippable") && EQUIPMENT_SLOTS.includes(slot) && itemRequiredSlots(item).includes(slot);
 }
 
 async function applyGrantRules(actor, sourceItem) {
@@ -36,13 +40,19 @@ async function applyGrantRules(actor, sourceItem) {
   const grants = resolved.grants.filter(rule => rule.itemId === sourceItem.id);
   for (const grant of grants) {
     if (actor.items.some(item => grantFlag(item, "grantedBy") === `${sourceItem.id}:${grant.slug}`)) continue;
-    const document = await fromUuid(grant.uuid);
-    if (!document || document.documentName !== "Item") {
-      ui.notifications.warn(`Could not grant ${grant.uuid} from ${sourceItem.name}.`);
+    let document;
+    try {
+      const reader = new CanonicalDefinitionReader(itemTypesWithCapability("actorOwned"));
+      const records = await reader.records();
+      const record = grant.definitionId ? records.find(entry => entry.definitionId === grant.definitionId)
+        : records.find(entry => `Compendium.${entry.packCollection}.Item.${entry.documentId}` === grant.uuid);
+      if (!record) throw new Error("The selected definition is unavailable.");
+      document = await reader.resolve(record.definitionId);
+    } catch (error) {
+      ui.notifications.warn(`Could not resolve the canonical grant from ${sourceItem.name}.`);
       continue;
     }
-    const data = document.toObject();
-    delete data._id;
+    const data = prepareActorOwnedSnapshot(document, { sourceVersion: game.system.version, currentLevel: 1 });
     const flagPath = `flags.${systemFlagScope()}`;
     foundry.utils.setProperty(data, `${flagPath}.grantedBy`, `${sourceItem.id}:${grant.slug}`);
     foundry.utils.setProperty(data, `${flagPath}.grantDuration`, grant.duration);
@@ -87,6 +97,7 @@ async function performEquipmentAction(actor, name, operation) {
 export async function equipPhysicalItem(actor, item) {
   if (!actor?.isOwner) return ui.notifications.warn("You do not have permission to equip this item.");
   if (!item || item.parent?.id !== actor.id) return ui.notifications.warn("That item is not owned by this actor.");
+  if (!itemHasCapability(item, "equippable")) return ui.notifications.warn(`${item.name} cannot be equipped.`);
   const required = itemRequiredSlots(item);
   if (!required.length) return ui.notifications.warn(`${item.name} has no required equipment slots.`);
   const equipment = equipmentBySlot(actor);

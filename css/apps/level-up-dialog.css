@@ -1,0 +1,34 @@
+/* .vr-level-up-dialog level-up dialog object. */
+
+/* The pulse animation owns box-shadow, so use a variable-driven animation for the Level-Up Glow picker. */
+@keyframes vr-level-max-pulse-custom {
+  0%, 100% {
+    box-shadow:
+      0 0 calc(10px * var(--vr-level-intensity, 1)) color-mix(in srgb, var(--vr-level-up-glow, #22d3ee) 62%, transparent),
+      0 0 calc(20px * var(--vr-level-intensity, 1)) color-mix(in srgb, var(--vr-level-up-glow, #22d3ee) 34%, transparent),
+      inset 0 0 10px color-mix(in srgb, var(--vr-level-up-glow, #22d3ee) 26%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 calc(20px * var(--vr-level-intensity, 1)) color-mix(in srgb, var(--vr-level-up-glow, #22d3ee) 86%, transparent),
+      0 0 calc(38px * var(--vr-level-intensity, 1)) color-mix(in srgb, var(--vr-level-up-glow, #22d3ee) 52%, transparent),
+      inset 0 0 16px color-mix(in srgb, var(--vr-level-up-glow, #22d3ee) 42%, transparent);
+  }
+}
+
+.vr-level-up-dialog{
+  width: min(520px, 72vw);
+  aspect-ratio: 16 / 10;
+}
+
+.vr-level-up-canvas{
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(34, 211, 238, 0.14), transparent 56%),
+    #080910;
+}

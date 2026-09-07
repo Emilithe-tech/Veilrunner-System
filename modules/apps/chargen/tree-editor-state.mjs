@@ -3,7 +3,7 @@ export const TREE_NODE_SHAPES = Object.freeze(["circle", "diamond", "hex", "pent
 export const TREE_NODE_SIZE_PRESETS = Object.freeze(["small", "medium", "large", "wide", "custom"]);
 export const TREE_CONNECTION_ROUTES = Object.freeze(["linear", "curved", "rounded", "square"]);
 export const TREE_PATH_STATE_ORDER = Object.freeze(["blocked", "available", "active"]);
-export const TREE_ZOOM = Object.freeze({ minimum: .35, initial: 1.2, maximum: 3, step: .05, controlStep: .1 });
+export const TREE_ZOOM = Object.freeze({ minimum: .35, initial: 1.2, maximum: 2, step: .1, controlStep: .1 });
 
 const STANDARD_NODE_SIZE = Object.freeze({ root: [78, 78], school: [60, 60], practice: [60, 60], spell: [56, 60] });
 const PRESET_FACTORS = Object.freeze({ small: [.8, .8], medium: [1, 1], large: [1.34, 1.34], wide: [1.75, 1.05] });
@@ -372,6 +372,32 @@ export function consolidateTreePathRecords(records = []) {
     if (!current || (priority[record.state] ?? 0) > (priority[current.state] ?? 0)) consolidated.set(key, { ...record });
   }
   return [...consolidated.values()];
+}
+
+/** Return the distance at which each source node begins within an active route graph. */
+export function treeRouteSourcePhases(records = []) {
+  const routes = records.map(record => ({
+    sourceId: String(record?.sourceId ?? ""),
+    targetId: String(record?.targetId ?? ""),
+    length: Math.max(0, Number(record?.length) || 0)
+  })).filter(record => record.sourceId && record.targetId);
+  const sources = new Set(routes.map(record => record.sourceId));
+  const targets = new Set(routes.map(record => record.targetId));
+  const phases = new Map([...sources].filter(sourceId => !targets.has(sourceId)).map(sourceId => [sourceId, 0]));
+  if (!phases.size) for (const sourceId of sources) phases.set(sourceId, 0);
+  for (let pass = 0; pass < routes.length; pass += 1) {
+    let changed = false;
+    for (const route of routes) {
+      const sourcePhase = phases.get(route.sourceId);
+      if (sourcePhase === undefined) continue;
+      const targetPhase = sourcePhase + route.length;
+      if (phases.has(route.targetId) && phases.get(route.targetId) <= targetPhase) continue;
+      phases.set(route.targetId, targetPhase);
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return phases;
 }
 
 function ringOrder(nodes, anchor, radius, rotation) {

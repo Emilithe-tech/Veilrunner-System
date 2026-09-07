@@ -23,7 +23,7 @@
           {{/each}}
           {{#if composer.action.spellComposer}}
             <label class="vr-hud-spell-level"><span>Spell Level</span><div><input data-composer-input data-spell-level type="range" min="{{composer.action.spellComposer.level.min}}" max="{{composer.action.spellComposer.level.max}}" step="1" value="{{composer.action.spellComposer.level.value}}" aria-label="Spell level slider" /><input data-composer-input data-spell-level type="number" name="spellLevel" min="{{composer.action.spellComposer.level.min}}" max="{{composer.action.spellComposer.level.max}}" step="1" value="{{composer.action.spellComposer.level.value}}" aria-label="Spell level" /></div></label>
-          {{else if composer.action.rankScaling.enabled}}<label><span>Rank</span><input data-composer-input type="number" name="rank" min="{{composer.action.rankScaling.min}}" max="{{composer.action.rankScaling.max}}" value="{{lookup composer.selections 'rank'}}" /></label>{{/if}}
+          {{else if composer.action.hasLevelSelection}}<label><span>Rank</span><input data-composer-input type="number" name="rank" min="1" max="{{composer.action.currentLevel}}" value="{{lookup composer.selections 'rank'}}" /></label>{{/if}}
           {{#each composer.action.enhancements as |enhancement|}}<label><span>{{enhancement.label}}</span><input data-composer-input type="number" name="enhancement:{{enhancement.id}}" min="0" max="{{enhancement.maxStacks}}" value="{{lookup ../composer.selections (concat 'enhancement:' enhancement.id)}}" /></label>{{/each}}
           {{#if composer.action.spellComposer}}
             <h3>Spell Modifiers</h3>
