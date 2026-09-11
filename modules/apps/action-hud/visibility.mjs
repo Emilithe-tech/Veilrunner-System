@@ -7,7 +7,7 @@ export function canSeeEffect(effect, { actor = effect?.parent, viewer = globalTh
     isGM: Boolean(viewer?.isGM),
     isOwner: Boolean(actor?.testUserPermission?.(viewer, "OWNER")),
     isSelf: actor?.id === viewerActor?.id,
-    panState,
+    panState: actor?.system?.panSilent ? PAN_STATE.LOST : panState,
     intel
   });
 }

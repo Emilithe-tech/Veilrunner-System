@@ -10,8 +10,10 @@ export default class AmmunitionData extends foundry.abstract.TypeDataModel {
     return {
       ...physicalItemFields(),
       ammoType: text("ballistic"),
+      roundsPerPack: new NumberField({ required: true, integer: true, min: 1, initial: 1, nullable: false }),
       caliber: text(),
       damage: new SchemaField({
+        base: text(),
         modifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
         type: new StringField({
           required: true,

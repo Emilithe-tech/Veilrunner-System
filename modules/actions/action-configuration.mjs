@@ -1,4 +1,5 @@
 import { SPELL_MODIFIERS } from "./spell-modifiers.mjs";
+import { firearmDamageFormula } from "../items/firearm-damage.mjs";
 import { resolveAtLevel } from "../rules/scaling.mjs";
 import { actionProgression } from "../data/item/legacy-action-progression.mjs";
 const number = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -193,10 +194,25 @@ export function resolveActionConfiguration(actor, action, selections = {}, conte
   if (action?.weaponComposer) {
     // Preview the identical base, ammunition, rule dice, and option additions used by fire().
     // damageFormula remains the optional mode override consumed by execution.
-    const modifier = number(action.weaponComposer.damageModifier) + number(action.weaponComposer.ammoDamageModifier) + damageModifier;
-    const formula = [damageFormula || action.weaponComposer.damageFormula,
+    const ammoModifier = number(action.weaponComposer.ammoDamageModifier);
+    const modifier = number(action.weaponComposer.damageModifier) + (action.weaponComposer.capAmmoDamage ? 0 : ammoModifier) + damageModifier;
+    if (action.weaponComposer.capAmmoDamage) damageFormula = "";
+    const base = action.weaponComposer.capAmmoDamage
+      ? [action.weaponComposer.damageFormula, ammoModifier ? String(ammoModifier) : ""].filter(Boolean).join(" + ")
+      : damageFormula || action.weaponComposer.damageFormula;
+    const cappedBase = firearmDamageFormula(base, action.weaponComposer.damageMaximum, { capped: action.weaponComposer.capAmmoDamage });
+    const formula = [cappedBase,
       ...(action.weaponComposer.extraDamageDice ?? []), modifier ? String(modifier) : ""].filter(Boolean).join(" + ");
     damageOutcome = resolveActionDamageFormula(formula, damageOptions);
+    if (action.weaponComposer.capAmmoDamage) {
+      const baseOutcome = resolveActionDamageFormula(base, damageOptions);
+      const ceiling = resolveActionDamageFormula(action.weaponComposer.damageMaximum, damageOptions);
+      const additions = resolveActionDamageFormula([...(action.weaponComposer.extraDamageDice ?? []), String(modifier)].join(" + "), damageOptions);
+      damageOutcome = { ...damageOutcome, available: Boolean(action.weaponComposer.damageFormula && cappedBase),
+        minimum: Math.min(baseOutcome.minimum, ceiling.maximum) + additions.minimum,
+        maximum: Math.min(baseOutcome.maximum, ceiling.maximum) + additions.maximum,
+        average: null };
+    }
   }
   if (hasSpellModifier("focused") && damageOutcome.available) {
     const naturalMinimum = damageOutcome.minimum;

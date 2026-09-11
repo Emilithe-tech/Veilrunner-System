@@ -1,0 +1,22 @@
+{{#if itemLoading}}
+<section class="vr-item-panel">
+  {{#if itemLoading.unowned}}
+    <h2 class="section-heading">Ammo → Magazine → Firearm</h2>
+    <p class="vr-item-hint">Add this item to a character's inventory, then open that owned copy to load rounds or insert a magazine.</p>
+  {{else}}
+    <h2 class="section-heading">{{itemLoading.title}}</h2>
+    {{#if itemLoading.stackedMagazine}}<p class="vr-item-hint">This old stack contains {{itemLoading.quantity}} magazines. Split it into separate items; loaded rounds stay in the original magazine and the others start empty.</p>
+    {{#if canConfigure}}<button type="button" data-sheet-action="itemLoading" data-operation="split" data-magazine-id="{{itemLoading.magazineId}}">Split into separate magazines</button>{{/if}}{{/if}}
+    <p class="vr-item-hint">Ammo → Magazine → Firearm. Load rounds fills the magazine from the selected ammo stack, up to capacity.</p>
+    <div class="vr-item-card-grid">
+      {{#each itemLoading.rows}}
+      <article class="vr-item-config-card">
+        <h3>{{name}}</h3><p>{{status}}</p>
+        {{#if reason}}<p class="vr-item-hint">{{reason}}</p>{{/if}}
+        {{#if @root.canConfigure}}<button type="button" data-sheet-action="itemLoading" data-operation="{{operation}}" data-ammo-id="{{ammoId}}" data-magazine-id="{{magazineId}}" data-weapon-id="{{weaponId}}" {{#if reason}}disabled{{/if}}>{{label}}</button>{{/if}}
+      </article>
+      {{else}}<p class="vr-item-hint">No related items yet. Add ammo, magazines, and a firearm to this character's inventory.</p>{{/each}}
+    </div>
+  {{/if}}
+</section>
+{{/if}}

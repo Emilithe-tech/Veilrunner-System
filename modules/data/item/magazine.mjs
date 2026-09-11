@@ -11,6 +11,10 @@ export default class MagazineData extends foundry.abstract.TypeDataModel {
     return {
       ...physicalItemFields(),
       capacity: whole(1),
+      magazineType: text(),
+      ammoDamage: text(),
+      ammoDamageType: text(),
+      ammoDamageModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false }),
       rounds: whole(),
       ammoId: text(),
       sourceAmmoId: text(),

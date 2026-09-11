@@ -1,4 +1,4 @@
-const SPECIES_PACK = "Veilrunner.species";
+const SPECIES_PACK = "Veilrunner.character-library";
 
 /** Persist the temporary Medium default into every existing Species definition once. */
 export async function migrateSpeciesSizes() {

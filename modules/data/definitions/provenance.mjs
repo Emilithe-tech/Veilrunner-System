@@ -2,6 +2,7 @@ import {
   ArchitectureValidationError
 } from "./validation.mjs";
 import { canonicalIdBuilder } from "./canonical-id.mjs";
+import { ammunitionAcquisitionQuantity } from "../../items/ammunition-quantity.mjs";
 
 export const DEFINITION_PROVENANCE_FLAG_PATH = "flags.Veilrunner.provenance";
 export const DEFINITION_SNAPSHOT_VERSION = 1;
@@ -44,6 +45,8 @@ export function prepareActorOwnedSnapshot(source, {
   data.flags.Veilrunner.provenance = { ...provenance };
   data.system ??= {};
   data.system.definitionId = provenance.definitionId;
+  const ammunitionQuantity = ammunitionAcquisitionQuantity(source);
+  if (ammunitionQuantity !== null) data.system.quantity = ammunitionQuantity;
   if (currentLevel !== undefined) {
     data.system.owned ??= {};
     data.system.owned.currentLevel = Math.max(0, Math.trunc(Number(currentLevel) || 0));

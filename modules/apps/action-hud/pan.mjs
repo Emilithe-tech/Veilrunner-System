@@ -1,5 +1,6 @@
 import { DEFAULT_HEALTH_BANDS, PAN_STATE, clamp, number, systemId } from "./constants.mjs";
 import { combatantForActor } from "./economy.mjs";
+import { sharesPanInformation } from "../../helpers/pan.mjs";
 
 export function getPanState(actor, combat = globalThis.game?.combat) {
   if (!actor?.system?.networkLinked) return PAN_STATE.LOST;
@@ -12,7 +13,7 @@ export function getPanState(actor, combat = globalThis.game?.combat) {
 
 export function panFidelity(viewerActor, subjectActor, combat = globalThis.game?.combat) {
   const viewer = getPanState(viewerActor, combat);
-  if (!subjectActor?.system?.networkLinked || viewer === PAN_STATE.LOST) return "observable";
+  if (!sharesPanInformation(subjectActor?.system) || viewer === PAN_STATE.LOST) return "observable";
   if (viewer === PAN_STATE.JAMMED) return "observable";
   if (viewer === PAN_STATE.DEGRADED) return "degraded";
   return "exact";
@@ -47,4 +48,3 @@ export async function setCombatantPanState(combatant, state) {
   await combatant.update({ [`flags.${systemId()}.actionHud.pan.state`]: state });
   return true;
 }
-

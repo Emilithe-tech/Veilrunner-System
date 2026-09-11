@@ -1,0 +1,224 @@
+/* Progression is contained within the character pane, including its XP track. */
+.veilrunner.sheet.actor .progression-panel > .progression-overview,
+.veilrunner.sheet.actor .progression-panel > .progression-pool-cards {
+  padding-top: 18px;
+}
+.veilrunner.sheet.actor .progression-planned > .progression-timeline {
+  padding-top: 18px;
+}
+.veilrunner.sheet.actor .section-body:has(> .progression-panel) {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+}
+.veilrunner.sheet.actor .section-body > .progression-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  padding-bottom: 0;
+}
+.veilrunner.sheet.actor .progression-panel > * { flex-shrink: 0; }
+.veilrunner.sheet.actor .progression-panel > .progression-planned {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+.veilrunner.sheet.actor .progression-planned > .progression-timeline {
+  flex: 1 0 auto;
+  max-height: none;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding-bottom: 0;
+  overflow: visible;
+}
+.veilrunner.sheet.actor .progression-timeline > .progression-planned-level {
+  display: flex;
+  flex-direction: column;
+}
+.veilrunner.sheet.actor .progression-planned-level > .progression-timeline-items {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding-bottom: 0;
+  border-left: 0;
+  position: relative;
+}
+.veilrunner.sheet.actor .progression-planned-level > .progression-timeline-items::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 22px;
+  border-left: 1px solid var(--progression-cyan);
+}
+.veilrunner.sheet.actor .progression-panel .progression-planner-title {
+  display: block;
+  width: 100%;
+}
+.veilrunner.sheet.actor .progression-panel .progression-planner-title-row {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.veilrunner.sheet.actor .progression-planner-title button {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  height: 28px;
+  padding: 4px 12px;
+  border: 1px solid var(--vr-accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--vr-accent) 18%, var(--vr-tech-control));
+  color: var(--vr-theme-control-text, #ffffff);
+  font-size: 11px;
+  letter-spacing: normal;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.veilrunner.sheet.actor .progression-planner-title-row > span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.veilrunner.sheet.actor .progression-panel {
+  --progression-cyan: var(--vr-accent);
+  --progression-line: color-mix(in srgb, var(--vr-accent) 28%, var(--vr-tech-control));
+  color: var(--vr-theme-text, #ffffff);
+  min-width: 0;
+  container-type: inline-size;
+}
+.veilrunner.sheet.actor .progression-panel :is(h1, h2, h3, p):not(.cohesive-section-heading) { margin: 0; border: 0; }
+.veilrunner.sheet.actor .progression-panel :is(h1, h2, h3) { color: var(--vr-theme-text, #ffffff); text-shadow: none; }
+.veilrunner.sheet.actor .progression-panel :is(section, article, header, div) { box-sizing: border-box; }
+.veilrunner.sheet.actor .progression-panel h2:not(.cohesive-section-heading) { font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.veilrunner.sheet.actor .progression-panel h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; }
+.veilrunner.sheet.actor .progression-panel small { color: color-mix(in srgb, var(--vr-accent) 35%, var(--vr-theme-text, #ffffff)); font-size: 12px; }
+.veilrunner.sheet.actor .progression-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--progression-cyan); padding: 18px 2px 9px; margin-bottom: 16px; }
+.veilrunner.sheet.actor .progression-heading h1 { font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; }
+.veilrunner.sheet.actor .progression-heading i { color: var(--progression-cyan); margin-right: 8px; }
+.veilrunner.sheet.actor .progression-heading small { font-size: 11px; text-transform: uppercase; }
+.veilrunner.sheet.actor .progression-overview { display: grid; grid-template-columns: minmax(110px, .8fr) minmax(0, 3fr); gap: 8px; }
+.veilrunner.sheet.actor .progression-overview > section { min-width: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.veilrunner.sheet.actor .progression-level { grid-row: span 2; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; gap: 24px; padding: 14px 8px; box-shadow: none; }
+.veilrunner.sheet.actor .progression-level-digits { font-size: 64px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .04em; text-shadow: 0 0 18px color-mix(in srgb, var(--vr-accent) 33%, transparent); }
+.veilrunner.sheet.actor .progression-experience { display: grid; grid-template-columns: minmax(0, 1fr) minmax(100px, .43fr); gap: 20px; padding: 7px; }
+.veilrunner.sheet.actor .progression-experience-main { display: grid; gap: 9px; align-content: center; min-width: 0; padding: 10px 6px; }
+.veilrunner.sheet.actor .progression-contained-xp { position: relative; width: 100%; min-width: 0; height: 30px; overflow: hidden; border: 1px solid var(--progression-cyan); border-radius: 20px; background: var(--vr-tech-control); box-shadow: 0 0 12px color-mix(in srgb, var(--vr-accent) 13%, transparent); }
+.veilrunner.sheet.actor .progression-contained-fill { position: absolute; inset: 0 auto 0 0; max-width: 100%; background: linear-gradient(90deg, var(--vr-accent), color-mix(in srgb, var(--vr-accent) 55%, white)); box-shadow: 2px 0 7px #cfffff; }
+.veilrunner.sheet.actor .progression-contained-xp > span { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; gap: 5px; font-size: 16px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000; }
+.veilrunner.sheet.actor .progression-contained-xp input { width: 7ch; min-width: 0; height: 24px; text-align: center; }
+.veilrunner.sheet.actor .progression-total { display: grid; align-content: center; justify-items: center; gap: 12px; padding: 12px 8px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.veilrunner.sheet.actor .progression-total strong { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 30px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.veilrunner.sheet.actor .progression-total i { color: var(--vr-accent); margin: 0; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--vr-accent) 40%, transparent)); }
+.veilrunner.sheet.actor .progression-gains { padding: 8px; }
+.veilrunner.sheet.actor .progression-gains h2 { color: color-mix(in srgb, var(--vr-accent) 35%, var(--vr-theme-text, #ffffff)); margin: 0 4px 8px; }
+.veilrunner.sheet.actor .progression-gains > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.veilrunner.sheet.actor .progression-gain { display: flex; gap: 12px; align-items: center; padding: 12px 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-size: 12px; }
+.veilrunner.sheet.actor .progression-kind-attribute { --point-color: #ff9c4c; }
+.veilrunner.sheet.actor .progression-kind-talent { --point-color: #27c9ff; }
+.veilrunner.sheet.actor .progression-kind-skill { --point-color: #c67bea; }
+.veilrunner.sheet.actor .progression-gain > i { color: var(--point-color); font-size: 30px; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--point-color) 45%, transparent)); }
+.veilrunner.sheet.actor .progression-panel .progression-rule-heading { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; color: var(--progression-cyan); margin: 18px 0 9px; font-size: 15px; }
+.veilrunner.sheet.actor .progression-rule-heading small { color: inherit; }
+.veilrunner.sheet.actor .progression-rule-heading::after { content: ""; height: 1px; background: var(--progression-cyan); flex: 1; margin-left: 8px; }
+.veilrunner.sheet.actor .progression-pool-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
+.veilrunner.sheet.actor .progression-pool-card { display: grid; grid-row: span 2; grid-template-rows: subgrid; min-width: 0; padding: 12px 10px 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.veilrunner.sheet.actor .progression-pool-card header { display: grid; grid-template-columns: 34px minmax(0, 1fr) 25px; align-items: center; gap: 8px; min-height: 58px; padding-bottom: 12px; }
+.veilrunner.sheet.actor .progression-pool-card header > i { color: var(--point-color); font-size: 34px; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--point-color) 40%, transparent)); }
+.veilrunner.sheet.actor .progression-pool-card header > div { flex: 1; min-width: 0; padding-left: 8px; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-card h3 { font-size: 12px; line-height: 16px; margin-bottom: 5px; white-space: nowrap; }
+.veilrunner.sheet.actor .progression-pool-card small { display: block; min-height: 28px; font-size: 10px; line-height: 14px; color: #bccbde; }
+.veilrunner.sheet.actor .progression-pool-card button { flex: 0 0 25px; width: 25px; height: 32px; padding: 0; border: 1px solid var(--progression-line); border-radius: 4px; background: var(--vr-tech-control); color: var(--progression-cyan); }
+.veilrunner.sheet.actor .progression-pool-values { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid color-mix(in srgb, var(--point-color) 20%, transparent); padding-top: 10px; text-align: center; }
+.veilrunner.sheet.actor .progression-pool-values label { display: grid; gap: 6px; font-size: 12px; color: #b0cddd; }
+.veilrunner.sheet.actor .progression-pool-values label + label { border-left: 1px solid #25414b; }
+.veilrunner.sheet.actor .progression-pool-values strong { color: #fff; font-size: 15px; }
+.veilrunner.sheet.actor .progression-pool-values input { width: 80%; min-width: 0; margin: auto; text-align: center; }
+.veilrunner.sheet.actor .progression-planned { margin-top: 20px; }
+.veilrunner.sheet.actor .progression-planned-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; margin-bottom: 10px; }
+.veilrunner.sheet.actor .progression-planned-heading > div { display: contents; }
+.veilrunner.sheet.actor .progression-panel .progression-planned-heading h2 { grid-column: 1; grid-row: 1; font-size: 18px; }
+.veilrunner.sheet.actor .progression-planned-heading h2 i { color: var(--progression-cyan); margin-right: 7px; font-size: 27px; }
+.veilrunner.sheet.actor .progression-panel .progression-planned-heading p { grid-column: 1 / -1; grid-row: 2; font-size: 12px; color: #a4c7d6; margin: 0; }
+.veilrunner.sheet.actor .progression-planned-heading > button { grid-column: 2; grid-row: 1; white-space: nowrap; }
+.veilrunner.sheet.actor .progression-planned-heading button { width: auto; flex-shrink: 0; display: flex; gap: 10px; align-items: center; padding: 9px 13px; border: 1px solid var(--progression-cyan); border-radius: 4px; background: linear-gradient(0deg, color-mix(in srgb, var(--vr-accent) 30%, var(--vr-tech-control)), var(--vr-tech-control)); font-size: 12px; text-transform: uppercase; }
+.veilrunner.sheet.actor .progression-timeline { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 18px; max-height: 520px; min-height: 350px; overflow: auto; padding: 16px 12px 24px; border: 1px solid var(--progression-line); border-radius: 6px; background: linear-gradient(110deg, color-mix(in srgb, var(--vr-accent) 6%, transparent), var(--vr-tech-control)); scrollbar-color: var(--progression-cyan) #05141b; scrollbar-width: thin; }
+.veilrunner.sheet.actor .progression-planned-level { min-width: 0; padding: 0 10px 0 18px; border-right: 1px solid #15333c; }
+.veilrunner.sheet.actor .progression-planned-level > header { display: flex; gap: 18px; align-items: center; margin-bottom: 12px; }
+.veilrunner.sheet.actor .progression-panel .progression-planned-level h3 { font-size: 16px; margin-bottom: 5px; }
+.veilrunner.sheet.actor .progression-timeline-diamond { position: relative; width: 28px; height: 28px; flex-shrink: 0; display: grid; place-items: center; color: #fff; font-size: 14px; }
+.veilrunner.sheet.actor .progression-timeline-diamond::before { content: ""; position: absolute; inset: 0; border: 1px solid var(--progression-cyan); transform: rotate(45deg); box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 27%, transparent); }
+.veilrunner.sheet.actor .progression-timeline-items { border-left: 1px solid var(--progression-cyan); margin-left: 13px; padding: 0 0 70px 19px; min-height: 225px; }
+.veilrunner.sheet.actor .progression-planned-item { position: relative; display: flex; align-items: center; gap: 10px; min-height: 74px; padding: 10px 7px; margin-bottom: 9px; border: 1px solid #193740; border-left-color: var(--point-color); border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--point-color) 9%, #070c12), #050e13); }
+.veilrunner.sheet.actor .progression-planned-item::before { content: ""; position: absolute; left: -26px; top: calc(50% - 6px); width: 11px; height: 11px; border: 2px solid #001016; border-radius: 50%; background: var(--progression-cyan); box-shadow: 0 0 0 1px var(--progression-cyan); }
+.veilrunner.sheet.actor .progression-planned-item > i { color: var(--point-color); font-size: 28px; }
+.veilrunner.sheet.actor .progression-planned-item > div:not(.progression-plan-actions) { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.veilrunner.sheet.actor .progression-planned-item strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.veilrunner.sheet.actor .progression-plan-actions { display: grid; gap: 5px; }
+.veilrunner.sheet.actor .progression-plan-actions button { width: 17px; height: 20px; padding: 0; border: 0; background: transparent; font-size: 10px; }
+.veilrunner.sheet.actor .progression-plan-empty { color: #829eae; font-size: 12px; padding: 20px 0; }
+.veilrunner.sheet.actor .progression-plan-add { display: flex; gap: 12px; align-items: center; width: auto; padding: 8px 0; border: 0; background: transparent; font-size: 12px; color: var(--vr-accent); text-align: left; }
+.veilrunner.sheet.actor .progression-plan-add i { font-size: 27px; color: #fff; margin-left: -33px; background: #061118; border-radius: 50%; }
+.veilrunner.sheet.actor .progression-scroll-hint { display: flex; gap: 20px; justify-content: center; padding-top: 8px; color: color-mix(in srgb, var(--vr-accent) 35%, var(--vr-theme-text, #ffffff)); font-size: 12px; }
+.veilrunner.sheet.actor .progression-planner-editor:not([hidden]) { display: grid; grid-template-columns: 70px 100px minmax(0, 1fr) 110px; gap: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--progression-line); border-radius: 5px; background: var(--vr-tech-control); }
+.veilrunner.sheet.actor .progression-planner-editor label { display: grid; gap: 5px; min-width: 0; font-size: 12px; }
+.veilrunner.sheet.actor .progression-planner-editor :is(input, select) { width: 100%; min-width: 0; }
+.veilrunner.sheet.actor .progression-planner-editor > button { grid-column: 1 / -1; }
+/* Keep the same compact metrics on both sides of the hero-column transition. */
+  .veilrunner.sheet.actor .progression-heading small { display: none; }
+  .veilrunner.sheet.actor .progression-overview { grid-template-columns: 90px minmax(0, 1fr); }
+  .veilrunner.sheet.actor .progression-experience { gap: 8px; grid-template-columns: minmax(0, 1fr) 105px; }
+  .veilrunner.sheet.actor .progression-total strong { font-size: 26px; gap: 8px; }
+  .veilrunner.sheet.actor .progression-gain { gap: 6px; padding: 10px 6px; font-size: 11px; }
+  .veilrunner.sheet.actor .progression-gain > i { font-size: 22px; }
+  .veilrunner.sheet.actor .progression-pool-card { padding-inline: 8px; }
+  .veilrunner.sheet.actor .progression-pool-card header { grid-template-columns: 24px minmax(0, 1fr) 22px; gap: 6px; }
+  .veilrunner.sheet.actor .progression-pool-card header > i { font-size: 24px; }
+  .veilrunner.sheet.actor .progression-pool-card button { width: 22px; }
+  .veilrunner.sheet.actor .progression-panel .progression-pool-card h3 { font-size: 11px; }
+  .veilrunner.sheet.actor .progression-timeline { gap: 20px 8px; }
+  .veilrunner.sheet.actor .progression-planned-level { padding-left: 8px; padding-right: 6px; }
+  .veilrunner.sheet.actor .progression-planner-editor:not([hidden]) { grid-template-columns: 1fr 1fr; }
+
+.veilrunner.sheet.actor .progression-panel :is(.progression-experience-main h2, .progression-experience-main > small, .progression-total h2, .progression-gains h2, .progression-pool-values label, .progression-planned-level h3, .progression-planned-level > header small) {
+  white-space: nowrap;
+  line-height: 16px;
+}
+.veilrunner.sheet.actor .progression-gain > span {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  line-height: 14px;
+}
+.veilrunner.sheet.actor .progression-panel .progression-pool-card small {
+  font-size: 10px;
+  line-height: 14px;
+  min-height: 28px;
+}
+.veilrunner.sheet.actor .progression-panel .progression-plan-empty {
+  box-sizing: border-box;
+  min-height: 72px;
+  line-height: 16px;
+}
+.veilrunner.sheet.actor .progression-plan-add {
+  min-height: 43px;
+  white-space: nowrap;
+  line-height: 16px;
+}
+.veilrunner.sheet.actor .progression-planned-item strong {
+  min-height: 32px;
+  line-height: 16px;
+}
+.veilrunner.sheet.actor .progression-planned-item small {
+  min-height: 16px;
+  line-height: 16px;
+}

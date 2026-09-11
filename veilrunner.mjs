@@ -39,6 +39,7 @@ const PARTY_SHEET_PARTIALS = [
 ];
 
 const HERO_SHEET_PARTIALS = [
+  "systems/veilrunner/templates/actor/hero/parts/progression.hbs",
   "systems/veilrunner/templates/actor/hero/parts/header.hbs",
   "systems/veilrunner/templates/actor/hero/parts/equipment.hbs",
   "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs",

@@ -2,6 +2,9 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 import { completedXpBeforeLevel, xpForLevel } from "../data/xp.mjs";
+import { ammunitionAcquisitionQuantity } from "../items/ammunition-quantity.mjs";
+import { progressionPresentation } from "./progression-view.mjs";
+import { fitHeroViewport } from "./hero-viewport.mjs";
 import { attributePointsForLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
 import { VEILRUNNER_PROFESSIONS, findDiscipline } from "../data/professions.mjs";
 import { openCharacterCreation } from "../apps/character-creation.mjs";
@@ -11,6 +14,7 @@ import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.
 import { equipPhysicalItem, itemAcceptsEquipmentSlot, unequipPhysicalItem } from "../items/equipment.mjs";
 import { discoverActorProvidedActions, isOwnedActionItem } from "../actions/action-sources.mjs";
 import { applyItemWear } from "../items/durability.mjs";
+import { firearmLoadedState } from "../items/firearms.mjs";
 import { equipmentBySlot, itemRequiredSlots } from "../rules/item-rules.mjs";
 import { EQUIPMENT_SLOT_COLUMNS, WEAPON_TYPE_GROUPS, itemRarityData, normalizeWeaponType } from "../data/item/physical.mjs";
 import { itemHasCapability } from "../data/definitions/item-capabilities.mjs";
@@ -31,7 +35,7 @@ const DETAILS_CATEGORIES = [
 const DETAILS_SUBTABS = DETAILS_CATEGORIES.map(category => category.key);
 
 const SECTIONS = ["character", "actions", "inventory", "datapad", "settings"];
-const CHARACTER_SUBTABS = ["stats", "progression", "details", "biography"];
+const CHARACTER_SUBTABS = ["loadout", "stats", "progression", "details", "biography"];
 const ACTIONS_SUBTABS = ["favorites", "actions", "abilities", "reactions", "magic", "tech"];
 const ACTION_DAMAGE_TYPES = ["pyro", "hydro", "cryo", "floral", "geo", "aero", "electric", "sonic", "light", "void", "slashing", "bludgeoning", "piercing"];
 const ACTION_DAMAGE_ICONS = {
@@ -270,8 +274,8 @@ function activatePortraitCrop(event, dialog) {
   if (!preview || !xInput || !yInput || !zoomInput || !rotationInput || !flipInput) return;
 
   const defaults = {
-    cropX: "50",
-    cropY: "50",
+    cropX: "0",
+    cropY: "0",
     cropZoom: "1",
     cropRotation: "0",
     cropFlipX: false
@@ -281,7 +285,36 @@ function activatePortraitCrop(event, dialog) {
   const formatCropValue = input => {
     if (input.name === "cropZoom") return `${Number(input.value).toFixed(2)}x`;
     if (input.name === "cropRotation") return `${input.value}deg`;
-    return `${input.value}%`;
+    const direction = input === xInput && flipInput.checked ? 1 : -1;
+    return `${Math.round(Number(input.value) * direction)}px`;
+  };
+
+  const portraitImage = preview.querySelector("img");
+  const positions = {
+    x: clampCropNumber(xInput.value, 0, 100, 50),
+    y: clampCropNumber(yInput.value, 0, 100, 50)
+  };
+  const travel = { x: 0, y: 0 };
+  const syncPixelControls = () => {
+    const width = preview.clientWidth;
+    const height = preview.clientHeight;
+    const imageWidth = portraitImage?.naturalWidth || width;
+    const imageHeight = portraitImage?.naturalHeight || height;
+    const scale = Math.max(width / imageWidth, height / imageHeight)
+      * clampCropNumber(zoomInput.value, 1, 5, 1);
+    for (const [axis, input, extent] of [
+      ["x", xInput, imageWidth * scale - width],
+      ["y", yInput, imageHeight * scale - height]
+    ]) {
+      travel[axis] = Math.max(0, extent);
+      const limit = travel[axis] / 2;
+      input.min = String(-limit);
+      input.max = String(limit);
+      input.step = "any";
+      input.disabled = limit < 0.5;
+      input.value = String((50 - positions[axis]) / 100 * travel[axis]);
+      input.dataset.cropPosition = String(positions[axis]);
+    }
   };
 
   const syncVerticalSliderLength = () => {
@@ -290,8 +323,9 @@ function activatePortraitCrop(event, dialog) {
   };
 
   const apply = () => {
-    const cropX = clampCropNumber(xInput.value, -100, 200, 50);
-    const cropY = clampCropNumber(yInput.value, -100, 200, 50);
+    syncPixelControls();
+    const cropX = positions.x;
+    const cropY = positions.y;
     const cropZoom = clampCropNumber(zoomInput.value, 1, 5, 1);
     const cropRotation = clampCropNumber(rotationInput.value, -180, 180, 0);
     preview.style.setProperty("--crop-x", `${cropX}%`);
@@ -306,19 +340,38 @@ function activatePortraitCrop(event, dialog) {
       if (input) output.textContent = formatCropValue(input);
     });
   };
-  for (const input of [xInput, yInput, zoomInput, rotationInput, flipInput]) input.addEventListener("input", apply);
+  for (const [axis, input] of [["x", xInput], ["y", yInput]]) {
+    input.addEventListener("input", () => {
+      positions[axis] = travel[axis] > 0 ? 50 - Number(input.value) / travel[axis] * 100 : 50;
+      apply();
+    });
+  }
+  for (const input of [zoomInput, rotationInput, flipInput]) input.addEventListener("input", apply);
+  preview.addEventListener("wheel", (wheelEvent) => {
+    wheelEvent.preventDefault();
+    wheelEvent.stopPropagation();
+    if (!wheelEvent.deltaY) return;
+    const zoom = clampCropNumber(zoomInput.value, 1, 5, 1);
+    zoomInput.value = String(Math.max(1, Math.min(5,
+      Math.round((zoom - Math.sign(wheelEvent.deltaY) * 0.05) * 100) / 100)));
+    apply();
+  }, { passive: false });
   root.querySelectorAll("[data-crop-reset]").forEach(button => {
     button.addEventListener("click", () => {
       const input = root.querySelector(`[name="${button.dataset.cropReset}"]`);
       if (!input) return;
       if (input.type === "checkbox") input.checked = defaults[input.name];
       else input.value = defaults[input.name];
+      if (input === xInput) positions.x = 50;
+      if (input === yInput) positions.y = 50;
       apply();
     });
   });
   syncVerticalSliderLength();
+  apply();
+  portraitImage?.addEventListener("load", apply);
   if (globalThis.ResizeObserver) {
-    const resizeObserver = new ResizeObserver(syncVerticalSliderLength);
+    const resizeObserver = new ResizeObserver(() => { syncVerticalSliderLength(); apply(); });
     resizeObserver.observe(preview);
   } else {
     window.addEventListener("resize", syncVerticalSliderLength);
@@ -331,9 +384,11 @@ function activatePortraitCrop(event, dialog) {
   });
   preview.addEventListener("pointermove", (pointerEvent) => {
     if (!drag) return;
-    const rect = preview.getBoundingClientRect();
-    xInput.value = Math.max(-100, Math.min(200, drag.x - ((pointerEvent.clientX - drag.startX) / rect.width) * 100));
-    yInput.value = Math.max(-100, Math.min(200, drag.y - ((pointerEvent.clientY - drag.startY) / rect.height) * 100));
+    for (const [axis, offset] of [["x", pointerEvent.clientX - drag.startX], ["y", pointerEvent.clientY - drag.startY]]) {
+      positions[axis] = travel[axis] > 0
+        ? Math.max(0, Math.min(100, 50 - (drag[axis] + offset) / travel[axis] * 100))
+        : 50;
+    }
     apply();
   });
   preview.addEventListener("pointerup", () => { drag = null; });
@@ -434,6 +489,8 @@ const barrierStatus = (percent) => {
   const key = percent === 0 ? "None" : percent <= 50 ? "Weakened" : "Active";
   return game.i18n.localize(`VEILRUNNER.Status.Barrier.${key}`);
 };
+import { PAN_MODES, panModeFor, panModeUpdate, sharesPanInformation } from "../helpers/pan.mjs";
+
 const PAN_STATES = Object.freeze(["active", "off", "interference", "jammed"]);
 const panStateFor = (system) => {
   if (!system?.networkLinked) return "off";
@@ -441,10 +498,17 @@ const panStateFor = (system) => {
   return PAN_STATES.includes(state) && state !== "off" ? state : "active";
 };
 const panStateLabel = (state) => game.i18n.localize(`VEILRUNNER.PAN.${state[0].toUpperCase()}${state.slice(1)}`);
+const panIconFor = (system) => {
+  const state = panStateFor(system);
+  if (state === "off") return "fa-wifi-slash";
+  if (state === "interference" || state === "jammed") return "fa-wifi-exclamation";
+  return panModeFor(system) === "silent" ? "fa-wifi-weak" : "fa-wifi";
+};
 const partyMemberViewData = (member, { sourcePanState, sheetOptions }) => {
   const resources = member.system.resources ?? {};
   const memberPanState = sourcePanState !== "off" ? panStateFor(member.system) : "off";
   const linked = memberPanState !== "off";
+  const sharing = linked && sharesPanInformation(member.system);
   const percent = member.system.percent ?? {};
   const shields = resources.shields ?? resources.shield ?? {};
   const hasMaximum = resource => Number(resource?.max ?? 0) > 0;
@@ -456,10 +520,10 @@ const partyMemberViewData = (member, { sourcePanState, sheetOptions }) => {
     img: member.system.appearanceImage || member.img,
     linked,
     panState: memberPanState,
-    health: linked ? `${resources.health?.value ?? 0} / ${resources.health?.max ?? 0}` : healthStatus(percent.health ?? 0),
-    armor: linked ? `${resources.armor?.value ?? 0} / ${resources.armor?.max ?? 0}` : armorStatus(percent.armor ?? 0),
-    shields: linked ? `${shields.value ?? 0} / ${shields.max ?? 0}` : shieldStatus(shields),
-    barriers: linked ? `${resources.barriers?.value ?? 0} / ${resources.barriers?.max ?? 0}` : barrierStatus(percent.barriers ?? 0),
+    health: sharing ? `${resources.health?.value ?? 0} / ${resources.health?.max ?? 0}` : healthStatus(percent.health ?? 0),
+    armor: sharing ? `${resources.armor?.value ?? 0} / ${resources.armor?.max ?? 0}` : armorStatus(percent.armor ?? 0),
+    shields: sharing ? `${shields.value ?? 0} / ${shields.max ?? 0}` : shieldStatus(shields),
+    barriers: sharing ? `${resources.barriers?.value ?? 0} / ${resources.barriers?.max ?? 0}` : barrierStatus(percent.barriers ?? 0),
     showHealth: showResource(resources.health),
     showArmor: showResource(resources.armor),
     showShields: showResource(shields),
@@ -501,6 +565,16 @@ function normalizeInventoryToken(value) {
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "");
+}
+
+function inventoryGradeRoman(value) {
+  let grade = Math.max(1, Math.floor(Number(value) || 1));
+  if (!Number.isFinite(grade) || grade > 3999) return String(grade);
+  let result = "";
+  for (const [amount, numeral] of [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100, "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]]) {
+    while (grade >= amount) { result += numeral; grade -= amount; }
+  }
+  return result;
 }
 
 function getInventoryFilters(category) {
@@ -639,6 +713,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   static DRAWER_WIDTH = 320;
   static DRAWER_ANIMATION_MS = 800;
   static #portraitEditorsByUser = new Map();
+  static #dismissActiveInventoryMenu = null;
 
   static DEFAULT_OPTIONS = {
     classes: ["veilrunner", "sheet", "actor", "hero"],
@@ -651,6 +726,14 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     actions: {
       setSection: VeilrunnerHeroSheet.#onSetSection,
       setSubTab: VeilrunnerHeroSheet.#onSetSubTab,
+      openLoadoutItem: VeilrunnerHeroSheet.#onOpenLoadoutItem,
+      openLoadoutMenu: VeilrunnerHeroSheet.#onOpenLoadoutMenu,
+      pickLoadoutConsumable: VeilrunnerHeroSheet.#onPickLoadoutConsumable,
+      selectLoadoutConsumable: VeilrunnerHeroSheet.#onSelectLoadoutConsumable,
+      closeLoadoutConsumables: VeilrunnerHeroSheet.#onCloseLoadoutConsumables,
+      toggleLoadoutPanel: VeilrunnerHeroSheet.#onToggleLoadoutPanel,
+      equipLoadoutItem: VeilrunnerHeroSheet.#onEquipLoadoutItem,
+      scrollArmorLoadout: VeilrunnerHeroSheet.#onScrollArmorLoadout,
       toggleInventoryFilters: VeilrunnerHeroSheet.#onToggleInventoryFilters,
       setInventoryLayout: VeilrunnerHeroSheet.#onSetInventoryLayout,
       setInventorySort: VeilrunnerHeroSheet.#onSetInventorySort,
@@ -665,6 +748,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       removeInventoryItem: VeilrunnerHeroSheet.#onRemoveInventoryItem,
       toggleSheetOption: VeilrunnerHeroSheet.#onToggleSheetOption,
       togglePan: VeilrunnerHeroSheet.#onTogglePan,
+      setPanMode: VeilrunnerHeroSheet.#onSetPanMode,
       setInventoryWeaponFilter: VeilrunnerHeroSheet.#onSetInventoryWeaponFilter,
       setActionView: VeilrunnerHeroSheet.#onSetActionView,
       setActionCardSort: VeilrunnerHeroSheet.#onSetActionCardSort,
@@ -679,6 +763,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       openEquipmentTab: VeilrunnerHeroSheet.#onOpenEquipmentTab,
       unequip: VeilrunnerHeroSheet.#onUnequip,
       toggleEditMode: VeilrunnerHeroSheet.#onToggleEditMode,
+      toggleHeroColumn: VeilrunnerHeroSheet.#onToggleHeroColumn,
       setAppearanceImage: VeilrunnerHeroSheet.#onSetAppearanceImage,
       setCharacterBackgroundImage: VeilrunnerHeroSheet.#onSetCharacterBackgroundImage,
       setPortraitImage: VeilrunnerHeroSheet.#onSetPortraitImage,
@@ -689,6 +774,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       toggleEquipment: VeilrunnerHeroSheet.#onToggleEquipment,
       toggleDetails: VeilrunnerHeroSheet.#onToggleDetails,
       openCharacterCreation: VeilrunnerHeroSheet.#onOpenCharacterCreation,
+      toggleProgressionPlanner: VeilrunnerHeroSheet.#onToggleProgressionPlanner,
+      openLevelPlanner: VeilrunnerHeroSheet.#onOpenLevelPlanner,
+      saveProgressionPlan: VeilrunnerHeroSheet.#onSaveProgressionPlan,
+      removeProgressionPlan: VeilrunnerHeroSheet.#onRemoveProgressionPlan,
+      moveProgressionPlan: VeilrunnerHeroSheet.#onMoveProgressionPlan,
       openPlayerDatapad: VeilrunnerHeroSheet.#onOpenPlayerDatapad,
       openLevelCanvas: VeilrunnerHeroSheet.#onOpenLevelCanvas,
       openPartyActor: VeilrunnerHeroSheet.#onOpenPartyActor,
@@ -747,7 +837,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   #detailsFrameWidth = VeilrunnerHeroSheet.BASE_WIDTH;
   #drawerHandleTop = { left: 50, right: 50 };
   #editMode = false;
-  #debouncedRender = foundry.utils.debounce(() => this.render(), 50);
+  #heroColumnSave = Promise.resolve();
+  #loadoutChange = null;
+  #loadoutChanging = false;
+  #leftDrawerExtent = 0;
+  #equipmentCloseTimeout;
+  #leftFrameReveal;
+  #debouncedRender = foundry.utils.debounce(() => { if (!this.#loadoutChanging) this.render(); }, 50);
   #hookIds = [];
   #inventoryItemContextMenu = null;
   #inventoryItemContextDismiss = null;
@@ -774,13 +870,84 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       action: "toggleEditMode",
       icon: `fa-solid ${this.#editMode ? "fa-toggle-on" : "fa-toggle-off"}`,
       label: "VEILRUNNER.EditMode"
+    }, {
+      action: "toggleHeroColumn",
+      icon: "fa-solid fa-table-columns",
+      label: "VEILRUNNER.ToggleHeroColumn"
     });
     return buttons;
   }
 
   /** @override */
+  #viewportWindow = null;
+  #onViewportResize = () => this.setPosition();
+
+  /** Resolve layout dimensions before scaling the window. @override */
+  _updatePosition(position) {
+    // V14.367 divides CSS min/max dimensions by position.scale. Our fixed
+    // layout bounds are unscaled pixels, so resolve them at 1 before fitting.
+    const resolved = super._updatePosition({ ...position, scale: 1 });
+    const view = this.element?.ownerDocument.defaultView;
+    if (!view) return resolved;
+    if (view !== this.#viewportWindow) {
+      this.#viewportWindow?.removeEventListener("resize", this.#onViewportResize);
+      this.#viewportWindow = view;
+      view.addEventListener("resize", this.#onViewportResize, { passive: true });
+    }
+    const root = view.document.documentElement;
+    return fitHeroViewport(resolved, {
+      width: root.clientWidth || view.innerWidth,
+      height: root.clientHeight || view.innerHeight
+    }, position);
+  }
+
   async _onRender(context, options) {
     await super._onRender(context, options);
+    const consumableGrid = this.element?.querySelector("[data-consumable-grid]");
+    if (consumableGrid) {
+      const fill = () => {
+        const count = 6;
+        while (consumableGrid.children.length > count) consumableGrid.lastElementChild.remove();
+        while (consumableGrid.children.length < count) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "loadout-gear-tile loadout-consumable-add";
+          button.dataset.action = "pickLoadoutConsumable";
+          button.dataset.consumableSlot = String(consumableGrid.children.length);
+          button.setAttribute("aria-label", "Select consumable");
+          button.title = "Select consumable";
+          const icon = document.createElement("i");
+          icon.className = "fa-solid fa-plus";
+          icon.setAttribute("aria-hidden", "true");
+          button.append(icon);
+          consumableGrid.append(button);
+        }
+      };
+      fill();
+    }
+    const armorTrack = this.element?.querySelector(".loadout-section-armor .loadout-items");
+    if (armorTrack && !armorTrack.dataset.scrollBound) {
+      armorTrack.dataset.scrollBound = "true";
+      const sync = () => {
+        const maximum = armorTrack.scrollWidth - armorTrack.clientWidth;
+        armorTrack.parentElement.querySelector(".previous").hidden = armorTrack.scrollLeft <= 1;
+        armorTrack.parentElement.querySelector(".next").hidden = armorTrack.scrollLeft >= maximum - 1;
+      };
+      armorTrack.addEventListener("scroll", sync, { passive: true });
+      armorTrack.parentElement.addEventListener("wheel", event => {
+        if (armorTrack.querySelector(".is-expanded, .is-closing")) return;
+        if (event.ctrlKey || event.target.closest(".loadout-expansion")) return;
+        const maximum = armorTrack.scrollWidth - armorTrack.clientWidth;
+        if (maximum <= 1) return;
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? armorTrack.clientWidth : 1;
+        const next = Math.max(0, Math.min(maximum, armorTrack.scrollLeft + delta * unit));
+        if (Math.abs(next - armorTrack.scrollLeft) < 0.5) return;
+        event.preventDefault();
+        armorTrack.scrollLeft = next;
+      }, { passive: false });
+      requestAnimationFrame(sync);
+    }
     if (this.element && !this.element.dataset.veilrunnerFrontBinding) {
       this.element.dataset.veilrunnerFrontBinding = "true";
       this.element.addEventListener("pointerdown", () => bringVeilrunnerApplicationToFront(this.element, this), { passive: true });
@@ -802,10 +969,38 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     this.#bindDrawerHandleDragging();
     this.#playPendingNavAnimation();
     this.#clearPendingTabAnimations();
+    this.#sizeConsumableSquares();
+    this.#animateLoadoutChange();
+  }
+
+  /** Coalesce automatic document renders during loadout changes. @override */
+  render(...args) {
+    // Document updates call render directly, not only _onUpdate. During a
+    // loadout transaction its single final render owns the animation snapshot.
+    if (this.#loadoutChanging) return Promise.resolve(this);
+    return super.render(...args);
+  }
+
+  #commitLoadoutRender() {
+    return super.render({ parts: ["main", "equipment", "details"] });
+  }
+
+  /** Keep drawer controls stable when inventory filters replace the main part. @override */
+  _syncPartState(partId, newElement, priorElement, state) {
+    if (partId === "main") {
+      for (const side of ["left", "right"]) {
+        const selector = `:scope > .drawer-handle.handle-${side}`;
+        const priorHandle = priorElement.querySelector(selector);
+        const newHandle = newElement.querySelector(selector);
+        if (priorHandle && newHandle) newHandle.replaceWith(priorHandle);
+      }
+    }
+    super._syncPartState(partId, newElement, priorElement, state);
   }
 
   /** @override */
   _onUpdate(changed, options, userId) {
+    if (this.#loadoutChanging) return;
     // Display-only option buttons update their affected elements directly.
     // Do not let their actor update recreate the main application part.
     if (options?.veilrunnerPreserveMainPosition) return;
@@ -814,6 +1009,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
 
   /** @override */
   async _onClose(options) {
+    this.#viewportWindow?.removeEventListener("resize", this.#onViewportResize);
+    this.#viewportWindow = null;
     this.#closeInventoryItemContextMenu();
     this.#closeInventoryFilters();
     this.#closeActionItemContextMenu();
@@ -876,6 +1073,14 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     if (!root || root.dataset.veilrunnerInventoryContextBinding) return;
     root.dataset.veilrunnerInventoryContextBinding = "true";
     root.addEventListener("contextmenu", event => this.#onInventoryItemContextMenu(event));
+    root.addEventListener("click", event => {
+      const summary = event.target.closest?.(".inventory-item-menu > summary");
+      const menu = summary?.parentElement;
+      if (!menu || menu.open) return;
+      VeilrunnerHeroSheet.#dismissActiveInventoryMenu?.();
+      for (const other of root.ownerDocument.querySelectorAll(".inventory-item-menu[open]")) other.open = false;
+      VeilrunnerHeroSheet.#dismissActiveInventoryMenu = () => { menu.open = false; };
+    }, true);
   }
 
   /** Filter rendered inventory rows without recreating the sheet on every keystroke. */
@@ -888,7 +1093,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       const query = normalizeInventoryToken(input.value);
       let visibleItems = 0;
       for (const row of this.element.querySelectorAll(".inventory-item-row")) {
-        row.hidden = Boolean(query) && !normalizeInventoryToken(row.textContent).includes(query);
+        const itemIds = String(row.dataset.itemIds || row.dataset.itemId || "").split(",");
+        const traits = itemIds.flatMap(id => this.actor.items.get(id.trim())?.system?.traits ?? []);
+        row.hidden = Boolean(query) && !normalizeInventoryToken(`${row.textContent} ${traits.join(" ")}`).includes(query);
         if (!row.hidden) visibleItems += 1;
       }
       for (const subtype of this.element.querySelectorAll(".inventory-subtype-section")) {
@@ -954,8 +1161,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   #onInventoryItemContextMenu(event) {
-    if (this.section !== "inventory" || !this.actor.isOwner) return;
-    const row = event.target.closest?.(".inventory-item-row[data-item-id]");
+    const loadout = this.section === "character" && this.subTabs.character === "loadout";
+    if ((!loadout && this.section !== "inventory") || !this.actor.isOwner) return;
+    const row = event.target.closest?.(loadout ? ".loadout-item[data-item-id], .loadout-gear-tile[data-item-id]" : ".inventory-item-row[data-item-id]");
     const item = this.actor.items.get(row?.dataset.itemId);
     if (!item?.isOwner) return;
 
@@ -965,6 +1173,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   #inventoryItemMenuActions(item, row) {
+    const loadout = Boolean(row?.closest(".loadout-sections"));
+    const equipped = row?.classList.contains("is-equipped") || (loadout && Object.values(equipmentBySlot(this.actor)).includes(item.id));
     const sourceItems = String(row?.dataset.itemIds || item.id)
       .split(",")
       .map(id => this.actor.items.get(id.trim()))
@@ -975,7 +1185,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const actions = [];
 
     if (itemRequiredSlots(item).length > 0 && (itemHasCapability(item, "equippable") || row?.classList.contains("is-equipped"))) {
-      actions.push(row?.classList.contains("is-equipped")
+      actions.push(equipped
         ? { action: "unequipInventoryItem", icon: "fa-shirt", label: "VEILRUNNER.InventoryCard.Unequip" }
         : { action: "equipInventoryItem", icon: "fa-shirt", label: "VEILRUNNER.InventoryCard.Equip" });
     }
@@ -995,7 +1205,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       { action: "openInventoryItemSheet", icon: "fa-wrench", label: "Modify" },
       { action: "removeInventoryItem", icon: "fa-trash", label: "VEILRUNNER.InventoryCard.Remove", className: "remove" }
     );
-    return actions;
+    return loadout
+      ? [{ action: "changeLoadoutItem", icon: "fa-arrows-rotate", label: "Change" }, ...actions.filter(entry => entry.action !== "removeInventoryItem")]
+      : actions;
   }
 
   async #runInventoryItemMenuAction(action, event, target) {
@@ -1016,7 +1228,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   #openInventoryItemContextMenu(event, item, row) {
+    VeilrunnerHeroSheet.#dismissActiveInventoryMenu?.();
+    for (const other of this.element.ownerDocument.querySelectorAll(".inventory-item-menu[open]")) other.open = false;
     this.#closeInventoryItemContextMenu();
+    VeilrunnerHeroSheet.#dismissActiveInventoryMenu = () => this.#closeInventoryItemContextMenu();
     const menu = document.createElement("menu");
     menu.className = "vr-inventory-item-context-menu";
     for (const property of ["--vr-accent", "--vr-tech-surface-raised", "--vr-tech-control-hover", "--vr-theme-raised-text", "--vr-tech-border-strong"]) {
@@ -1040,6 +1255,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       button.append(icon, label);
       button.addEventListener("click", async clickEvent => {
         this.#closeInventoryItemContextMenu();
+        if (entry.action === "changeLoadoutItem") return this.#changeLoadoutItem(row, clickEvent);
         await this.#runInventoryItemMenuAction(entry.action, clickEvent, button);
       });
       menu.append(button);
@@ -1171,6 +1387,17 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const stateLabel = panStateLabel(sourcePanState);
     const connectedLabel = game.i18n.localize("VEILRUNNER.PAN.Connected");
     const panLabel = game.i18n.localize("VEILRUNNER.PAN.Label");
+    const mode = panModeFor(system);
+    for (const icon of this.element?.querySelectorAll("[data-pan-icon]") ?? []) {
+      icon.className = `fa-solid fa-fw ${panIconFor(system)}`;
+    }
+    for (const control of this.element?.querySelectorAll(".party-pan-modes") ?? []) {
+      control.dataset.panMode = mode;
+      for (const button of control.querySelectorAll("[data-pan-mode]")) {
+        button.setAttribute("aria-pressed", String(button.dataset.panMode === mode));
+      }
+    }
+    for (const count of this.element?.querySelectorAll("[data-pan-connected-count]") ?? []) count.textContent = String(connectedCount);
 
     for (const button of this.element?.querySelectorAll(".party-pan-status") ?? []) {
       button.dataset.panState = sourcePanState;
@@ -1227,6 +1454,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       uiColor: "#101216",
       categoryHighlightColor: "#a855f7",
       characterBorderColor: "#66717d",
+      loadoutCardColor: "#cbd5e1",
+      loadoutButtonColor: "",
       characterBackgroundColor: "#000000",
       manaTextColor: "#60a5fa",
       staminaTextColor: "#f59e0b",
@@ -1239,11 +1468,16 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       panInterferenceColor: "#fbbf24"
     };
     const colorProperties = {
+      healthBarColor: "--vr-resource-health",
+      armorBarColor: "--vr-resource-armor",
+      shieldsBarColor: "--vr-resource-shields",
+      barriersBarColor: "--vr-resource-barriers",
       categoryHighlightColor: "--vr-accent",
       panOffColor: "--vr-pan-off",
       panOnColor: "--vr-pan-on",
       panInterferenceColor: "--vr-pan-interference",
       characterBorderColor: "--vr-character-border",
+      loadoutCardColor: "--vr-loadout-card-color",
       characterBackgroundColor: "--vr-character-background",
       manaTextColor: "--vr-mana-text",
       staminaTextColor: "--vr-stamina-text",
@@ -1271,6 +1505,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     mainPanel.querySelectorAll("[data-ui-preview]").forEach(control => {
       const preview = () => {
         const key = control.dataset.uiPreview;
+        if (key === "loadoutCardColor" && !this.actor.system.sheetOptions?.loadoutButtonColor) {
+          const picker = mainPanel.querySelector("[data-loadout-button-color]");
+          if (picker) picker.value = control.value;
+        }
         const property = colorProperties[key];
         if (property) mainPanel.style.setProperty(property, normalizeUiColor(control.value, mainPanel.style.getPropertyValue(property)));
         if (key === "levelUpBrightness") mainPanel.style.setProperty("--vr-level-brightness", Math.max(0.25, Math.min(2, Number(control.value) || 1)));
@@ -1296,6 +1534,23 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         await updateUiOption(key, control.value);
       });
     });
+    const loadoutButtonPicker = mainPanel.querySelector("[data-loadout-button-color]");
+    if (loadoutButtonPicker) {
+      loadoutButtonPicker.addEventListener("input", () => {
+        this.element.style.setProperty("--vr-loadout-button-color", loadoutButtonPicker.value);
+      });
+      loadoutButtonPicker.addEventListener("change", async event => {
+        event.stopPropagation();
+        await updateUiOption("loadoutButtonColor", loadoutButtonPicker.value);
+      });
+      mainPanel.querySelector("[data-reset-loadout-button-color]")?.addEventListener("click", async event => {
+        event.preventDefault();
+        await updateUiOption("loadoutButtonColor", "");
+        this.element.style.removeProperty("--vr-loadout-button-color");
+        loadoutButtonPicker.value = mainPanel.querySelector('[data-ui-preview="loadoutCardColor"]')?.value
+          || normalizeUiColor(this.actor.system.sheetOptions?.loadoutCardColor, "#cbd5e1");
+      });
+    }
     mainPanel.querySelectorAll("[data-reset-ui-color]").forEach(button => {
       button.addEventListener("click", async event => {
         event.preventDefault();
@@ -1363,6 +1618,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     root.classList.remove("color-vision-default", "color-vision-protanopia", "color-vision-deuteranopia", "color-vision-tritanopia");
     root.classList.add(`color-vision-${colorVision}`);
     root.style.setProperty("--vr-ui-color", uiColor);
+    root.style.setProperty("--vr-loadout-card-color", normalizeUiColor(options.loadoutCardColor ?? this.actor.system.sheetOptions?.loadoutCardColor, "#cbd5e1"));
+    const loadoutButtonColor = options.loadoutButtonColor ?? this.actor.system.sheetOptions?.loadoutButtonColor;
+    if (loadoutButtonColor) root.style.setProperty("--vr-loadout-button-color", normalizeUiColor(loadoutButtonColor, "#cbd5e1"));
+    else root.style.removeProperty("--vr-loadout-button-color");
     root.style.setProperty("--vr-theme-text", readableThemeText(uiColor, "#080910", 0.12));
     root.style.setProperty("--vr-theme-header-text", readableThemeText(uiColor, "#11141c", 0.18));
     root.style.setProperty("--vr-theme-surface-text", readableThemeText(uiColor, "#080a0f", 0.14));
@@ -1384,11 +1643,29 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     root.style.setProperty("--vr-resource-armor", resourcePalette.armor);
     root.style.setProperty("--vr-resource-shields", resourcePalette.shields);
     root.style.setProperty("--vr-resource-barriers", resourcePalette.barriers);
+    for (const key of ["health", "armor", "shields", "barriers"]) {
+      const color = options[`${key}BarColor`] ?? this.actor.system.sheetOptions?.[`${key}BarColor`];
+      root.style.setProperty(`--vr-resource-${key}`, normalizeUiColor(color, key === "health" ? "#00ff49" : resourcePalette[key]));
+    }
   }
 
   /** Update defensive-bar visibility in place, avoiding a main-panel redraw and scroll reset. */
   #syncResourceBarVisibility() {
     const options = this.actor.system.sheetOptions ?? {};
+    this.element?.querySelector(".stat-grid-compact")?.classList.toggle("resource-health-static", Boolean(options.staticHealthColor));
+    for (const key of ["health", "armor", "shields", "barriers"]) {
+      const stat = this.element?.querySelector(`.resource-bar.${key}`)?.closest(".stat");
+      stat?.style.setProperty("--resource-radius-left", options[`${key}BarRoundLeft`] ? "999px" : "0px");
+      stat?.style.setProperty("--resource-radius-right", options[`${key}BarRoundRight`] ? "999px" : "0px");
+    }
+    const bars = this.element?.querySelector(".stat-grid-compact");
+    for (const resource of ["mana", "stamina"]) {
+      this.element?.querySelector(".hero-energy-pool." + resource)?.classList.toggle("energy-compact", Boolean(options.compactManaBar || options.compactStaminaBar));
+      this.element?.querySelector(".hero-energy-pool." + resource)?.style.setProperty("--energy-radius", options[resource + "BarRounded"] ? "999px" : "0px");
+    }
+    bars?.classList.toggle("resource-vfx-off", Boolean(options.disableResourceBarVfx));
+    bars?.classList.toggle("resource-compact", Boolean(options.compactResourceBars));
+    bars?.classList.toggle("resource-icons-off", Boolean(options.hideResourceBarIcons));
     const resourceIsActive = key => Number(this.actor.system.resources?.[key]?.max ?? this.actor.system.resources?.[key]?.value ?? 0) > 0;
     const visible = {
       armor: this.#editMode || options.showAllResourceBars || options.showArmorResourceBar || resourceIsActive("armor"),
@@ -1515,6 +1792,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
 
   #applyDrawerState() {
     const wc = this.element?.querySelector(".window-content");
+    this.#syncLeftDrawerExtent();
     const detailsAnimating = this.#animateDetails && this.#lastDetailsOpen !== this.#detailsOpen;
     const detailsCloseStarted = this.#animateDetails && this.#lastDetailsOpen && !this.#detailsOpen;
     if (this.#detailsOpen) this.#detailsClosing = false;
@@ -1559,9 +1837,45 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     else this.#setSheetWidth(this.#detailsFrameWidth);
   }
 
+  #syncLeftDrawerExtent() {
+    const hidden = this.element?.querySelector(".hero-row")?.classList.contains("hero-column-hidden");
+    const extent = hidden && (this.#equipmentOpen || this.#equipmentCloseTimeout
+      || (this.#animateEquipment && this.#lastEquipmentOpen)) ? 260 : 0;
+    const delta = extent - this.#leftDrawerExtent;
+    this.#leftDrawerExtent = extent;
+    const wc = this.element?.querySelector(".window-content");
+    wc?.classList.toggle("equipment-expanded-left", extent > 0);
+    wc?.style.setProperty("--vr-left-drawer-extent", `${extent}px`);
+    const frame = this.#sheetFrameElement();
+    if (frame) frame.style.maxWidth = `${VeilrunnerHeroSheet.BASE_WIDTH + VeilrunnerHeroSheet.DRAWER_WIDTH + extent}px`;
+    if (delta && frame) {
+      // The left edge and width must commit together. A CSS width transition
+      // otherwise clips the stationary main content after the left edge moves.
+      frame.style.transition = "none";
+      const left = Math.max(0, (this.position?.left ?? frame.offsetLeft) - delta * (this.position?.scale ?? 1));
+      this.setPosition({ left, width: this.#detailsFrameWidth + extent });
+      this.#setSheetFrameWidth(this.#detailsFrameWidth);
+      void frame.offsetWidth;
+      if (extent) {
+        this.#leftFrameReveal?.cancel();
+        if (!globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+          this.#leftFrameReveal = frame.animate([
+            { clipPath: `inset(0 0 0 ${extent}px)` },
+            { clipPath: "inset(0)" }
+          ], { duration: VeilrunnerHeroSheet.DRAWER_ANIMATION_MS, easing: "ease" });
+        }
+      } else {
+        this.#leftFrameReveal?.cancel();
+      }
+      // Suppress width easing only for the atomic left-edge adjustment.
+      // The right drawer still relies on the normal frame width transition.
+      frame.style.removeProperty("transition");
+    }
+  }
+
   #setSheetWidth(width) {
     try {
-      this.setPosition({ width });
+      this.setPosition({ width: width + this.#leftDrawerExtent });
     } catch (err) {
       console.warn("Veilrunner | setPosition failed, forcing frame width directly", err);
     }
@@ -1569,6 +1883,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   #setSheetFrameWidth(width) {
+    width += this.#leftDrawerExtent;
     if (this.position) this.position.width = width;
     if (this.options?.position) this.options.position.width = width;
     const frame = this.#sheetFrameElement();
@@ -1615,7 +1930,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const elements = this.#sheetRevealElements();
     if (!revealed) {
       for (const header of this.#windowHeaders()) {
-        header.style.width = `${VeilrunnerHeroSheet.BASE_WIDTH}px`;
+        header.style.width = `${VeilrunnerHeroSheet.BASE_WIDTH + this.#leftDrawerExtent}px`;
       }
     }
     if (!elements.length) return;
@@ -1651,11 +1966,14 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       const side = handle.classList.contains("handle-left") ? "left" : "right";
       handle.style.setProperty("--vr-drawer-handle-top", `${this.#drawerHandleTop[side]}%`);
 
+      if (handle.dataset.veilrunnerDrawerDragBinding) continue;
+      handle.dataset.veilrunnerDrawerDragBinding = "true";
+
       let drag = null;
       let moved = false;
       handle.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
-        const mainRect = main.getBoundingClientRect();
+        const mainRect = handle.closest('[data-application-part="main"]').getBoundingClientRect();
         const handleRect = handle.getBoundingClientRect();
         drag = {
           startY: event.clientY,
@@ -1702,8 +2020,15 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   #slideEquipmentDrawer(equipmentPart) {
-    const closedTransform = "translateX(calc(-100% - 2px))";
+    const interruptedClose = Boolean(this.#equipmentCloseTimeout);
+    window.clearTimeout(this.#equipmentCloseTimeout);
+    this.#equipmentCloseTimeout = undefined;
+    if (interruptedClose) this.#leftFrameReveal?.cancel();
+    const outward = this.element?.querySelector(".hero-row")?.classList.contains("hero-column-hidden");
+    const closedTransform = outward ? "translateX(100%)" : "translateX(calc(-100% - 2px))";
     const openTransform = "translateX(0)";
+    const closedClip = outward ? "inset(0 100% 0 0)" : "inset(0)";
+    const targetClip = this.#equipmentOpen ? "inset(0)" : closedClip;
     const target = this.#equipmentOpen ? openTransform : closedTransform;
     const animate = this.#animateEquipment && this.#lastEquipmentOpen !== this.#equipmentOpen;
     this.#animateEquipment = false;
@@ -1714,19 +2039,37 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     if (!animate) {
       equipmentPart.style.transition = "none";
       equipmentPart.style.transform = target;
+      equipmentPart.style.clipPath = targetClip;
       void equipmentPart.offsetWidth;
       equipmentPart.style.transition = "";
+      if (!this.#equipmentOpen && interruptedClose) this.#syncLeftDrawerExtent();
       return;
     }
 
     const from = this.#equipmentOpen ? closedTransform : openTransform;
     equipmentPart.style.transition = "none";
     equipmentPart.style.transform = from;
+    equipmentPart.style.clipPath = this.#equipmentOpen ? closedClip : "inset(0)";
     void equipmentPart.offsetWidth;
     equipmentPart.style.transition = "";
     requestAnimationFrame(() => {
       equipmentPart.style.transform = target;
+      equipmentPart.style.clipPath = targetClip;
     });
+    if (outward && !this.#equipmentOpen) {
+      const frame = this.#sheetFrameElement();
+      this.#leftFrameReveal?.cancel();
+      if (frame && !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        this.#leftFrameReveal = frame.animate([
+          { clipPath: "inset(0)" },
+          { clipPath: `inset(0 0 0 ${this.#leftDrawerExtent}px)` }
+        ], { duration: VeilrunnerHeroSheet.DRAWER_ANIMATION_MS, easing: "ease", fill: "forwards" });
+      }
+      this.#equipmentCloseTimeout = window.setTimeout(() => {
+        this.#equipmentCloseTimeout = undefined;
+        this.#syncLeftDrawerExtent();
+      }, VeilrunnerHeroSheet.DRAWER_ANIMATION_MS);
+    }
   }
 
   #slideDetailsDrawer(detailsPart, detailsClosing, animate, sheetWidth) {
@@ -1788,6 +2131,11 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   #pinEquipmentWidth(equipmentPart) {
+    // The drawer keeps its normal width when its reference column is hidden.
+    if (this.element?.querySelector(".hero-row")?.classList.contains("hero-column-hidden")) {
+      equipmentPart.style.removeProperty("--vr-equipment-width");
+      return;
+    }
     const heroColumn = this.element?.querySelector(".hero-column");
     const mainField = this.element?.querySelector(".main-field");
     const content = this.element?.querySelector(".window-content");
@@ -1807,7 +2155,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   /** Party hooks. */
   #bindPartyHooks() {
     const id = Hooks.on("updateActor", (doc, change, options) => {
-      if (!this.rendered) return;
+      if (!this.rendered || this.#loadoutChanging) return;
       if (options?.veilrunnerPanPresentationOnly) {
         this.#syncPanPresentation();
         return;
@@ -1817,13 +2165,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     });
     this.#hookIds.push(["updateActor", id]);
     const itemId = Hooks.on("updateItem", (item) => {
-      if (!this.rendered) return;
+      if (!this.rendered || this.#loadoutChanging) return;
       if (item.parent?.id === this.actor.id || item.parent?.type === "party") this.#debouncedRender();
     });
     this.#hookIds.push(["updateItem", itemId]);
     for (const hook of ["createItem", "deleteItem"]) {
       const hookId = Hooks.on(hook, (item) => {
-        if (!this.rendered) return;
+        if (!this.rendered || this.#loadoutChanging) return;
         if (item.parent?.id === this.actor.id || item.parent?.type === "party") this.#debouncedRender();
       });
       this.#hookIds.push([hook, hookId]);
@@ -1953,6 +2301,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.tempHealthValue = tempHealthValue;
     context.hasTempHealth = hasTempHealth;
     context.experienceValue = experienceValue;
+    context.experienceMax = experienceMax;
+    context.progression = progressionPresentation(system, actor.getFlag("Veilrunner", "progressionPlan"));
     context.tempHealthPercent = tempHealthPercent;
     context.experiencePercent = Math.max(0, Math.min(100, Number(system.percent?.experience ?? 0)));
     context.experienceGlow = context.experiencePercent / 100;
@@ -1979,7 +2329,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const sheetOptions = {
       // Preserve the former positive setting for existing heroes while the UI uses the clearer hide toggle.
       hidePartyList: typeof storedHidePartyList === "boolean" ? storedHidePartyList : system.sheetOptions?.showPartyList === false,
+      hideHeroColumn: Boolean(system.sheetOptions?.hideHeroColumn),
       showAllPartyResources: Boolean(system.sheetOptions?.showAllPartyResources),
+      disableResourceBarVfx: Boolean(system.sheetOptions?.disableResourceBarVfx),
+      compactResourceBars: Boolean(system.sheetOptions?.compactResourceBars),
+      compactEnergyBars: Boolean(system.sheetOptions?.compactManaBar || system.sheetOptions?.compactStaminaBar),
+      hideResourceBarIcons: Boolean(system.sheetOptions?.hideResourceBarIcons),
       showAllResourceBars: Boolean(system.sheetOptions?.showAllResourceBars),
       showArmorResourceBar: Boolean(system.sheetOptions?.showArmorResourceBar),
       showShieldsResourceBar: Boolean(system.sheetOptions?.showShieldsResourceBar),
@@ -1994,6 +2349,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       panOnColor: normalizeUiColor(system.sheetOptions?.panOnColor, "#00ff49"),
       panInterferenceColor: normalizeUiColor(system.sheetOptions?.panInterferenceColor, "#fbbf24")
       ,characterBorderColor: normalizeUiColor(system.sheetOptions?.characterBorderColor, "#66717d")
+      ,loadoutCardColor: normalizeUiColor(system.sheetOptions?.loadoutCardColor, "#cbd5e1")
+      ,loadoutButtonColor: system.sheetOptions?.loadoutButtonColor || ""
       ,characterBackgroundColor: normalizeUiColor(system.sheetOptions?.characterBackgroundColor, "#000000")
       ,characterBackgroundColorEnabled: Boolean(system.sheetOptions?.characterBackgroundColorEnabled ?? true)
       ,manaTextColor: normalizeUiColor(system.sheetOptions?.manaTextColor, "#60a5fa")
@@ -2016,6 +2373,19 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.showBarriersResource = this.#editMode || sheetOptions.showAllResourceBars || sheetOptions.showBarriersResourceBar || resourceIsActive("barriers");
     context.showPartyList = !sheetOptions.hidePartyList;
     context.sheetOptions = sheetOptions;
+    sheetOptions.staticHealthColor = Boolean(system.sheetOptions?.staticHealthColor);
+    context.resourceBarSettings = ["health", "armor", "shields", "barriers"].map(key => ({
+      key,
+      label: `VEILRUNNER.${key[0].toUpperCase()}${key.slice(1)}`,
+      roundLeft: Boolean(system.sheetOptions?.[`${key}BarRoundLeft`]),
+      roundRight: Boolean(system.sheetOptions?.[`${key}BarRoundRight`]),
+      color: normalizeUiColor(system.sheetOptions?.[`${key}BarColor`], { health: "#00ff49", armor: "#cbd5e1", shields: "#22d3ee", barriers: "#c084fc" }[key])
+    }));
+    context.energyBarSettings = ["mana", "stamina"].map(key => ({
+      key,
+      label: `VEILRUNNER.${key[0].toUpperCase()}${key.slice(1)}`,
+      rounded: Boolean(system.sheetOptions?.[key + "BarRounded"])
+    }));
     context.portraitCrop = {
       x: Number(system.portraitCrop?.x ?? 50),
       y: Number(system.portraitCrop?.y ?? 50),
@@ -2212,6 +2582,104 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const equipmentData = equipmentBySlot(actor);
     const equippedItemIds = new Set(Object.values(equipmentData).filter(Boolean));
     const ownedInventory = selectInventoryItems(sortedItems);
+    context.loadoutSections = [
+      { key: "weapon", label: "VEILRUNNER.InventoryCategory.weapon" },
+      { key: "armor", label: "VEILRUNNER.InventoryCategory.armor" },
+      { key: "gear", label: "VEILRUNNER.LoadoutGear" }
+    ].map(section => ({
+      ...section,
+      items: ownedInventory.filter(item => {
+        if (section.key !== "gear" && !equippedItemIds.has(item.id)) return false;
+        const category = item.type === "weapon" ? "weapon" : ["armor", "shield"].includes(item.type) ? "armor" : "gear";
+        return category === section.key;
+      }).sort((left, right) => {
+        if (section.key !== "weapon") return 0;
+        const order = item => ["mainHand", "offhand", "auxiliary"].findIndex(slot => equipmentData[slot] === item.id);
+        return order(left) - order(right);
+      }).map((item, index) => {
+        const data = item.system ?? {};
+        const ammo = item.type === "weapon" ? firearmLoadedState(actor, item) : null;
+        const stat = (icon, value, label) => ({ icon, value, label });
+        const stats = item.type === "weapon" ? [
+          stat("burst", `${data.damage?.base ?? "—"}${data.damage?.modifier ? `${data.damage.modifier > 0 ? "+" : ""}${data.damage.modifier}` : ""}`, "DMG"),
+          stat("bars", ammo?.mode !== "none" ? ammo.capacity : "—", "MAG"),
+          stat("crosshairs", data.range ? `${data.range} m` : "Melee", "RANGE")
+        ] : [
+          stat("shield-halved", data.armorClass ?? "—", "ARMOR"),
+          stat("layer-group", typeof data.capacity === "number" ? data.capacity : data.capacity?.[data.capacity?.mode] ?? "—", "CAPACITY"),
+          stat("weight-hanging", `${data.weight ?? 0}`, "KG")
+        ];
+        return {
+          id: item.id, name: item.name, img: item.img, index: index + 1,
+          slot: section.key === "weapon" ? ["mainHand", "offhand", "auxiliary"].find(slot => equipmentData[slot] === item.id) : undefined,
+          compact: section.key === "gear", rarity: itemRarityData(item), stats,
+          typeLabel: game.i18n.localize(item.type === "weapon" ? `VEILRUNNER.WeaponFilter.${data.weaponType}` : `TYPES.Item.${item.type}`),
+          quantity: data.quantity ?? 1,
+          traits: Array.isArray(data.traits) ? data.traits : [],
+          ammo: ammo && ammo.mode !== "none" ? {
+            value: ammo.rounds, max: ammo.capacity,
+            label: ammo.magazine?.name || ammo.internal?.name || "Ammunition"
+          } : null,
+          slots: section.key === "weapon"
+            ? game.i18n.localize(`VEILRUNNER.LoadoutWeaponSlot.${["mainHand", "offhand", "auxiliary"].find(slot => equipmentData[slot] === item.id) ?? "mainHand"}`)
+            : Object.entries(equipmentData).filter(([, id]) => id === item.id)
+              .map(([slot]) => game.i18n.localize(`VEILRUNNER.Slot.${slot}`)).join(", ")
+        };
+      })
+    }));
+    const weaponSection = context.loadoutSections.find(section => section.key === "weapon");
+    weaponSection.twoHanded = Boolean(equipmentData.mainHand
+      && equipmentData.mainHand === equipmentData.offhand
+      && actor.items.get(equipmentData.mainHand)?.type === "weapon");
+    for (const section of context.loadoutSections) section.equippedCount = section.items.length;
+    for (const slot of ["mainHand", "offhand", "auxiliary"]) {
+      if (equipmentData[slot]) continue;
+      weaponSection.items.push({
+        empty: true, slot, pickerLabel: "VEILRUNNER.LoadoutSelectWeapon", pickerEmpty: "VEILRUNNER.LoadoutNoAvailableWeapons",
+        slots: game.i18n.localize(`VEILRUNNER.LoadoutWeaponSlot.${slot}`),
+        choices: ownedInventory.filter(item => item.type === "weapon"
+          && !equippedItemIds.has(item.id) && itemAcceptsEquipmentSlot(item, slot, actor)
+          && itemRequiredSlots(item, actor, slot).every(required => !equipmentData[required]))
+          .map(item => ({ id: item.id, name: item.name, img: item.img }))
+      });
+    }
+    weaponSection.items.sort((left, right) => {
+      const position = item => ["mainHand", "offhand", "auxiliary"].indexOf(item.slot
+        ?? ["mainHand", "offhand", "auxiliary"].find(slot => equipmentData[slot] === item.id));
+      return position(left) - position(right);
+    });
+    const armorSection = context.loadoutSections.find(section => section.key === "armor");
+    const gearSection = context.loadoutSections.find(section => section.key === "gear");
+    const armorSlots = ["head", "chest", "arms", "legs", "feet", "ears", "neck", "wrists", "leftRing"];
+    const armorIds = new Set(armorSlots.map(slot => equipmentData[slot]).filter(Boolean));
+    const equippedCards = new Map(context.loadoutSections.flatMap(section => section.items)
+      .filter(item => item.id).map(item => [item.id, item]));
+    const otherArmor = armorSection.items.filter(item => !armorIds.has(item.id));
+    armorSection.items = armorSlots.map(slot => {
+      const label = game.i18n.localize(`VEILRUNNER.Slot.${slot}`);
+      const equipped = equippedCards.get(equipmentData[slot]);
+      if (equipped) return { ...equipped, compact: false, slot, slots: label };
+      return {
+        empty: true, slot, slots: label,
+        pickerLabel: "VEILRUNNER.LoadoutSelectEquipment", pickerEmpty: "VEILRUNNER.LoadoutNoAvailableEquipment",
+        choices: ownedInventory.filter(item => !equippedItemIds.has(item.id)
+          && itemAcceptsEquipmentSlot(item, slot, actor)
+          && itemRequiredSlots(item, actor, slot).every(required => !equipmentData[required]))
+          .map(item => ({ id: item.id, name: item.name, img: item.img }))
+      };
+    }).concat(otherArmor);
+    armorSection.equippedCount = new Set(armorSection.items.filter(item => item.id).map(item => item.id)).size;
+    gearSection.items = gearSection.items.filter(item => !armorIds.has(item.id));
+    gearSection.equippedCount = gearSection.items.length;
+    const consumableSlots = this.actor.getFlag("Veilrunner", "loadoutConsumables");
+    const selectedConsumables = Array.isArray(consumableSlots) ? consumableSlots : [];
+    gearSection.consumableSlots = selectedConsumables.map((id, slot) => {
+      const item = ownedInventory.find(item => item.id === id && item.type === "consumable");
+      return { slot, id: item?.id, name: item?.name, img: item?.img };
+    });
+    gearSection.equippedCount = gearSection.consumableSlots.filter(item => item.id).length;
+    gearSection.consumableChoices = ownedInventory.filter(item => item.type === "consumable")
+      .map(item => ({ id: item.id, name: item.name, img: item.img }));
     const inventoryItems = ownedInventory
       .map(item => {
         const category = inventoryCategoryForItem(item);
@@ -2228,14 +2696,18 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
           name: item.name,
           img: item.img,
           type: item.type,
+          isMagazine: item.type === "magazine",
+          magazineRounds: Math.max(0, Number(item.system?.rounds) || 0),
+          magazineCapacity: Math.max(0, Number(item.system?.capacity) || 0),
           category,
           isJunk: category === "junk",
           isJunkMarked,
           inventoryFilterKey,
-          quantity: Math.max(0, Number(item.system?.quantity) || 1),
+          quantity: Math.max(0, Number(item.system?.quantity ?? 1) || 0),
           weight: Math.max(0, Number(item.system?.weight) || 0),
           documentSort: Number(item.sort) || 0,
           grade: Math.max(1, Math.floor(Number(item.system?.grade) || 1)),
+          gradeRoman: inventoryGradeRoman(item.system?.grade),
           equipmentSlot: item.system?.equipmentSlot ?? "",
           requiredSlots: itemRequiredSlots(item),
           canEquip: (itemHasCapability(item, "equippable") || equippedItemIds.has(item.id)) && itemRequiredSlots(item).length > 0,
@@ -2251,8 +2723,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       .filter(item => this.subTabs.inventory === "all"
         || item.category === this.subTabs.inventory
         || (this.subTabs.inventory === "ammo" && item.inventoryFilterKey.startsWith("ammo")))
-      .filter(item => inventoryItemMatchesFilter(item, activeInventoryFilter))
-      .filter(item => !inventorySearchQuery || normalizeInventoryToken(`${item.name} ${item.typeLabel} ${item.groupLabel} ${item.subtypeLabel} ${item.rarity.name}`).includes(inventorySearchQuery));
+      // Keep all category/filter matches rendered so clearing or changing a search
+      // after a refresh can reveal them again. The search binding handles traits too.
+      .filter(item => inventoryItemMatchesFilter(item, activeInventoryFilter));
     context.inventoryItems = sortInventoryItems(stackInventoryItems(inventoryItems), context.inventorySort);
     context.inventoryGroups = groupInventoryItems(context.inventoryItems, this.inventoryCollapsedGroups).map(group => ({
       ...group,
@@ -2270,7 +2743,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       id: inventoryDetailsItem.id,
       name: inventoryDetailsItem.name,
       img: inventoryDetailsItem.img,
-      quantity: this.inventoryDetailsQuantity ?? Math.max(0, Number(inventoryDetailsItem.system?.quantity) || 1),
+      quantity: this.inventoryDetailsQuantity ?? Math.max(0, Number(inventoryDetailsItem.system?.quantity ?? 1) || 0),
       weight: Math.max(0, Number(inventoryDetailsItem.system?.weight) || 0),
       grade: Math.max(1, Math.floor(Number(inventoryDetailsItem.system?.grade) || 1)),
       rarity: itemRarityData(inventoryDetailsItem),
@@ -2282,7 +2755,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.inventoryCarryWeightKg = Math.round(ownedInventory
       .reduce((total, item) => {
         const weight = Math.max(0, Number(item.system?.weight) || 0);
-        const quantity = Math.max(0, Number(item.system?.quantity) || 1);
+        const quantity = Math.max(0, Number(item.system?.quantity ?? 1) || 0);
         return total + (weight * quantity);
       }, 0) * 100) / 100;
     context.inventoryCarryCapacityKg = 5 + (Math.max(1, Number(system.attributes?.physical?.strength) || 1) * 2);
@@ -2303,6 +2776,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       .filter(Boolean)
       .map(item => ({ id: item.id, name: item.name, img: item.img, rarity: itemRarityData(item) }));
     context.panLinked = Boolean(system.networkLinked);
+    context.panMode = panModeFor(system);
+    context.panIcon = panIconFor(system);
+    context.panModes = PAN_MODES.map(mode => ({ mode, label: game.i18n.localize(`VEILRUNNER.PAN.${mode[0].toUpperCase()}${mode.slice(1)}`), selected: mode === context.panMode }));
     context.panState = panStateFor(system);
     context.panActive = context.panState === "active";
     context.panStatus = panStateLabel(context.panState);
@@ -2408,6 +2884,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     normalizeSheetOption("panOnColor", "#00ff49");
     normalizeSheetOption("panInterferenceColor", "#fbbf24");
     normalizeSheetOption("characterBorderColor", "#66717d");
+    normalizeSheetOption("loadoutCardColor", "#cbd5e1");
     normalizeSheetOption("characterBackgroundColor", "#000000");
     normalizeSheetOption("manaTextColor", "#60a5fa");
     normalizeSheetOption("staminaTextColor", "#f59e0b");
@@ -2575,6 +3052,393 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     this.render({ parts: ["main"] });
   }
 
+  #sizeConsumableSquares() {
+    const row = this.element?.querySelector(".hero-row");
+    const grid = row?.querySelector("[data-consumable-grid]");
+    if (!grid) return;
+    const rowWidth = row.getBoundingClientRect().width;
+    const normalColumn = Math.max(225, (rowWidth - 36) * .32 / 1.32);
+    const field = row.querySelector(".main-field");
+    const inset = field ? field.getBoundingClientRect().width - grid.clientWidth : 0;
+    const previousSize = Math.max(0, (rowWidth - normalColumn - 36 - inset - 36) / 7);
+    const size = Math.max(0, (rowWidth - normalColumn - 36 - inset - 30) / 6);
+    grid.style.setProperty("--vr-consumable-square-size", `${size}px`);
+    grid.style.setProperty("--vr-consumable-tile-height", `${previousSize * 1.1 + 30}px`);
+  }
+
+  #captureLoadoutChange() {
+    const root = this.element?.querySelector(".loadout-sections");
+    if (!root || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = new Map();
+    for (const card of root.querySelectorAll(".loadout-item, .loadout-gear-tile")) {
+      const key = card.dataset.equipmentSlot || `consumable:${card.dataset.consumableSlot}`;
+      cards.set(key, { rect: card.getBoundingClientRect(), id: card.dataset.itemId,
+        expanded: card.classList.contains("is-expanded"),
+        panel: card.classList.contains("is-expanded") ? card.querySelector(".loadout-expansion")?.cloneNode(true) : null,
+        summaryWidth: card.querySelector(".loadout-card-summary")?.getBoundingClientRect().width });
+    }
+    this.#loadoutChange = {
+      cards,
+      twoHanded: Boolean(root.querySelector(".loadout-section-two-handed")),
+      scrollLeft: root.querySelector(".loadout-section-armor .loadout-items")?.scrollLeft ?? 0
+    };
+  }
+
+  #animateLoadoutChange() {
+    const previous = this.#loadoutChange;
+    const root = this.element?.querySelector(".loadout-sections");
+    if (!previous || !root) return;
+    this.#loadoutChange = null;
+    const armor = root.querySelector(".loadout-section-armor .loadout-items");
+    if (armor) armor.scrollLeft = previous.scrollLeft;
+    if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const handednessChanged = previous.twoHanded !== Boolean(root.querySelector(".loadout-section-two-handed"));
+    const timing = { duration: handednessChanged ? 750 : 450, easing: "cubic-bezier(.4,0,.2,1)" };
+    const revealingPrimary = previous.cards.get("mainHand")?.expanded;
+    for (const card of root.querySelectorAll(".loadout-item, .loadout-gear-tile")) {
+      const key = card.dataset.equipmentSlot || `consumable:${card.dataset.consumableSlot}`;
+      const before = previous.cards.get(key);
+      const after = card.getBoundingClientRect();
+      if (revealingPrimary && ["offhand", "auxiliary"].includes(key)) {
+        // Freeze the destination dimensions while the primary reveals this
+        // card. Never interpolate from its old two-/three-column width.
+        const fixed = { width: `${after.width}px`, height: `${after.height}px`,
+          minWidth: `${after.width}px`, maxWidth: `${after.width}px`, transform: "none" };
+        const primary = previous.cards.get("mainHand");
+        const covered = Math.max(0, primary.rect.right - after.left);
+        // Match the primary's retracting edge, including its travel across
+        // the gaps. Stacking alone allows translucent card surfaces to leak.
+        card.animate([
+          { ...fixed, clipPath: `inset(0 0 0 ${covered}px)` },
+          { ...fixed, clipPath: `inset(0 0 0 ${Math.min(0, root.querySelector('[data-equipment-slot="mainHand"]').getBoundingClientRect().right - after.left)}px)` }
+        ], { ...timing, fill: "backwards" });
+        continue;
+      }
+      if (handednessChanged && key === "offhand") {
+        // Already present underneath the moving primary; uncover it naturally.
+        continue;
+      }
+      if (handednessChanged && !before?.expanded) {
+        // The destination cards are already in place behind the open picker.
+        // Only its retracting edge reveals them; they do not move separately.
+        continue;
+      }
+      if (before) {
+        if (before.panel) {
+          const panel = before.panel;
+          panel.inert = true;
+          panel.setAttribute("aria-hidden", "true");
+          for (const element of [panel, ...panel.querySelectorAll("[id], [data-action]")]) {
+            element.removeAttribute("id");
+            element.removeAttribute("data-action");
+          }
+          card.style.position = "relative";
+          Object.assign(panel.style, { position: "absolute", top: "6px", bottom: "6px",
+            left: `${before.summaryWidth + 18}px`, pointerEvents: "none" });
+          card.append(panel);
+          panel.animate([
+            { left: `${before.summaryWidth + 18}px` },
+            { left: `${after.width + 6}px` }
+          ], timing).finished.then(() => panel.remove(), () => panel.remove());
+          card.style.zIndex = "3";
+          card.classList.add("loadout-change-sliding");
+        }
+        card.animate([
+          { width: `${before.rect.width}px`, height: `${before.rect.height}px`, minWidth: "0px", maxWidth: "none", transform: `translate(${before.rect.left - after.left}px, ${before.rect.top - after.top}px)`, overflow: "hidden" },
+          { width: `${after.width}px`, height: `${after.height}px`, minWidth: "0px", maxWidth: "none", transform: "translate(0,0)", overflow: "hidden" }
+        ], { ...timing, fill: "backwards" }).finished.then(() => {
+          if (before.expanded) {
+            card.style.removeProperty("position");
+            card.style.removeProperty("z-index");
+            card.classList.remove("loadout-change-sliding");
+          }
+        }, () => {});
+        if (before.id !== card.dataset.itemId && !before.expanded && !handednessChanged) {
+          (card.querySelector(".loadout-card-summary") || card.querySelector("img") || card).animate(
+            [{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: handednessChanged ? 180 : 80, fill: "backwards" });
+        }
+      } else {
+        // The secondary hand returns only after the primary and auxiliary
+        // have begun making room for the three-card layout.
+        card.animate([
+          { width: "0px", minWidth: "0px", paddingInline: "0px", borderInlineWidth: "0px", opacity: 0, overflow: "hidden" },
+          { width: `${after.width}px`, minWidth: "0px", opacity: 1, overflow: "hidden" }
+        ], { ...timing, fill: "backwards" });
+      }
+    }
+  }
+
+  static #onOpenLoadoutMenu(event, target) {
+    event.preventDefault();
+    const row = target.closest(".loadout-item[data-item-id]");
+    const item = this.actor.items.get(row?.dataset.itemId);
+    if (!this.actor.isOwner || !item?.isOwner) return;
+    const rect = target.getBoundingClientRect();
+    this.#openInventoryItemContextMenu({ clientX: rect.right, clientY: rect.bottom }, item, row);
+  }
+
+  #changeLoadoutItem(row, event) {
+    if (!row?.isConnected) return;
+    if (row.matches(".loadout-gear-tile")) return VeilrunnerHeroSheet.#onPickLoadoutConsumable.call(this, event, row);
+    const equipment = equipmentBySlot(this.actor);
+    const slot = row.dataset.equipmentSlot || Object.keys(equipment).find(slot => equipment[slot] === row.dataset.itemId);
+    if (!slot) return;
+    row.dataset.equipmentSlot = slot;
+    const expansion = row.querySelector(".loadout-expansion");
+    if (!expansion) return;
+    expansion.querySelector('[data-loadout-panel="change"]')?.remove();
+    const panel = document.createElement("section");
+    panel.dataset.loadoutPanel = "change";
+    panel.hidden = true;
+    const heading = document.createElement("h4");
+    heading.textContent = "Change equipment";
+    const list = document.createElement("div");
+    list.className = "loadout-weapon-list";
+    for (const item of selectInventoryItems(this.actor.items.contents)) {
+      if (Object.values(equipment).includes(item.id) || !itemAcceptsEquipmentSlot(item, slot, this.actor)
+        || itemRequiredSlots(item, this.actor, slot).some(required => equipment[required] && equipment[required] !== row.dataset.itemId)) continue;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "loadout-weapon-option";
+      button.dataset.action = "equipLoadoutItem";
+      button.dataset.itemId = item.id;
+      const img = document.createElement("img");
+      img.src = item.img;
+      img.alt = "";
+      const name = document.createElement("span");
+      name.textContent = item.name;
+      button.append(img, name);
+      list.append(button);
+    }
+    if (!list.children.length) list.textContent = "No compatible unequipped items available.";
+    panel.append(heading, list);
+    expansion.append(panel);
+    const trigger = document.createElement("button");
+    trigger.dataset.panel = "change";
+    trigger.hidden = true;
+    row.append(trigger);
+    VeilrunnerHeroSheet.#onToggleLoadoutPanel.call(this, event, trigger);
+    trigger.remove();
+  }
+
+  static #onOpenLoadoutItem(event, target) {
+    event.preventDefault();
+    this.actor.items.get(target.dataset.itemId)?.sheet?.render(true);
+  }
+
+  async #animateConsumablePicker(picker, opening) {
+    const wasHidden = picker.hidden;
+    const currentBounds = wasHidden ? null : picker.getBoundingClientRect();
+    picker.getAnimations().forEach(animation => animation.cancel());
+    picker.hidden = false;
+    const tile = picker.parentElement?.querySelector(`[data-consumable-slot="${picker.dataset.consumableSlot}"]`);
+    const bounds = picker.getBoundingClientRect();
+    const origin = tile?.getBoundingClientRect() ?? bounds;
+    const geometry = rect => ({ left: `${rect.left - bounds.left}px`, top: `${rect.top - bounds.top}px`,
+      width: `${rect.width}px`, height: `${rect.height}px`, right: "auto", bottom: "auto", overflow: "hidden" });
+    const closed = geometry(origin);
+    const expanded = geometry(bounds);
+    const from = wasHidden ? closed : geometry(currentBounds);
+    const transition = String(Number(picker.dataset.transition || 0) + 1);
+    picker.dataset.transition = transition;
+    picker.getAnimations().forEach(animation => animation.cancel());
+    picker.hidden = false;
+    picker.inert = !opening;
+    if (!globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      const animation = picker.animate([from, opening ? expanded : closed],
+        { duration: 650, easing: "cubic-bezier(.4,0,.2,1)", fill: "both" });
+      for (const child of picker.children) {
+        child.getAnimations().forEach(active => active.cancel());
+        child.animate(opening ? [{ opacity: 0, offset: 0 }, { opacity: 0, offset: .65 }, { opacity: 1 }]
+          : [{ opacity: 1 }, { opacity: 0, offset: .25 }, { opacity: 0 }],
+        { duration: 650, easing: "ease", fill: "both" });
+      }
+      try { await animation.finished; } catch { return; }
+      if (picker.dataset.transition !== transition) return;
+      picker.hidden = !opening;
+      animation.cancel();
+      for (const child of picker.children) child.getAnimations().forEach(active => active.cancel());
+    } else picker.hidden = !opening;
+    if (opening) picker.querySelector("button")?.focus({ preventScroll: true });
+    else picker.parentElement?.querySelector(`[data-consumable-slot="${picker.dataset.consumableSlot}"]`)?.focus({ preventScroll: true });
+  }
+
+  static #onPickLoadoutConsumable(event, target) {
+    event.preventDefault();
+    const row = target.closest(".loadout-row");
+    const picker = row?.querySelector(".loadout-consumable-picker");
+    if (!picker) return;
+    picker.dataset.consumableSlot = target.dataset.consumableSlot;
+    return this.#animateConsumablePicker(picker, true);
+  }
+
+  static #onCloseLoadoutConsumables(event, target) {
+    event.preventDefault();
+    const picker = target.closest(".loadout-consumable-picker");
+    if (picker) {
+      return this.#animateConsumablePicker(picker, false);
+    }
+  }
+
+  static async #onSelectLoadoutConsumable(event, target) {
+    event.preventDefault();
+    if (!this.actor.isOwner || target.disabled) return;
+    const item = this.actor.items.get(target.dataset.itemId);
+    const slot = Number(target.closest(".loadout-consumable-picker")?.dataset.consumableSlot);
+    if (item?.type !== "consumable" || !Number.isInteger(slot) || slot < 0) return;
+    const saved = this.actor.getFlag("Veilrunner", "loadoutConsumables");
+    const slots = Array.isArray(saved) ? [...saved] : [];
+    while (slots.length <= slot) slots.push("");
+    slots[slot] = item.id;
+    target.disabled = true;
+    try {
+      await this.#animateConsumablePicker(target.closest(".loadout-consumable-picker"), false);
+      this.#captureLoadoutChange();
+      await this.actor.setFlag("Veilrunner", "loadoutConsumables", slots);
+    }
+    catch (error) { this.#loadoutChange = null; throw error; }
+    finally { target.disabled = false; }
+  }
+
+  static #onScrollArmorLoadout(event, target) {
+    event.preventDefault();
+    const track = target.closest(".loadout-row")?.querySelector(".loadout-items");
+    track?.scrollBy({ left: Number(target.dataset.direction) * track.clientWidth,
+      behavior: globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }
+
+  static async #onEquipLoadoutItem(event, target) {
+    event.preventDefault();
+    if (target.disabled || this.#loadoutChanging) return;
+    const item = this.actor.items.get(target.dataset.itemId);
+    const slot = target.closest("[data-equipment-slot]")?.dataset.equipmentSlot;
+    const equipment = equipmentBySlot(this.actor);
+    const replacedId = target.closest(".loadout-item")?.dataset.itemId;
+    if (!item || !itemAcceptsEquipmentSlot(item, slot, this.actor)
+      || Object.values(equipment).includes(item.id)
+      || itemRequiredSlots(item, this.actor, slot).some(required => equipment[required] && equipment[required] !== replacedId)) return;
+    target.disabled = true;
+    this.#loadoutChanging = true;
+    try {
+      // Capture the open picker itself: closing it first creates a separate
+      // animation before the handedness layout can begin resizing.
+      this.#captureLoadoutChange();
+      if (!await equipPhysicalItem(this.actor, item, { replaceOutsideCombat: true, slot })) this.#loadoutChange = null;
+      await this.#commitLoadoutRender();
+    } catch (error) {
+      this.#loadoutChange = null;
+      throw error;
+    } finally {
+      this.#loadoutChanging = false;
+      target.disabled = false;
+    }
+  }
+
+  static #onToggleLoadoutPanel(event, target) {
+    event.preventDefault();
+    const card = target.closest(".loadout-item");
+    const grid = card?.parentElement;
+    if (!grid) return;
+    const panel = target.dataset.panel;
+    const opening = Boolean(panel) && target.getAttribute("aria-expanded") !== "true";
+    const cards = [...grid.querySelectorAll(":scope > .loadout-item")];
+    const columns = getComputedStyle(grid).gridTemplateColumns.split(/\s+/).length;
+    const armorRow = grid.closest(".loadout-section-armor");
+    const viewportLeft = grid.scrollLeft;
+    const viewportWidth = grid.clientWidth;
+    // Capture the displayed geometry before cancelling an interrupted transition.
+    const before = new Map(cards.map(item => [item, item.getBoundingClientRect()]));
+    const gridHeight = grid.getBoundingClientRect().height;
+    const summaryWidths = new Map(cards.map(item => [item, item.querySelector(".loadout-card-summary").getBoundingClientRect().width]));
+    const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const closingPanels = new Map(cards.flatMap(item => {
+      const expansion = item.querySelector(".loadout-expansion");
+      return !reducedMotion && expansion && !expansion.hidden && !(item === card && opening)
+        ? [[item, expansion.getBoundingClientRect().width]] : [];
+    }));
+    grid.getAnimations().forEach(animation => animation.cancel());
+    for (const item of cards) item.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
+    for (const [index, item] of cards.entries()) {
+      const active = item === card && opening;
+      // Reserve every card's original cell so the expanded card overlaps its
+      // neighbors instead of auto-placement pushing it onto another row.
+      item.style.gridRow = armorRow ? "1" : String(Math.floor(index / columns) + 1);
+      item.style.gridColumn = armorRow
+        ? active ? `1 / span ${cards.length}` : String(index + 1)
+        : active ? "1 / -1" : String(index % columns + 1);
+      if (armorRow) {
+        // Grid tracks extend beyond the viewport. Anchor the overlay to the
+        // exact visible pixels, including partially scrolled cards.
+        item.style.left = active ? `${viewportLeft}px` : "";
+        item.style.width = active ? `${viewportWidth}px` : "";
+      }
+      item.style.setProperty("--loadout-summary-width", `${summaryWidths.get(item)}px`);
+      item.classList.toggle("is-expanded", active);
+      item.classList.toggle("is-closing", closingPanels.has(item));
+      item.querySelectorAll("[data-panel]").forEach(button => {
+        button.setAttribute("aria-expanded", String(active && button.dataset.panel === panel));
+      });
+      const expansion = item.querySelector(".loadout-expansion");
+      if (expansion) {
+        expansion.hidden = !active && !closingPanels.has(item);
+        expansion.style.width = closingPanels.has(item) ? `${closingPanels.get(item)}px` : "";
+      }
+      item.querySelectorAll("[data-loadout-panel]").forEach(content => {
+        if (!closingPanels.has(item)) content.hidden = !active || content.dataset.loadoutPanel !== panel;
+      });
+    }
+    const restoreAutoPlacement = () => {
+      if (cards.some(item => item.classList.contains("is-expanded") || item.classList.contains("is-closing"))) return;
+      for (const item of cards) {
+        item.style.removeProperty("grid-row");
+        item.style.removeProperty("grid-column");
+      }
+    };
+    if (reducedMotion) {
+      restoreAutoPlacement();
+      return;
+    }
+    const after = new Map(cards.map(item => [item, item.getBoundingClientRect()]));
+    const finalSummaryWidths = new Map(cards.map(item => [item,
+      item.querySelector(".loadout-card-summary").getBoundingClientRect().width
+    ]));
+    const finalGridHeight = grid.getBoundingClientRect().height;
+    // Reveal the final panel through the growing card instead of reflowing its
+    // heading and two-column contents on every animation frame.
+    const expansion = opening ? card.querySelector(".loadout-expansion") : null;
+    if (expansion) expansion.style.width = `${expansion.getBoundingClientRect().width}px`;
+    const timing = { duration: 650, easing: "cubic-bezier(.4,0,.2,1)" };
+    for (const item of cards) {
+      const first = before.get(item);
+      const last = after.get(item);
+      // Closing restores the flex layout before the bounds animation starts.
+      // Keep its summary from stretching to the still-expanded animated width.
+      const summaryWidth = `${finalSummaryWidths.get(item)}px`;
+      item.querySelector(".loadout-card-summary").animate([
+        { width: summaryWidth },
+        { width: summaryWidth }
+      ], timing);
+      // Animate the card bounds without scaling its text, art, or controls.
+      const animation = item.animate([
+        { width: `${first.width}px`, transform: `translate(${first.left - last.left}px, ${first.top - last.top}px)`, overflow: "hidden" },
+        { width: `${last.width}px`, transform: "translate(0, 0)", overflow: "hidden" }
+      ], timing);
+      if (closingPanels.has(item)) animation.finished.then(() => {
+        item.classList.remove("is-closing");
+        const content = item.querySelector(".loadout-expansion");
+        content.hidden = true;
+        content.style.width = "";
+        content.querySelectorAll("[data-loadout-panel]").forEach(section => { section.hidden = true; });
+        restoreAutoPlacement();
+      }).catch(() => {}); // A new toggle owns cleanup after an interrupted close.
+    }
+    grid.animate([{ height: `${gridHeight}px` }, { height: `${finalGridHeight}px` }], timing);
+    if (opening) card.querySelector(`[data-loadout-panel="${panel}"]`)?.animate(
+      [{ opacity: 0 }, { opacity: 1 }],
+      { duration: 350, delay: 180, fill: "backwards", easing: "ease-out" }
+    );
+  }
+
   static #inventoryItemFromTarget(actor, target) {
     const itemId = target.closest("[data-item-id]")?.dataset.itemId;
     const item = itemId ? actor?.items.get(itemId) : null;
@@ -2594,7 +3458,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     event.preventDefault();
     const item = VeilrunnerHeroSheet.#inventoryItemFromTarget(this.actor, target);
     if (!item) return;
-    await equipPhysicalItem(this.actor, item);
+    await equipPhysicalItem(this.actor, item, { replaceOutsideCombat: true });
   }
 
   static async #onUnequipInventoryItem(event, target) {
@@ -2636,12 +3500,17 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   /** Equip owned or newly-embedded physical Items when they are dropped on a drawer slot. */
   async _onDropItem(event, item) {
     const slot = event.target.closest?.(".equip-slot[data-slot]")?.dataset.slot;
-    if (!slot) return super._onDropItem(event, item);
+    if (!slot) {
+      const quantity = ammunitionAcquisitionQuantity(item);
+      const ownedItem = await super._onDropItem(event, item);
+      if (ownedItem && quantity !== null) await ownedItem.update({ "system.quantity": quantity });
+      return ownedItem;
+    }
     if (!itemHasCapability(item, "equippable")) {
       ui.notifications.warn(`${item.name} cannot be equipped.`);
       return null;
     }
-    if (!itemAcceptsEquipmentSlot(item, slot)) {
+    if (!itemAcceptsEquipmentSlot(item, slot, this.actor)) {
       const label = game.i18n.localize(`VEILRUNNER.Slot.${slot}`);
       ui.notifications.warn(`${item.name} cannot be equipped in ${label}. Check its slot restrictions.`);
       return null;
@@ -2650,7 +3519,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     let ownedItem = item;
     if (this.actor.uuid !== item.parent?.uuid) ownedItem = await super._onDropItem(event, item);
     if (!ownedItem) return null;
-    return await equipPhysicalItem(this.actor, ownedItem) ? ownedItem : null;
+    return await equipPhysicalItem(this.actor, ownedItem, { replaceOutsideCombat: true, slot }) ? ownedItem : null;
   }
 
   _onDragOver(event) {
@@ -2695,7 +3564,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     if (!item) return;
     const wasOpen = this.#detailsOpen;
     this.inventoryDetailsItemId = item.id;
-    this.inventoryDetailsQuantity = Math.max(0, Number(target.closest("[data-stack-quantity]")?.dataset.stackQuantity) || Number(item.system?.quantity) || 1);
+    this.inventoryDetailsQuantity = Math.max(0, Number(target.closest("[data-stack-quantity]")?.dataset.stackQuantity ?? item.system?.quantity ?? 1) || 0);
     this.actionDetailsDrawer = false;
     this.actionDetailsItemId = null;
     this.#clearActionDetailsAfterClose = false;
@@ -2717,9 +3586,15 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   static async #onToggleSheetOption(event, target) {
     event.preventDefault();
     const key = target.dataset.sheetOption;
-    if (!["showAllPartyResources", "showAllResourceBars", "showArmorResourceBar", "showShieldsResourceBar", "showBarriersResourceBar", "hidePartyList", "characterBackgroundColorEnabled"].includes(key)) return;
-    const value = !Boolean(this.actor.system.sheetOptions?.[key]);
-    await this.actor.update({ [`system.sheetOptions.${key}`]: value }, {
+    const resourceShapeOption = /^(health|armor|shields|barriers)BarRound(Left|Right)$/.test(key);
+    if (!resourceShapeOption && !["manaBarRounded", "staminaBarRounded", "staticHealthColor", "disableResourceBarVfx", "compactResourceBars", "compactEnergyBars", "hideResourceBarIcons", "showAllPartyResources", "showAllResourceBars", "showArmorResourceBar", "showShieldsResourceBar", "showBarriersResourceBar", "hidePartyList", "characterBackgroundColorEnabled"].includes(key)) return;
+    const options = this.actor.system.sheetOptions ?? {};
+    const current = key === "compactEnergyBars" ? options.compactManaBar || options.compactStaminaBar : options[key];
+    const value = !Boolean(current);
+    const update = key === "compactEnergyBars"
+        ? { "system.sheetOptions.compactManaBar": value, "system.sheetOptions.compactStaminaBar": value }
+        : { [`system.sheetOptions.${key}`]: value };
+    await this.actor.update(update, {
       render: false,
       veilrunnerPreserveMainPosition: true
     });
@@ -2736,6 +3611,19 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     if (!this.actor.isOwner) return ui.notifications.warn("You do not have permission to change PAN status.");
     const value = !Boolean(this.actor.system.networkLinked);
     await this.actor.update({ "system.networkLinked": value }, {
+      render: false,
+      veilrunnerPreserveMainPosition: true,
+      veilrunnerPanPresentationOnly: true
+    });
+    this.#syncPanPresentation();
+  }
+
+  static async #onSetPanMode(event, target) {
+    event.preventDefault();
+    if (!this.actor.isOwner) return ui.notifications.warn("You do not have permission to change PAN status.");
+    const update = panModeUpdate(target.dataset.panMode);
+    if (!update || panModeFor(this.actor.system) === target.dataset.panMode) return;
+    await this.actor.update(update, {
       render: false,
       veilrunnerPreserveMainPosition: true,
       veilrunnerPanPresentationOnly: true
@@ -2928,6 +3816,122 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     this.#syncFrameEditToggle(target);
     await this.render();
     this.#syncFrameEditToggle();
+  }
+
+  static async #onToggleHeroColumn(event) {
+    event.preventDefault();
+    const row = this.element?.querySelector(".hero-row");
+    const column = row?.querySelector(".hero-column");
+    if (!row || !column) return;
+    const hidden = !row.classList.contains("hero-column-hidden");
+    this.#sizeConsumableSquares();
+    const main = row.parentElement;
+    const handleCenters = [...main.querySelectorAll(":scope > .drawer-handle")].flatMap(handle => {
+      const rect = handle.getBoundingClientRect();
+      return rect.height ? [[handle, rect.top + rect.height / 2]] : [];
+    });
+    const pinHandleCenters = () => {
+      const top = main.getBoundingClientRect().top + main.clientTop;
+      for (const [handle, center] of handleCenters) {
+        handle.style.setProperty("--vr-drawer-handle-top", `${center - top}px`);
+      }
+    };
+    const normalWidth = Math.max(225, (row.getBoundingClientRect().width - 36) * .32 / 1.32);
+    const rowStyle = getComputedStyle(row);
+    const firstWidth = parseFloat(rowStyle.gridTemplateColumns) || 0;
+    const firstGap = parseFloat(rowStyle.columnGap) || 0;
+    if (row.dataset.columnFrame) cancelAnimationFrame(Number(row.dataset.columnFrame));
+    column.style.width = `${normalWidth}px`;
+    const transition = String(Number(row.dataset.columnTransition || 0) + 1);
+    row.dataset.columnTransition = transition;
+    row.classList.add("hero-column-sliding");
+    row.classList.toggle("hero-column-hidden", hidden);
+    const initialDrawerExtent = this.#leftDrawerExtent;
+    const finalDrawerExtent = hidden && this.#equipmentOpen ? 260 : 0;
+    const sheetFrame = this.#sheetFrameElement();
+    const initialLeft = this.position?.left ?? sheetFrame.offsetLeft;
+    const content = this.element.querySelector(".window-content");
+    const equipmentPanel = this.element.querySelector('[data-application-part="equipment"]');
+    const initialEquipmentWidth = equipmentPanel?.getBoundingClientRect().width ?? 260;
+    const finalEquipmentWidth = hidden ? 260 : normalWidth + 42;
+    this.#leftFrameReveal?.cancel();
+    window.clearTimeout(this.#equipmentCloseTimeout);
+    this.#equipmentCloseTimeout = undefined;
+    const drawDrawer = progress => {
+      if (initialDrawerExtent === finalDrawerExtent) return;
+      const extent = initialDrawerExtent + (finalDrawerExtent - initialDrawerExtent) * progress;
+      this.#leftDrawerExtent = extent;
+      content.classList.toggle("equipment-expanded-left", extent > 0);
+      content.style.setProperty("--vr-left-drawer-extent", `${extent}px`);
+      sheetFrame.style.transition = "none";
+      sheetFrame.style.maxWidth = `${VeilrunnerHeroSheet.BASE_WIDTH + VeilrunnerHeroSheet.DRAWER_WIDTH + Math.max(initialDrawerExtent, finalDrawerExtent)}px`;
+      const left = Math.max(0, initialLeft + initialDrawerExtent - extent);
+      sheetFrame.style.left = `${left}px`;
+      if (this.position) this.position.left = left;
+      this.#setSheetFrameWidth(this.#detailsFrameWidth);
+      equipmentPanel?.style.setProperty("--vr-equipment-width", `${initialEquipmentWidth + (finalEquipmentWidth - initialEquipmentWidth) * progress}px`);
+    };
+    column.inert = hidden;
+    const finish = () => {
+      if (row.dataset.columnTransition !== transition) return;
+      drawDrawer(1);
+      this.#syncLeftDrawerExtent();
+      void sheetFrame.offsetWidth;
+      sheetFrame.style.removeProperty("transition");
+      row.classList.remove("hero-column-sliding");
+      row.style.gridTemplateColumns = "";
+      row.style.columnGap = "";
+      delete row.dataset.columnFrame;
+      column.style.width = "";
+      column.style.transform = "";
+      column.style.visibility = "";
+      pinHandleCenters();
+      // Preserve the same center on subsequent renders and when dragging resumes.
+      for (const [handle] of handleCenters) {
+        const side = handle.classList.contains("handle-left") ? "left" : "right";
+        this.#drawerHandleTop[side] = parseFloat(handle.style.getPropertyValue("--vr-drawer-handle-top")) / main.clientHeight * 100;
+      }
+      const equipment = this.element?.querySelector('[data-application-part="equipment"]');
+      if (equipment) this.#pinEquipmentWidth(equipment);
+      // Keep document preparation and persistence off the animation's hot path.
+      // Serialize completed toggles so a slower earlier save cannot win.
+      this.#heroColumnSave = this.#heroColumnSave.then(() => this.actor.update({
+        "system.sheetOptions.hideHeroColumn": hidden
+      }, { render: false, veilrunnerPreserveMainPosition: true })).catch(error => {
+        console.error("Veilrunner | Could not save hero column visibility", error);
+        ui.notifications.error("Could not save hero column visibility.");
+      });
+    };
+    if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      finish();
+      return;
+    }
+    // One edge drives both elements in the same frame. The hero's right edge
+    // stays exactly 36px left of the main area throughout the entire slide.
+    const fullExtent = normalWidth + 36;
+    const from = firstWidth + firstGap;
+    const to = hidden ? 0 : fullExtent;
+    const draw = extent => {
+      row.style.gridTemplateColumns = `${extent}px minmax(0,1fr)`;
+      row.style.columnGap = "0px";
+      column.style.transform = `translateX(${extent - fullExtent}px)`;
+      column.style.visibility = "visible";
+    };
+    pinHandleCenters();
+    draw(from);
+    drawDrawer(0);
+    let started;
+    const frame = now => {
+      if (row.dataset.columnTransition !== transition || !row.isConnected) return;
+      started ??= now;
+      const progress = Math.min(1, (now - started) / 500);
+      const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+      drawDrawer(eased);
+      draw(from + (to - from) * eased);
+      if (progress === 1) finish();
+      else row.dataset.columnFrame = String(requestAnimationFrame(frame));
+    };
+    row.dataset.columnFrame = String(requestAnimationFrame(frame));
   }
 
   static async #onSetStatusTrack(event, target) {
@@ -3131,12 +4135,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
             <div class="vr-portrait-crop-axis vertical" aria-label="${game.i18n.localize("VEILRUNNER.CropVertical")}">
               <button type="button" data-crop-reset="cropY" title="Reset ${game.i18n.localize("VEILRUNNER.CropVertical")}"><i class="fa-solid fa-rotate-left"></i></button>
               <label>${game.i18n.localize("VEILRUNNER.CropVertical")}<input name="cropY" type="range" min="-100" max="200" value="${crop.y}" /></label>
-              <output class="vr-portrait-crop-value" data-crop-value="cropY">${crop.y}%</output>
+              <output class="vr-portrait-crop-value" data-crop-value="cropY">0px</output>
             </div>
             <div class="vr-portrait-crop-axis horizontal" aria-label="${game.i18n.localize("VEILRUNNER.CropHorizontal")}">
               <button type="button" data-crop-reset="cropX" title="Reset ${game.i18n.localize("VEILRUNNER.CropHorizontal")}"><i class="fa-solid fa-rotate-left"></i></button>
               <label><input name="cropX" type="range" min="-100" max="200" value="${crop.x}" /></label>
-              <output class="vr-portrait-crop-value" data-crop-value="cropX">${crop.x}%</output>
+              <output class="vr-portrait-crop-value" data-crop-value="cropX">0px</output>
             </div>
           </div>
           <div class="vr-portrait-crop-option vr-portrait-crop-option-range">
@@ -3158,8 +4162,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         ok: {
           label: game.i18n.localize("VEILRUNNER.SaveCrop"),
           callback: (event, button) => ({
-            x: clampCropNumber(button.form.elements.cropX.value, -100, 200, 50),
-            y: clampCropNumber(button.form.elements.cropY.value, -100, 200, 50),
+            x: clampCropNumber(button.form.elements.cropX.dataset.cropPosition, 0, 100, 50),
+            y: clampCropNumber(button.form.elements.cropY.dataset.cropPosition, 0, 100, 50),
             zoom: clampCropNumber(button.form.elements.cropZoom.value, 1, 5, 1),
             rotation: clampCropNumber(button.form.elements.cropRotation.value, -180, 180, 0),
             flipX: button.form.elements.cropFlipX.checked
@@ -3207,8 +4211,64 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     openCharacterCreation(this.actor, { mode: "levelUp" });
   }
 
-  static #onOpenCharacterCreation() {
-    openCharacterCreation(this.actor, { portraitEditor: this });
+  static #onOpenCharacterCreation(event, target) {
+    openCharacterCreation(this.actor, { portraitEditor: this, destination: target?.dataset.progressionDestination });
+  }
+
+  static #onToggleProgressionPlanner(event, target) {
+    const panel = target.closest(".progression-planned");
+    const editor = panel.querySelector(".progression-planner-editor");
+    editor.hidden = target.dataset.planLevel ? false : !editor.hidden;
+    panel.querySelector("[aria-expanded]").setAttribute("aria-expanded", String(!editor.hidden));
+    if (target.dataset.planLevel) editor.querySelector("[data-plan-level]").value = target.dataset.planLevel;
+    if (!editor.hidden) editor.querySelector("[data-plan-name]").focus();
+  }
+
+  static #onOpenLevelPlanner(event, target) {
+    const level = Number(target.dataset.planLevel ?? Number(this.actor.system.level) + 1);
+    if (!this.actor.isOwner || !Number.isInteger(level) || level <= Number(this.actor.system.level)) return;
+    return openCharacterCreation(this.actor, { mode: "planning", planningLevel: level, destination: "attribute" });
+  }
+
+  static async #onSaveProgressionPlan(event, target) {
+    if (!this.actor.isOwner || target.disabled) return;
+    const editor = target.closest(".progression-planner-editor");
+    const nameInput = editor.querySelector("[data-plan-name]");
+    const name = nameInput.value.trim().slice(0, 120);
+    const level = Number(editor.querySelector("[data-plan-level]").value);
+    const kind = editor.querySelector("[data-plan-kind]").value;
+    if (!name) { nameInput.focus(); return; }
+    if (!Number.isInteger(level) || level <= Number(this.actor.system.level) || !["attribute", "talent", "skill"].includes(kind)) return;
+    const saved = this.actor.getFlag("Veilrunner", "progressionPlan");
+    const plan = Array.isArray(saved) ? [...saved] : [];
+    plan.push({ level, kind, name, detail: editor.querySelector("[data-plan-detail]").value.trim().slice(0, 40) });
+    target.disabled = true;
+    try { await this.actor.setFlag("Veilrunner", "progressionPlan", plan); }
+    finally { target.disabled = false; }
+  }
+
+  static async #onRemoveProgressionPlan(event, target) {
+    if (!this.actor.isOwner || target.disabled) return;
+    const saved = this.actor.getFlag("Veilrunner", "progressionPlan");
+    const index = Number(target.dataset.planIndex);
+    if (!Array.isArray(saved) || !Number.isInteger(index) || index < 0 || index >= saved.length) return;
+    target.disabled = true;
+    try { await this.actor.setFlag("Veilrunner", "progressionPlan", saved.filter((item, i) => i !== index)); }
+    finally { target.disabled = false; }
+  }
+
+  static async #onMoveProgressionPlan(event, target) {
+    if (!this.actor.isOwner || target.disabled) return;
+    const saved = this.actor.getFlag("Veilrunner", "progressionPlan");
+    const index = Number(target.dataset.planIndex);
+    if (!Array.isArray(saved) || !Number.isInteger(index) || index < 1 || index >= saved.length) return;
+    const plan = [...saved];
+    const previous = plan.findLastIndex((item, i) => i < index && item.level === plan[index].level);
+    if (previous < 0) return;
+    [plan[previous], plan[index]] = [plan[index], plan[previous]];
+    target.disabled = true;
+    try { await this.actor.setFlag("Veilrunner", "progressionPlan", plan); }
+    finally { target.disabled = false; }
   }
 
   static #onOpenPlayerDatapad() {

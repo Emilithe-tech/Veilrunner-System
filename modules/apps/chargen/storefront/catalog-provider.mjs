@@ -185,7 +185,7 @@ export function catalogRecord(item, entry) {
     rarity: rarity.slug, rarityName: rarity.name, rarityColor: rarity.color, rarityTier: rarity.tier,
     grade, manufacturer: system.manufacturer || "",
     price: Math.max(0, Number(entry.price ?? system.price) || 0), currency: entry.currency || system.currency || "credits",
-    weight: Math.max(0, Number(system.weight) || 0), damage: system.damage?.base || "", range: Math.max(0, Number(system.range) || 0),
+    weight: Math.max(0, Number(system.weight) || 0) * (item.type === "ammunition" ? Math.max(1, Number(system.roundsPerPack) || 1) : 1), damage: system.damage?.base || "", range: Math.max(0, Number(system.range) || 0),
     magazine: Math.max(0, Number(system.firearm?.capacity ?? system.capacity) || 0), fireModes, reload: system.reload || "",
     actions: system.actions ?? "", description: descriptionText(system.description?.value ?? system.description),
     buildCompatibility: Array.isArray(system.buildCompatibility) ? system.buildCompatibility : [],

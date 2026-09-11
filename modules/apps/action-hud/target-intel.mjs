@@ -2,6 +2,7 @@ import { DEFAULT_INTEL_MODULES, PAN_STATE, systemId } from "./constants.mjs";
 import { findPartyForHero } from "../../helpers/party.mjs";
 import { getPanState, qualitativeHealth } from "./pan.mjs";
 import { visibleEffects } from "./visibility.mjs";
+import { sharesPanInformation } from "../../helpers/pan.mjs";
 
 const safeKey = value => String(value ?? "unknown").replace(/[^A-Za-z0-9_-]/g, "_");
 const tokenDocument = token => token?.document ?? token;
@@ -39,7 +40,7 @@ export function getTargetIntelPresentation(token, { user = globalThis.game?.user
   const intel = getEncounterIntel(token, viewerActor, combat);
   const panState = getPanState(viewerActor, combat);
   const gm = Boolean(user?.isGM);
-  const networked = Boolean(actor.system?.networkLinked);
+  const networked = sharesPanInformation(actor.system);
   const resources = actor.system?.resources ?? {};
   const exact = module => gm || (networked && panState === PAN_STATE.STABLE && known(intel, module));
   const identity = gm || known(intel, "identity") || !actor.flags?.[systemId()]?.hideIdentity;

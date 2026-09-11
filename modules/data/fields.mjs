@@ -70,7 +70,7 @@ export function equipmentSchema() {
     neck: slot(),
     wrists: slot(),
     leftRing: slot(),
-    rightRing: slot(),
+    auxiliary: slot(),
     offhand: slot()
   });
 }

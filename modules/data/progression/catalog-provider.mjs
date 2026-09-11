@@ -6,7 +6,7 @@ import {
   materializeTalentTreeCatalog
 } from "./catalog-materializer.mjs";
 
-export const PROGRESSION_CATALOG_COLLECTION = "Veilrunner.progression";
+export const PROGRESSION_CATALOG_COLLECTION = "Veilrunner.character-library";
 export const PROGRESSION_CATALOG_CHANGED_HOOK = "veilrunnerTalentTreeCatalogChanged";
 
 const documentsIn = collection => Array.isArray(collection?.contents) ? collection.contents : Array.from(collection?.values?.() ?? collection ?? []);
@@ -99,7 +99,7 @@ export class ProgressionCatalogProvider {
     this.loading = null;
     this.revision = 0;
     this.definitionIndex = null;
-    this.dependencyCollections = new Set([`${this.systemId}.progression`]);
+    this.dependencyCollections = new Set([PROGRESSION_CATALOG_COLLECTION]);
     this.unregisterHooks = null;
     this.invalidationBatchDepth = 0;
     this.invalidationPending = false;
@@ -150,6 +150,7 @@ export class ProgressionCatalogProvider {
       throw unavailable("progression-pack-unreadable", "The canonical Progression pack could not be read.", { collection: progressionRoute.collection }, cause);
     }
     if (!Array.isArray(documents)) documents = documentsIn(documents);
+    documents = documents.filter(document => ["practice", "progression"].includes(document.type));
     if (this.expected !== null && documents.length !== this.expected.practices + this.expected.progressions) {
       throw unavailable("progression-pack-count-mismatch", `Canonical Progression pack expected ${this.expected.practices + this.expected.progressions} Items, found ${documents.length}.`);
     }

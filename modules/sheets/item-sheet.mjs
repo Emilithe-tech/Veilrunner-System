@@ -2,11 +2,15 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
+import { ammoPackQuantity } from "../items/ammunition-quantity.mjs";
+import { weaponRequiredSlots } from "../data/equipment-slots.mjs";
 import { itemHasCapability, SEMANTIC_ITEM_TYPES } from "../data/definitions/item-capabilities.mjs";
 import { CanonicalDefinitionReader } from "../data/definitions/canonical-reader.mjs";
 import { SEMANTIC_TYPE_DOMAINS } from "../data/definitions/canonical-id.mjs";
 import { actionAuthoringContracts } from "./action-authoring.mjs";
-import { firearmActionForItem, firearmLoadedState, executeFirearmAction } from "../items/firearms.mjs";
+import { uniqueItemKind, UNIQUE_KIND_OPTIONS, changeUniqueItemKind } from "./unique-kind.mjs";
+import { firearmActionForItem, firearmLoadedState, executeFirearmAction, executeMagazineAction, setLoadedMagazine, splitMagazineStack } from "../items/firearms.mjs";
+import { projectAmmunitionRelations, projectItemLoading } from "./ammunition-view.mjs";
 import { normalizeHudAction, itemHudActions } from "../apps/action-hud/discovery.mjs";
 import { resolveActionConfiguration } from "../actions/action-configuration.mjs";
 import { getHudPreferences, setHudPreferences, replaceHudPreferences } from "../apps/action-hud/preferences.mjs";
@@ -76,17 +80,22 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     const [descriptionHTML, mechanicsHTML, gmDescriptionHTML] = await Promise.all([
       enrich(descriptionValue), enrich(String(system.mechanics ?? "")), isGM && physical ? enrich(String(system.description?.gm ?? "")) : ""
     ]);
-    await foundry.applications.handlebars.loadTemplates(["rows", "summary", "actions", "configuration", "details", "field"].map(name => `${PART}${name}.hbs`));
+    await foundry.applications.handlebars.loadTemplates(["rows", "summary", "actions", "configuration", "details", "field", "ammunition", "loading"].map(name => `${PART}${name}.hbs`));
     const catalogs = { definitions: this.definitionChoices, types: SEMANTIC_ITEM_TYPES,
       actorTypes: Object.keys(CONFIG.Actor.dataModels), effects: (CONFIG.statusEffects ?? []).map(effect => ({ id: effect.id, name: game.i18n.localize(effect.name ?? effect.label ?? effect.id) })),
       traits: game.settings.get(game.system.id, "actionTraits") ?? [], localize: key => game.i18n.localize(key),
       containers: contents(actor?.items).filter(entry => entry.type === "container" && entry !== item) };
     Object.assign(context, { id: this.id, item, system, overview, isGM, physical, canConfigure,
+      ammunitionRelations: projectAmmunitionRelations(item, catalogs),
+      itemLoading: projectItemLoading(item),
+      uniqueKind: uniqueItemKind(item),
+      uniqueKindOptions: UNIQUE_KIND_OPTIONS.map(option => ({ ...option, selected: option.value === uniqueItemKind(item) })),
+      canEditUniqueKind: this.isEditable && isGM && !actor,
       editable: this.isEditable, descriptionEditing: this.descriptionEditing && this.isEditable,
       descriptionPath: physical ? "system.description.value" : "system.description", descriptionValue, descriptionHTML, mechanicsHTML, gmDescriptionHTML,
       actionGroups: [...new Set(cards.map(card => card.group))].map(label => ({ label, cards: cards.filter(card => card.group === label) })),
       configurations, details: this.itemTab === "details" ? projectItemDetails(item, catalogs, this.isEditable) : [],
-      tabs: ITEM_TABS.map(tab => ({ ...tab, active: tab.id === this.itemTab })),
+      tabs: ITEM_TABS.map(tab => ({ ...tab, label: tab.id === "configuration" ? ({ ammunition: "Ammo setup", magazine: "Loading" })[item.type] ?? (firearm ? "Loadout" : tab.label) : tab.label, active: tab.id === this.itemTab })),
       tabSummary: this.itemTab === "summary", tabActions: this.itemTab === "actions", tabConfiguration: this.itemTab === "configuration", tabDetails: this.itemTab === "details",
       magazine: loaded?.mode === "detachable" ? { name: loaded.magazine?.name ?? "Empty slot", installed: Boolean(loaded.magazine),
         img: loaded.magazine?.img, rounds: loaded.rounds, capacity: loaded.capacity } : null,
@@ -119,6 +128,7 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
         if (document !== this.item && this.item.actor && (document?.parent === this.item.actor || document === this.item.actor)) this.render();
       };
       this.#hooks.push(["updateItem", Hooks.on("updateItem", refresh)], ["updateActor", Hooks.on("updateActor", refresh)],
+        ["createItem", Hooks.on("createItem", refresh)], ["deleteItem", Hooks.on("deleteItem", refresh)],
         ["updateCompendium", Hooks.on("updateCompendium", () => { this.definitionChoices = []; })],
         ["updateUser", Hooks.on("updateUser", user => { if (this.item.actor && user === game.user) { this.previewSelections = {}; this.render(); } })]);
     }
@@ -140,6 +150,17 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
   }
 
   _onChangeForm(formConfig, event) {
+    if (event.target.matches("[data-unique-kind]")) {
+      if (!this.isEditable || !game.user?.isGM || this.item.actor) return;
+      const kind = event.target.value;
+      event.target.disabled = true;
+      this.#configurationQueue = this.#configurationQueue.then(async () => {
+        await changeUniqueItemKind(this.item, kind);
+        this.previewSelections = {};
+        await this.render();
+      }).catch(error => { console.error("Veilrunner | Unique kind", error); ui.notifications.error(error.message); this.render(); });
+      return;
+    }
     if (event.target.matches("[data-configuration]")) {
       const control = event.target;
       if (!control.reportValidity()) return;
@@ -174,11 +195,22 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     const current = this.item.system.toObject();
     if (submitted.system || submitted.contractArrays) submitted.system = normalizeContractForm(schema, submitted.system ?? {}, current, submitted.contractArrays ?? {}, ITEM_DETAIL_PATHS);
     delete submitted.contractArrays;
-    if (submitted.system) { delete submitted.system.definitionId; delete submitted.system.quantity; delete submitted.system.owned; }
+    if (submitted.system) {
+      delete submitted.system.definitionId;
+      delete submitted.system.owned;
+      if (this.item.type === "ammunition" && !this.item.actor) submitted.system.quantity = ammoPackQuantity({ ...current, ...submitted.system });
+      else if (this.item.type === "ammunition" && this.item.actor?.isOwner && submitted.system.quantity !== undefined) {
+        const quantity = Number(submitted.system.quantity);
+        if (!Number.isSafeInteger(quantity) || quantity < 0) throw new Error("Ammo quantity must be a whole number of rounds, zero or greater.");
+        submitted.system.quantity = quantity;
+      } else delete submitted.system.quantity;
+    }
     if (submitted.system && itemHasCapability(this.item, "actionProvider") && !itemHasCapability(this.item, "inventory")) {
       submitted.system = actionAuthoringContracts(current, submitted.system, { actorOwned: Boolean(this.item.actor) });
     }
-    if (this.item.type === "weapon" && submitted.system?.handedness !== undefined) submitted.system.requiredSlots = submitted.system.handedness === "two" ? ["mainHand", "offhand"] : ["mainHand"];
+    if (this.item.type === "weapon" && submitted.system && (submitted.system.handedness !== undefined || submitted.system.requiredSlots !== undefined)) {
+      submitted.system.requiredSlots = weaponRequiredSlots({ ...current, ...submitted.system });
+    }
     return submitted;
   }
 
@@ -198,15 +230,33 @@ export default class VeilrunnerItemSheet extends HandlebarsApplicationMixin(Item
     if (action === "openDefinition") {
       const id = button.dataset.definitionId;
       const domain = String(id ?? "").split(".")[1];
-      const types = SEMANTIC_ITEM_TYPES.filter(type => SEMANTIC_TYPE_DOMAINS[type] === domain);
+      const types = SEMANTIC_ITEM_TYPES.filter(type => SEMANTIC_TYPE_DOMAINS[type] === domain
+        || (["ability", "trait"].includes(domain) && ["ability", "action", "trait"].includes(type)));
       if (!types.length) throw new Error("This reference has no canonical definition route.");
       const document = await new CanonicalDefinitionReader(types).resolve(id);
       return document.sheet.render(true);
     }
     if (action === "editDescription" && this.isEditable) { this.descriptionEditing = !this.descriptionEditing; return this.render(); }
+    if (action === "itemLoading" && this.isEditable && this.item.actor?.isOwner) {
+      const { operation, ammoId, magazineId, weaponId } = button.dataset;
+      button.disabled = true;
+      try {
+        const success = operation === "split" ? await splitMagazineStack(this.item.actor, magazineId) : ["rounds", "unload"].includes(operation)
+          ? await executeMagazineAction(this.item.actor, magazineId, operation === "rounds" ? "load" : "unload", { ammoId })
+          : ["insert", "remove"].includes(operation) && await setLoadedMagazine(this.item.actor, weaponId, operation === "insert" ? magazineId : "");
+        if (!success) ui.notifications.warn("Loading could not be completed. Check the current ammo, capacity, and compatibility.");
+      } finally { await this.render(); }
+      return;
+    }
     if (action === "firearm" && this.isEditable && this.item.actor?.isOwner) {
       await executeFirearmAction(this.item.actor, this.item.id, button.dataset.operation);
       return this.render();
+    }
+    if (action === "magazine" && this.isEditable && this.item.actor?.isOwner) {
+      button.disabled = true;
+      try { await executeMagazineAction(this.item.actor, this.item.id, button.dataset.operation); }
+      finally { await this.render(); }
+      return;
     }
     if (!this.isEditable) return;
     if (action === "loadDefinitions") {

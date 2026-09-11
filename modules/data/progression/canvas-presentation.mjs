@@ -1,9 +1,9 @@
 export const PROGRESSION_CANVAS_PRESENTATION_VERSION = 2;
 
 const COLLECTIONS = Object.freeze({
-  practice: ["Veilrunner.progression"],
-  spell: ["Veilrunner.unique-abilities", "Veilrunner.progression"],
-  skill: ["Veilrunner.talents-skills", "Veilrunner.progression"]
+  practice: ["Veilrunner.character-library"],
+  spell: ["Veilrunner.character-library"],
+  skill: ["Veilrunner.character-library"]
 });
 const OUTCOME_COPY = Object.freeze({
   previewed: { tone: "success", heading: "Canonical candidate validated" },
@@ -122,7 +122,7 @@ export function progressionCanvasConfirmationView({ draft, preview, capabilities
     type,
     definitionId,
     nodeId,
-    collections: clone(operation === "create-content" ? COLLECTIONS[type] ?? [] : ["Veilrunner.progression"]),
+    collections: clone(operation === "create-content" ? COLLECTIONS[type] ?? [] : ["Veilrunner.character-library"]),
     changes,
     blockingReason
   });

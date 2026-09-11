@@ -1,3 +1,5 @@
+{{> "systems/veilrunner/templates/item/parts/loading.hbs"}}
+{{> "systems/veilrunner/templates/item/parts/ammunition.hbs"}}
 {{#if magazine}}<section class="vr-item-panel"><h2 class="section-heading">Installed components</h2><div class="vr-item-card-grid">
   <article class="vr-item-config-card"><h3>Magazine</h3><div class="vr-item-feature">{{#if magazine.img}}<img src="{{magazine.img}}" alt="" />{{else}}<i class="fa-solid fa-grip-lines-vertical vr-item-feature-icon" aria-hidden="true"></i>{{/if}}<div><strong>{{magazine.name}}</strong>{{#if magazine.installed}}<p>{{magazine.rounds}} / {{magazine.capacity}} rounds</p>{{/if}}</div></div>
     {{#if canConfigure}}<div class="vr-item-buttons">{{#if magazine.installed}}<button type="button" data-sheet-action="firearm" data-operation="reload">Reload</button><button type="button" class="vr-item-remove" data-sheet-action="firearm" data-operation="unload">Remove</button>{{else}}<button type="button" data-sheet-action="firearm" data-operation="load">Install</button>{{/if}}</div>{{/if}}
@@ -14,4 +16,4 @@
   </label>{{/each}}</div>
   {{#if comparison.length}}<h2 class="section-heading vr-item-subheading">Current loadout <small>Compare to base</small></h2><div class="vr-item-comparison">{{#each comparison}}<div><span>{{label}}</span><p>{{before}} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> <b class="{{#if changed}}changed{{/if}}">{{after}}</b></p>{{#if change}}<strong class="changed">{{change}}</strong>{{/if}}</div>{{/each}}</div>{{/if}}
   {{#if breakdown.length}}<details class="vr-item-calculation"><summary>Configuration effects</summary>{{> "systems/veilrunner/templates/item/parts/rows.hbs" rows=breakdown}}</details>{{/if}}
-</section>{{else}}{{#unless magazine}}{{#unless internalAmmo}}<p class="vr-item-empty">This item has no configurable choices.</p>{{/unless}}{{/unless}}{{/each}}
+</section>{{else}}{{#unless ammunitionRelations}}{{#unless magazine}}{{#unless internalAmmo}}<p class="vr-item-empty">This item has no configurable choices.</p>{{/unless}}{{/unless}}{{/unless}}{{/each}}

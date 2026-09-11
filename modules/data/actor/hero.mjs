@@ -20,6 +20,7 @@ import {
   clampResourcePools
 } from "../fields.mjs";
 import { xpForLevel } from "../xp.mjs";
+import { migrateRingEquipment } from "../equipment-slots.mjs";
 import { normalizeQualitySelections } from "../../apps/chargen/quality-rules.mjs";
 
 const { StringField, NumberField, ArrayField, SchemaField } = foundry.data.fields;
@@ -85,7 +86,28 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
       sheetOptions: new SchemaField({
         showPartyList: booleanFlag(true),
         hidePartyList: booleanFlag(false),
+        hideHeroColumn: booleanFlag(false),
         showAllPartyResources: booleanFlag(false),
+        disableResourceBarVfx: booleanFlag(false),
+        compactResourceBars: booleanFlag(false),
+        compactManaBar: booleanFlag(false),
+        compactStaminaBar: booleanFlag(false),
+        manaBarRounded: booleanFlag(false),
+        staminaBarRounded: booleanFlag(false),
+        staticHealthColor: booleanFlag(false),
+        healthBarRoundLeft: booleanFlag(false),
+        healthBarRoundRight: booleanFlag(false),
+        healthBarColor: new StringField({ required: true, blank: true, initial: "" }),
+        armorBarRoundLeft: booleanFlag(false),
+        armorBarRoundRight: booleanFlag(false),
+        armorBarColor: new StringField({ required: true, blank: true, initial: "" }),
+        shieldsBarRoundLeft: booleanFlag(false),
+        shieldsBarRoundRight: booleanFlag(false),
+        shieldsBarColor: new StringField({ required: true, blank: true, initial: "" }),
+        barriersBarRoundLeft: booleanFlag(false),
+        barriersBarRoundRight: booleanFlag(false),
+        barriersBarColor: new StringField({ required: true, blank: true, initial: "" }),
+        hideResourceBarIcons: booleanFlag(false),
         showAllResourceBars: booleanFlag(false),
         showArmorResourceBar: booleanFlag(false),
         showShieldsResourceBar: booleanFlag(false),
@@ -98,6 +120,8 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
         panOnColor: new StringField({ required: true, blank: false, initial: "#00ff49" }),
         panInterferenceColor: new StringField({ required: true, blank: false, initial: "#fbbf24" }),
         characterBorderColor: new StringField({ required: true, blank: false, initial: "#66717d" }),
+        loadoutCardColor: new StringField({ required: true, blank: false, initial: "#cbd5e1" }),
+        loadoutButtonColor: new StringField({ required: true, blank: true, initial: "" }),
         characterBackgroundColor: new StringField({ required: true, blank: false, initial: "#000000" }),
         characterBackgroundColorEnabled: booleanFlag(true),
         manaTextColor: new StringField({ required: true, blank: false, initial: "#60a5fa" }),
@@ -111,6 +135,7 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
         levelUpGlowIntensity: new NumberField({ required: true, min: 0.25, max: 2, initial: 1, nullable: false })
       }),
       networkLinked: booleanFlag(false),
+      panSilent: booleanFlag(false),
       resources: resourcesSchema(),
       equipment: equipmentSchema(),
       equipmentAssignments: new ArrayField(new SchemaField({
@@ -161,6 +186,7 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
     const hasQualitiesTaken = Object.hasOwn(source, "qualitiesTaken");
     const hasFlawsTaken = Object.hasOwn(source, "flawsTaken");
     source = super.migrateData(source);
+    migrateRingEquipment(source);
     if (hasQualitiesTaken) source.qualitiesTaken = normalizeQualitySelections(source.qualitiesTaken);
     if (hasFlawsTaken) source.flawsTaken = normalizeQualitySelections(source.flawsTaken);
     const mental = source.attributes?.mental;
@@ -188,7 +214,7 @@ export default class HeroData extends foundry.abstract.TypeDataModel {
       for (const slot of ["helmet", "back", "shoulders", "offHand", "waist", "hands"]) {
         delete source.equipment[slot];
       }
-      const stableSlots = ["head", "chest", "arms", "legs", "feet", "mainHand", "ears", "neck", "wrists", "leftRing", "rightRing", "offhand"];
+      const stableSlots = ["head", "chest", "arms", "legs", "feet", "mainHand", "ears", "neck", "wrists", "leftRing", "auxiliary", "offhand"];
       const hasCompleteRoster = stableSlots.every(slot => Object.hasOwn(source.equipment, slot));
       if (source.equipmentAssignments === undefined && hasCompleteRoster) {
         const assignments = new Map();

@@ -1,5 +1,6 @@
 import { EQUIPMENT_SLOTS, PHYSICAL_ITEM_TYPES, RULE_ELEMENT_KEYS } from "../data/item/physical.mjs";
 import { isSafeEffectPath, normalizeEffectChange, normalizeEffectMode } from "./effect-boundary.mjs";
+import { actorWeaponSlots, canDualWieldTwoHandedWeapons } from "../data/equipment-slots.mjs";
 
 const RULE_KEYS = new Set(RULE_ELEMENT_KEYS);
 
@@ -11,9 +12,9 @@ export function isSafeRulePath(path) {
   return isSafeEffectPath(path);
 }
 
-export function itemRequiredSlots(item) {
+export function itemRequiredSlots(item, actor = item?.parent, slot) {
   const required = textList(item?.system?.requiredSlots).filter(slot => EQUIPMENT_SLOTS.includes(slot));
-  if (required.length) return [...new Set(required)];
+  if (required.length) return actorWeaponSlots(actor, item, [...new Set(required)], slot);
   const legacy = String(item?.system?.equipmentSlot ?? "");
   return EQUIPMENT_SLOTS.includes(legacy) ? [legacy] : [];
 }
@@ -33,6 +34,11 @@ export function equipmentBySlot(actor) {
       if (EQUIPMENT_SLOTS.includes(slot) && !resolved[slot]) resolved[slot] = itemId;
     }
   }
+  // Release the old offhand reservation when the future trait becomes active.
+  const primary = actor?.items?.get?.(resolved.mainHand);
+  if (resolved.mainHand && resolved.mainHand === resolved.offhand
+    && primary?.type === "weapon" && primary.system?.handedness === "two"
+    && canDualWieldTwoHandedWeapons(actor)) delete resolved.offhand;
   return resolved;
 }
 
@@ -42,7 +48,7 @@ export function equippedSlotsForItem(actor, itemId) {
 }
 
 export function isItemEquipped(actor, item) {
-  const required = itemRequiredSlots(item);
+  const required = itemRequiredSlots(item, actor);
   if (!required.length) return false;
   const equipped = new Set(equippedSlotsForItem(actor, item.id));
   return required.every(slot => equipped.has(slot));

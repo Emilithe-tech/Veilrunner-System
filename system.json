@@ -3,7 +3,7 @@
   "type": "system",
   "title": "Veilrunner First Edition",
   "description": "The Official FoundryVTT System for Veilrunner",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "license": "Open RPG Community License (ORC)",
   "manifest": "https://github.com/Emilithe-tech/Veilrunner-System/raw/main/system.json",
   "download": "https://github.com/Emilithe-tech/Veilrunner-System",
@@ -35,28 +35,10 @@
   ],
   "packs": [
     {
-      "name": "archetypes",
-      "label": "Archetype Library",
+      "name": "character-library",
+      "label": "Character Library",
       "system": "Veilrunner",
-      "path": "packs/archetypes",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "professions",
-      "label": "Profession Library",
-      "system": "Veilrunner",
-      "path": "packs/path-professions",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "disciplines",
-      "label": "Discipline Library",
-      "system": "Veilrunner",
-      "path": "packs/disciplines",
+      "path": "packs/character-library",
       "type": "Item",
       "private": false,
       "flags": {}
@@ -71,136 +53,10 @@
       "flags": {}
     },
     {
-      "name": "unique-abilities",
-      "label": "Unique Abilities",
-      "system": "Veilrunner",
-      "path": "packs/unique-abilities",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "talents-skills",
-      "label": "Talents & Skills Library",
-      "system": "Veilrunner",
-      "path": "packs/talents-skills",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "progression",
-      "label": "Progression Library",
-      "system": "Veilrunner",
-      "path": "packs/progression",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "unique-actions",
-      "label": "Unique Actions",
-      "system": "Veilrunner",
-      "path": "packs/unique-actions",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "unique-reactions",
-      "label": "Unique Reactions",
-      "system": "Veilrunner",
-      "path": "packs/unique-reactions",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "unique-traits",
-      "label": "Unique Traits",
-      "system": "Veilrunner",
-      "path": "packs/unique-traits",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "weapons",
-      "label": "Weapons Library",
-      "system": "Veilrunner",
-      "path": "packs/weapons",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "armor",
-      "label": "Armor & Shields Library",
-      "system": "Veilrunner",
-      "path": "packs/armor",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "ammunition",
-      "label": "Ammunition & Magazines Library",
-      "system": "Veilrunner",
-      "path": "packs/ammunition",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
       "name": "equipment",
       "label": "Equipment Library",
       "system": "Veilrunner",
       "path": "packs/equipment",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "species",
-      "label": "Species Library",
-      "system": "Veilrunner",
-      "path": "packs/species",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "origins",
-      "label": "Origin Library",
-      "system": "Veilrunner",
-      "path": "packs/origins",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "backgrounds",
-      "label": "Background Library",
-      "system": "Veilrunner",
-      "path": "packs/backgrounds",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "languages",
-      "label": "Language Library",
-      "system": "Veilrunner",
-      "path": "packs/languages",
-      "type": "Item",
-      "private": false,
-      "flags": {}
-    },
-    {
-      "name": "qualities-perks",
-      "label": "Perks & Flaws Library",
-      "system": "Veilrunner",
-      "path": "packs/qualities-perks",
       "type": "Item",
       "private": false,
       "flags": {}

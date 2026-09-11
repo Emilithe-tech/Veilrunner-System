@@ -14,6 +14,7 @@ import { starterStoreContext } from "../../data/starter-store.mjs";
 import { ChargenBuildStore } from "./build-store.mjs";
 import { validateChargenBuild } from "./validation.mjs";
 import { renderReviewPage, renderReviewStatus } from "./review-view.mjs";
+import { PLANNING_STEPS, normalizePlanningLevel, planningState, planningValidation, saveLevelPlan } from "./planning-mode.mjs";
 import { renderChargenHeader, renderDetailsPanel } from "./shell.mjs";
 import { renderLiveBuild } from "./live-build.mjs";
 import { renderSelectionBrowser } from "./selection-browser.mjs";
@@ -116,10 +117,7 @@ const REFERENCE_PACKS = Object.freeze({
   background: "backgrounds"
 });
 const UNIQUE_ABILITY_PACKS = Object.freeze([
-  "unique-abilities",
-  "unique-actions",
-  "unique-reactions",
-  "unique-traits"
+  "character-library"
 ]);
 const SPECIES_GROUPS = Object.freeze([
   { label: "Mammalian", options: ["Human", "Elf", "Dwarf", "Ork", "Troll", "Goblin"] },
@@ -434,15 +432,19 @@ export function registerCharacterCreation() {
   });
 }
 
-export function openCharacterCreation(actor, { mode = "creation", portraitEditor = null } = {}) {
-  const existing = existingCreators.get(actor.id);
+export function openCharacterCreation(actor, { mode = "creation", portraitEditor = null, destination = null, planningLevel = null } = {}) {
+  const creatorKey = mode === "planning" ? `${actor.id}:plan:${planningLevel}` : actor.id;
+  const existing = existingCreators.get(creatorKey);
   if (existing) {
     if (portraitEditor) existing.portraitEditor = portraitEditor;
+    if (destination) existing.navigateToProgression(destination);
     existing.bringToFront();
     return existing;
   }
-  const creator = new CharacterCreationOverlay(actor, { mode, portraitEditor });
-  existingCreators.set(actor.id, creator);
+  const creator = new CharacterCreationOverlay(actor, { mode, portraitEditor, planningLevel });
+  creator.creatorKey = creatorKey;
+  if (destination) creator.navigateToProgression(destination, { draw: false });
+  existingCreators.set(creatorKey, creator);
   creator.render();
   return creator;
 }
@@ -484,10 +486,11 @@ export class TalentTreeEditorMenu extends foundry.applications.api.ApplicationV2
 }
 
 class CharacterCreationOverlay {
-  constructor(actor, { mode = "creation", page = "magic", nodeId = "", portraitEditor = null, authoringRuntime = null } = {}) {
+  constructor(actor, { mode = "creation", page = "magic", nodeId = "", portraitEditor = null, authoringRuntime = null, planningLevel = null } = {}) {
     this.actor = actor;
     this.portraitEditor = portraitEditor;
-    this.mode = mode === "treeEditor" ? "treeEditor" : mode === "levelUp" ? "levelUp" : "creation";
+    this.mode = mode === "planning" ? "planning" : mode === "treeEditor" ? "treeEditor" : mode === "levelUp" ? "levelUp" : "creation";
+    this.planningLevel = this.mode === "planning" ? normalizePlanningLevel(actor.system?.level, planningLevel) : null;
     this.isTreeEditor = this.mode === "treeEditor";
     this.authoringRuntime = this.isTreeEditor ? authoringRuntime : null;
     this.authoringSession = this.authoringRuntime ? new ProgressionCanvasSession({ runtime: this.authoringRuntime }) : null;
@@ -565,6 +568,9 @@ class CharacterCreationOverlay {
       deepClone: foundry.utils.deepClone
     });
     this.state = this.store.state;
+    if (this.mode === "planning") {
+      Object.assign(this.state, planningState(this.state, actor.getFlag("Veilrunner", "levelPlans"), this.planningLevel));
+    }
     this.catalogProvider = new CatalogProvider(starterStoreContext());
     this.catalogIndex = new CatalogIndex(this.catalogProvider);
     this.catalogRecords = [];
@@ -600,12 +606,33 @@ class CharacterCreationOverlay {
   }
 
   get #steps() {
+    if (this.mode === "planning") return STEPS.filter(step => PLANNING_STEPS.includes(step.key));
     if (this.mode === "levelUp") return STEPS.filter(step => LEVEL_UP_STEP_KEYS.includes(step.key));
     return this.state.startingLevelLocked ? STEPS.filter(step => step.key !== "level") : STEPS;
   }
 
   bringToFront() {
     this.root.focus();
+  }
+
+  navigateToProgression(destination, { draw = true } = {}) {
+    if (!["attribute", "talent", "skill"].includes(destination) || this.isTreeEditor) return;
+    if (this.root.isConnected) this.#saveVisibleInputs();
+    const key = destination === "attribute" ? "attributes" : "talents";
+    const step = this.#steps.findIndex(entry => entry.key === key);
+    if (step < 0) return;
+    this.step = step;
+    this.state.detailSelection = null;
+    if (destination !== "attribute") {
+      this.treePage = destination === "skill" ? "skills" : "magic";
+      this.treeHelpOpen = false;
+      this.openPracticeId = null;
+      this.treeFocus = null;
+      this.treeSearch = "";
+      this.pendingTreeCenterId = "";
+      this.selectedTreeNodes.clear();
+    }
+    if (draw) this.#draw();
   }
 
   draw() {
@@ -701,7 +728,7 @@ class CharacterCreationOverlay {
     if (this.treeCatalogHook !== undefined) Hooks.off("veilrunnerTalentTreeCatalogChanged", this.treeCatalogHook);
     this.root.remove();
     if (this.isTreeEditor) existingTalentTreeEditor = null;
-    else existingCreators.delete(this.actor.id);
+    else existingCreators.delete(this.creatorKey ?? this.actor.id);
     if (renderSheet) this.actor.sheet?.render(true);
   }
 
@@ -752,10 +779,11 @@ class CharacterCreationOverlay {
     this.root.innerHTML = `
       <div class="vr-cc-shell">
         ${renderChargenHeader(steps, this.step, validation, STEP_GROUPS.filter(group => group.keys.some(key => steps.some(step => step.key === key))))}
-        <div class="vr-cc-corner-brand"><span>Veilrunner</span><strong>Character Generation</strong></div>
+        <div class="vr-cc-corner-brand"><span>Veilrunner</span><strong>${this.mode === "planning" ? `Level ${this.planningLevel} Planner` : "Character Generation"}</strong></div>
         <button type="button" class="vr-cc-icon vr-cc-shell-close" data-action="cancel" title="Close character generation" aria-label="Close character generation"><i class="fa-solid fa-xmark"></i></button>
         <aside class="vr-cc-live-build">${this.#liveBuild()}</aside>
         <main class="vr-cc-main">
+          ${this.mode === "planning" ? `<div class="vr-cc-planning-toolbar"><label>Plan level <input type="number" data-planning-level min="${number(this.actor.system.level) + 1}" value="${this.planningLevel}" /></label><button type="button" class="vr-cc-btn" data-action="change-planning-level">Open Level</button><button type="button" class="vr-cc-btn primary" data-action="save-level-plan">Save Plan</button><span>Future purchases are saved as a plan.</span></div>` : ""}
           ${current.key === "talents" ? this.#talentHeader(current, steps.length) : ""}
           <section class="vr-cc-panel">${this.#stepContent(current.key, validation)}</section>
         </main>
@@ -1591,6 +1619,7 @@ class CharacterCreationOverlay {
       try {
         const index = await pack.getIndex({ fields: ["system.summary", "system.description", "flags.veilrunner.profession", "flags.veilrunner.discipline", "flags.veilrunner.sourceAbilityName", "flags.veilrunner.rulesText"] });
         for (const entry of index) {
+          if (!["ability", "action", "spell", "trait"].includes(entry.type)) continue;
           const profession = foundry.utils.getProperty(entry, "flags.veilrunner.profession") ?? entry.flags?.veilrunner?.profession;
           const discipline = foundry.utils.getProperty(entry, "flags.veilrunner.discipline") ?? entry.flags?.veilrunner?.discipline;
           const ability = foundry.utils.getProperty(entry, "flags.veilrunner.sourceAbilityName") ?? entry.flags?.veilrunner?.sourceAbilityName ?? entry.name;
@@ -4869,6 +4898,12 @@ class CharacterCreationOverlay {
   }
 
   #reviewStep(validation) {
+    if (this.mode === "planning") {
+      const attributes = ATTRIBUTE_GROUPS.flatMap(group => group.attributes.map(attribute => `<li>${escape(attribute)}: ${number(foundry.utils.getProperty(this.state, `attributes.${group.key}.${attribute}`))}</li>`)).join("");
+      const branches = (this.state.talentTree?.branches ?? []).map(id => `<li>${escape(this.#treeCatalogEntry(id, "practice")?.practice?.name ?? id)}</li>`).join("");
+      const leaves = (this.state.talentTree?.leaves ?? []).map(leaf => `<li>${escape(this.#treeCatalogEntry(leaf.id, "spell")?.spell?.name ?? leaf.id)} · Rank ${number(leaf.rank, 1)}</li>`).join("");
+      return `<section class="vr-cc-planning-review"><h1>Level ${this.planningLevel} Plan</h1><p>Save this future build and return to it later. Your current hero stays at Level ${number(this.actor.system.level)}.</p><h2>Attributes</h2><ul>${attributes}</ul><h2>Talents &amp; Skills</h2><ul>${branches}${leaves || ""}</ul><button type="button" class="vr-cc-btn primary" data-action="confirm">Save Level ${this.planningLevel} Plan &amp; Close</button></section>`;
+    }
     const purchases = normalizeCart(this.state.storefront?.purchases);
     const purchaseTotal = cartTotal(purchases, this.catalogRecords);
     const branchNames = (this.state.talentTree?.branches ?? []).map(id => {
@@ -4887,7 +4922,7 @@ class CharacterCreationOverlay {
     const personaValues = this.state.personaTouched ? this.state.personaIndex : this.#personaRecommendation().values;
     return renderReviewPage({
       validation,
-      actionLabel: this.mode === "levelUp" ? "APPLY LEVEL UP" : "CREATE CHARACTER",
+      actionLabel: this.mode === "planning" ? `SAVE LEVEL ${this.planningLevel} PLAN` : this.mode === "levelUp" ? "APPLY LEVEL UP" : "CREATE CHARACTER",
       identity: {
         name: String(this.state.name ?? "").trim() || this.actor.name, level: this.state.startingLevel || 1,
         species: this.state.species, origin: this.state.origin, background: this.state.background,
@@ -4916,6 +4951,7 @@ class CharacterCreationOverlay {
   }
 
   #validation() {
+    if (this.mode === "planning") return planningValidation(this.planningLevel);
     const treeIssues = [];
     const catalog = talentTreeCatalog();
     for (const leaf of this.state.talentTree?.leaves ?? []) {
@@ -5090,6 +5126,24 @@ class CharacterCreationOverlay {
   }
 
   async #onClick(event) {
+    const planningAction = event.target.closest?.("[data-action]");
+    if (this.mode === "planning" && ["change-planning-level", "save-level-plan"].includes(planningAction?.dataset.action)) {
+      event.preventDefault();
+      if (planningAction.disabled) return;
+      planningAction.disabled = true;
+      try {
+        this.#saveVisibleInputs();
+        await saveLevelPlan(this.actor, this.planningLevel, this.state);
+        if (planningAction.dataset.action === "change-planning-level") {
+          const level = normalizePlanningLevel(this.actor.system.level, this.root.querySelector("[data-planning-level]")?.value);
+          if (level !== this.planningLevel) {
+            this.close();
+            openCharacterCreation(this.actor, { mode: "planning", planningLevel: level, destination: "attribute" });
+          }
+        } else ui.notifications.info(`Level ${this.planningLevel} plan saved.`);
+      } finally { planningAction.disabled = false; }
+      return;
+    }
     if (this.suppressTreeClick) {
       this.suppressTreeClick = false;
       event.preventDefault();
@@ -6362,6 +6416,13 @@ class CharacterCreationOverlay {
 
   async #confirm() {
     this.#saveVisibleInputs();
+    if (this.mode === "planning") {
+      if (!this.actor.isOwner) return;
+      await saveLevelPlan(this.actor, this.planningLevel, this.state);
+      ui.notifications.info(`Level ${this.planningLevel} plan saved.`);
+      this.close({ renderSheet: true });
+      return;
+    }
     if (this.mode === "levelUp") return this.#confirmLevelUp();
     if (normalizeCart(this.state.storefront?.cart).length) {
       ui.notifications.warn("Purchase or clear the remaining storefront cart before confirming character generation.");

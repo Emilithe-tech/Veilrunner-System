@@ -3,6 +3,7 @@
 @import url("./system/veilrunner.css");
 @import url("./sheets/document-sheet.css");
 @import url("./sheets/actor-sheet.css");
+@import url("./sheets/progression-panel.css");
 @import url("./sheets/party-sheet.css");
 @import url("./apps/player-datapad.css");
 @import url("./apps/portrait-editor.css");

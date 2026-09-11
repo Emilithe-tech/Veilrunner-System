@@ -2,6 +2,7 @@ import {
   DAMAGE_TYPES, EQUIPMENT_SLOTS, WEAPON_TYPES,
   compatibilitySchema, migratePhysicalItemData, physicalItemFields
 } from "./physical.mjs";
+import { weaponRequiredSlots } from "../equipment-slots.mjs";
 
 const { ArrayField, StringField, NumberField, SchemaField } = foundry.data.fields;
 const text = (initial = "") => new StringField({ required: true, blank: true, initial });
@@ -27,7 +28,7 @@ export function migrateWeaponData(source) {
   }
   if (source.handedness !== undefined) {
     source.handedness = source.handedness === "two" ? "two" : "one";
-    source.requiredSlots = source.handedness === "two" ? ["mainHand", "offhand"] : ["mainHand"];
+    source.requiredSlots = weaponRequiredSlots(source);
   } else if (source.requiredSlots !== undefined) {
     const slots = Array.isArray(source.requiredSlots)
       ? source.requiredSlots
@@ -88,7 +89,8 @@ export default class WeaponData extends foundry.abstract.TypeDataModel {
         capacity: whole(),
         loadedMagazineId: text(),
         internal: new SchemaField({
-          ammoId: text(), sourceAmmoId: text(), quantity: whole(), name: text(), img: text(), caliber: text(), ammoType: text(), ammoDefinitionId: text()
+          ammoId: text(), sourceAmmoId: text(), quantity: whole(), name: text(), img: text(), caliber: text(), ammoType: text(), ammoDefinitionId: text(),
+          ammoDamage: text(), ammoDamageType: text(), ammoDamageModifier: new NumberField({ required: true, integer: true, initial: 0, nullable: false })
         }),
         fireModes: new ArrayField(new SchemaField({
           id: text("single"), label: text("Single Shot"), actions: whole(1), ammoCost: whole(1),

@@ -2,7 +2,7 @@ import { QUALITY_PILLARS, QUALITY_TIERS, evaluateQualitySelection, qualitySelect
 import { CanonicalDefinitionReader } from "../../data/definitions/canonical-reader.mjs";
 import { qualityRequirements } from "../../data/item/legacy-quality-requirements.mjs";
 
-export const QUALITY_CATALOG_PACK = "Veilrunner.qualities-perks";
+export const QUALITY_CATALOG_PACK = "Veilrunner.character-library";
 const text = value => String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 const list = value => Array.isArray(value) ? value.map(entry => String(entry ?? "").trim()).filter(Boolean) : [];
 

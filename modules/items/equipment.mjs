@@ -31,8 +31,8 @@ export function equipmentAssignments(equipment = {}) {
   return [...byItem].map(([itemId, slots]) => ({ itemId, slots }));
 }
 
-export function itemAcceptsEquipmentSlot(item, slot) {
-  return itemHasCapability(item, "equippable") && EQUIPMENT_SLOTS.includes(slot) && itemRequiredSlots(item).includes(slot);
+export function itemAcceptsEquipmentSlot(item, slot, actor = item?.parent) {
+  return itemHasCapability(item, "equippable") && EQUIPMENT_SLOTS.includes(slot) && itemRequiredSlots(item, actor, slot).includes(slot);
 }
 
 async function applyGrantRules(actor, sourceItem) {
@@ -94,17 +94,19 @@ async function performEquipmentAction(actor, name, operation) {
   return true;
 }
 
-export async function equipPhysicalItem(actor, item) {
+export async function equipPhysicalItem(actor, item, { replaceOutsideCombat = false, slot } = {}) {
   if (!actor?.isOwner) return ui.notifications.warn("You do not have permission to equip this item.");
   if (!item || item.parent?.id !== actor.id) return ui.notifications.warn("That item is not owned by this actor.");
   if (!itemHasCapability(item, "equippable")) return ui.notifications.warn(`${item.name} cannot be equipped.`);
-  const required = itemRequiredSlots(item);
+  if (slot && !itemAcceptsEquipmentSlot(item, slot, actor)) return ui.notifications.warn("That item cannot use this equipment slot.");
+  const required = itemRequiredSlots(item, actor, slot);
   if (!required.length) return ui.notifications.warn(`${item.name} has no required equipment slots.`);
   const equipment = equipmentBySlot(actor);
+  const canReplace = replaceOutsideCombat && !globalThis.game?.combat?.started;
   const conflicts = required
     .map(slot => ({ slot, itemId: equipment[slot] }))
     .filter(entry => entry.itemId && entry.itemId !== item.id);
-  if (conflicts.length) {
+  if (conflicts.length && !canReplace) {
     const labels = conflicts.map(({ slot, itemId }) => `${game.i18n.localize(`VEILRUNNER.Slot.${slot}`)} (${actor.items.get(itemId)?.name ?? "occupied"})`);
     return ui.notifications.warn(`${item.name} cannot be equipped: ${labels.join(", ")}.`);
   }
@@ -114,18 +116,28 @@ export async function equipPhysicalItem(actor, item) {
   if (equippedSlots.length === expectedSlots.length && equippedSlots.every((slot, index) => slot === expectedSlots[index])) return true;
 
   const updates = {};
+  const displacedIds = new Set(conflicts.map(entry => entry.itemId));
   for (const slot of EQUIPMENT_SLOTS) {
-    if (equipment[slot] === item.id && !required.includes(slot)) updates[`system.equipment.${slot}`] = "";
+    if (actor.system.equipment?.[slot] && !equipment[slot]) updates[`system.equipment.${slot}`] = "";
+    if (displacedIds.has(equipment[slot]) || (equipment[slot] === item.id && !required.includes(slot))) updates[`system.equipment.${slot}`] = "";
   }
   for (const slot of required) updates[`system.equipment.${slot}`] = item.id;
   const nextEquipment = { ...equipment };
   for (const [path, value] of Object.entries(updates)) nextEquipment[path.split(".").at(-1)] = value;
   updates["system.equipmentAssignments"] = equipmentAssignments(nextEquipment);
-  return performEquipmentAction(actor, `Equip ${item.name}`, async () => {
+  const operation = async () => {
     await actor.update(updates);
+    // Displaced Items stay owned; remove only their temporary equipment grants.
+    const granted = actor.items.filter(document => {
+      const source = grantFlag(document, "grantedBy");
+      return typeof source === "string" && displacedIds.has(source.split(":")[0])
+        && grantFlag(document, "grantDuration") === "while-equipped";
+    });
+    if (granted.length) await actor.deleteEmbeddedDocuments("Item", granted.map(document => document.id));
     await applyGrantRules(actor, item);
     return true;
-  });
+  };
+  return canReplace ? operation() : performEquipmentAction(actor, `Equip ${item.name}`, operation);
 }
 
 export async function unequipPhysicalItem(actor, itemOrSlot) {

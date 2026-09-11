@@ -1,0 +1,30 @@
+{{#if ammunitionRelations}}
+<section class="vr-item-panel">
+  <h2 class="section-heading">{{ammunitionRelations.title}}</h2>
+  <p class="vr-item-hint">{{ammunitionRelations.hint}}</p>
+  <fieldset class="vr-item-details" {{#unless editable}}disabled{{/unless}}>
+    {{#each ammunitionRelations.fields}}{{> "systems/veilrunner/templates/item/parts/field.hbs"}}{{/each}}
+  </fieldset>
+</section>
+{{#if ammunitionRelations.owned}}
+<section class="vr-item-panel">
+  <h2 class="section-heading">Current inventory</h2>
+  {{#if ammunitionRelations.ammunition}}
+    {{#if canConfigure}}<label class="vr-item-field"><span>Qty (rounds remaining)</span><input type="number" name="system.quantity" value="{{ammunitionRelations.rounds}}" min="0" step="1" /></label>
+    {{else}}<p>Qty: {{ammunitionRelations.rounds}} rounds</p>{{/if}}
+    <p class="vr-item-hint">A 50-round pack starts at Qty 50. Loading a 12-round magazine leaves Qty 38. Editing pack size does not refill an owned ammo stack.</p>
+  {{/if}}
+  {{#if ammunitionRelations.magazine}}
+    <p>{{ammunitionRelations.ammoName}} · {{ammunitionRelations.rounds}} / {{ammunitionRelations.capacity}} rounds</p>
+    {{#if ammunitionRelations.inserted}}<p class="vr-item-hint">Remove this magazine from its firearm before loading or unloading rounds.</p>{{/if}}
+    {{#if canConfigure}}<div class="vr-item-buttons">
+      <button type="button" data-sheet-action="magazine" data-operation="load" {{#unless ammunitionRelations.canLoad}}disabled{{/unless}}>Load rounds</button>
+      <button type="button" data-sheet-action="magazine" data-operation="unload" {{#unless ammunitionRelations.canUnload}}disabled{{/unless}}>Unload rounds</button>
+    </div>{{/if}}
+  {{/if}}
+  <h3>Compatibility in your inventory</h3>
+  <p class="vr-item-hint">Compatibility only; availability also depends on remaining rounds and whether a magazine is already installed.</p>
+  {{#each ammunitionRelations.matches}}<div class="vr-item-stat-row"><span>{{name}}</span><span>{{#if compatible}}Compatible{{else}}Incompatible{{/if}}</span></div>{{else}}<p class="vr-item-hint">No related items in this inventory.</p>{{/each}}
+</section>
+{{/if}}
+{{/if}}

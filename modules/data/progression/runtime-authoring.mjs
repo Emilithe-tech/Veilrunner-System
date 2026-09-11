@@ -5,7 +5,7 @@ import {
 } from "./authoring-services.mjs";
 
 export const PROGRESSION_AUTHORING_RUNTIME_VERSION = 3;
-export const PROGRESSION_AUTHORING_COLLECTION = "Veilrunner.progression";
+export const PROGRESSION_AUTHORING_COLLECTION = "Veilrunner.character-library";
 export const PROGRESSION_AUTHORING_MUTATION_OPERATION = "live-progression-authoring-mutation";
 
 const PAGE_DEFINITION_IDS = Object.freeze({

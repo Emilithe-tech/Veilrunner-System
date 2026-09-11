@@ -39,7 +39,13 @@
 }
 .vr-universal-item :is(.vr-item-rail, .vr-item-main) { min-width: 0; min-height: 0; }
 .vr-universal-item .vr-item-rail { overflow: auto; padding-right: 12px; border-right: 1px solid var(--vr-tech-divider); scrollbar-width: thin; }
-.vr-universal-item .vr-item-main { display: grid; grid-template-rows: 162px 46px minmax(0, 1fr); gap: 10px; }
+.vr-universal-item .vr-item-main { display: grid; grid-template-rows: auto 46px minmax(0, 1fr); gap: 10px; }
+.vr-universal-item .vr-item-sheet[data-item-family="combat"] { --vr-accent: #e5a06c; }
+.vr-universal-item .vr-item-sheet[data-item-family="defense"] { --vr-accent: #78b9e5; }
+.vr-universal-item .vr-item-sheet[data-item-family="magic"] { --vr-accent: #bd9aee; }
+.vr-universal-item .vr-item-sheet[data-item-family="character"] { --vr-accent: #85cba8; }
+.vr-universal-item .vr-item-sheet[data-item-family="equipment"] { --vr-accent: #d7bd83; }
+.vr-universal-item .vr-item-sheet { --vr-accent-soft: color-mix(in srgb, var(--vr-accent) 16%, transparent); }
 .vr-universal-item .vr-item-content { overflow: auto; min-height: 0; padding: 1px 2px 2px 0; scrollbar-width: thin; }
 .vr-universal-item :is(h1, h2, h3, p, dl, ul) { margin: 0; }
 .vr-universal-item :is(h1, h2) { font-family: inherit; }
@@ -50,8 +56,11 @@
 .vr-universal-item .vr-item-artwork > img { display: block; height: 100%; width: 100%; object-fit: contain; border: 0; }
 .vr-universal-item .vr-item-artwork > button { position: absolute; bottom: 5px; right: 5px; width: 28px; height: 26px; min-height: 0; padding: 0; opacity: 0; }
 .vr-universal-item .vr-item-artwork:hover > button, .vr-universal-item .vr-item-artwork:focus-within > button { opacity: 1; }
-.vr-universal-item .vr-item-identity { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0 0 10px; }
+.vr-universal-item .vr-item-identity { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0 12px 10px; border-left: 3px solid var(--vr-accent); min-height: 100px; }
+.vr-universal-item .vr-item-name h1 { overflow-wrap: anywhere; }
 .vr-universal-item .vr-item-name { min-width: 0; padding-top: 10px; }
+.vr-universal-item .vr-item-unique-kind { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.vr-universal-item .vr-item-unique-kind select { width: auto; min-width: 130px; }
 .vr-universal-item .vr-item-subtype { color: var(--vr-item-muted); font-size: 1.12rem; margin-top: 9px; }
 .vr-universal-item .vr-item-type { display: inline-block; border: 1px solid color-mix(in srgb, var(--vr-accent) 62%, var(--vr-tech-border)); border-radius: 3px; margin-top: 12px; padding: 4px 12px; font-size: .85rem; }
 .vr-universal-item .vr-item-grade-panel { flex: 0 0 108px; align-self: start; border: 1px solid var(--vr-tech-divider); border-radius: 4px; text-align: center; }
@@ -150,7 +159,7 @@
 .vr-universal-item prose-mirror .editor-content { padding: 10px; min-height: 140px; }
 @container (max-width: 800px) {
   .vr-universal-item .vr-item-sheet { grid-template-columns: 210px minmax(0, 1fr); padding: 8px; gap: 8px; }
-  .vr-universal-item .vr-item-main { grid-template-rows: 138px 46px minmax(0, 1fr); }
+  .vr-universal-item .vr-item-main { grid-template-rows: auto 46px minmax(0, 1fr); }
   .vr-universal-item .vr-item-artwork { height: 194px; }
   .vr-universal-item .vr-item-action-grid { grid-template-columns: minmax(0, 1fr); }
   .vr-universal-item .bottom-nav-btn { gap: 5px; font-size: .6rem; }

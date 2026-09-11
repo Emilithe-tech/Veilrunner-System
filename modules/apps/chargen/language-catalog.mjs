@@ -1,6 +1,6 @@
 import { CanonicalDefinitionReader } from "../../data/definitions/canonical-reader.mjs";
 
-export const LANGUAGE_CATALOG_PACK = "Veilrunner.languages";
+export const LANGUAGE_CATALOG_PACK = "Veilrunner.character-library";
 
 const text = value => String(value ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 

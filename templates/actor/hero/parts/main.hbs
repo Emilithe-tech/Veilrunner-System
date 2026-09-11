@@ -1,6 +1,6 @@
 <section class="main-panel" style="--vr-accent: {{sheetOptions.categoryHighlightColor}}; --vr-pan-off: {{sheetOptions.panOffColor}}; --vr-pan-on: {{sheetOptions.panOnColor}}; --vr-pan-interference: {{sheetOptions.panInterferenceColor}}; --vr-character-border: {{sheetOptions.characterBorderColor}}; --vr-character-background: {{#if sheetOptions.characterBackgroundColorEnabled}}{{sheetOptions.characterBackgroundColor}}{{else}}transparent{{/if}};{{#if characterBackgroundImage}} --vr-character-background-image: url('{{characterBackgroundImage}}');{{/if}} --vr-mana-text: {{sheetOptions.manaTextColor}}; --vr-stamina-text: {{sheetOptions.staminaTextColor}}; --vr-level-up: {{sheetOptions.levelUpColor}}; --vr-earned-xp: {{sheetOptions.earnedXpColor}}; --vr-total-xp: {{sheetOptions.totalXpColor}}; --vr-level-up-glow: {{sheetOptions.levelUpGlowColor}}; --vr-level-brightness: {{sheetOptions.levelUpBrightness}}; --vr-level-intensity: {{sheetOptions.levelUpGlowIntensity}}; --vr-level-rate-duration: {{sheetOptions.levelUpRateDuration}}s;">
   {{> "systems/veilrunner/templates/actor/hero/parts/drawer-handles.hbs"}}
-  <div class="hero-row">
+  <div class="hero-row {{#if sheetOptions.hideHeroColumn}}hero-column-hidden{{/if}}">
     <div class="hero-column">
       <section class="sidecar-identity" aria-label="{{localize 'VEILRUNNER.Section.character'}}">
         <input class="name-input" type="text" name="name" value="{{actor.name}}"
@@ -29,33 +29,6 @@
         <div class="hero-image" style="--portrait-x: {{portraitCrop.x}}%; --portrait-y: {{portraitCrop.y}}%; --portrait-zoom: {{portraitCrop.zoom}}; --portrait-rotation: {{portraitCrop.rotation}}deg; --portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}};{{#if characterBackgroundImage}} background: url('{{characterBackgroundImage}}') center / cover no-repeat !important;{{/if}}">
           <img src="{{portraitImage}}" alt="{{actor.name}}" />
 
-          <div class="hero-pool hero-pool-left">
-            <span class="hero-pool-current" title="{{localize 'VEILRUNNER.Stamina'}}">
-              {{#if editMode}}
-                <input type="number" name="system.resources.stamina.value" value="{{system.resources.stamina.value}}" />
-              {{else}}
-                {{system.resources.stamina.value}}
-              {{/if}}
-            </span>
-            <div class="bar-track vertical hud stamina">
-              <div class="bar-fill stamina" style="height: {{system.percent.stamina}}%"></div>
-            </div>
-            <span class="hero-pool-label">{{localize 'VEILRUNNER.Stamina'}}</span>
-          </div>
-
-          <div class="hero-pool hero-pool-right">
-            <span class="hero-pool-current" title="{{localize 'VEILRUNNER.Mana'}}">
-              {{#if editMode}}
-                <input type="number" name="system.resources.mana.value" value="{{system.resources.mana.value}}" />
-              {{else}}
-                {{system.resources.mana.value}}
-              {{/if}}
-            </span>
-            <div class="bar-track vertical hud mana">
-              <div class="bar-fill mana" style="height: {{system.percent.mana}}%"></div>
-            </div>
-            <span class="hero-pool-label">{{localize 'VEILRUNNER.Mana'}}</span>
-          </div>
 
           <div class="inspiration-dots">
             {{#each inspirationDots}}
@@ -122,12 +95,47 @@
         </div>
       </div>
 
+      <div class="hero-energy-panel">
+        <div class="hero-energy-pool stamina {{#if sheetOptions.compactEnergyBars}}energy-compact{{/if}}" style="--energy-radius: {{#if system.sheetOptions.staminaBarRounded}}999px{{else}}0px{{/if}};">
+          <div class="hero-energy-heading">
+            <span class="hero-energy-label">{{localize 'VEILRUNNER.Stamina'}}</span>
+            <span class="hero-energy-value">
+              {{#if editMode}}
+                <input type="number" name="system.resources.stamina.value" value="{{system.resources.stamina.value}}" aria-label="{{localize 'VEILRUNNER.Stamina'}}" />
+              {{else}}
+                {{system.resources.stamina.value}}
+              {{/if}}
+              / {{system.resources.stamina.max}}
+            </span>
+          </div>
+          <div class="hero-energy-track" role="meter" aria-label="{{localize 'VEILRUNNER.Stamina'}}" aria-valuemin="0" aria-valuemax="{{system.resources.stamina.max}}" aria-valuenow="{{system.resources.stamina.value}}">
+            <div class="hero-energy-fill" style="width: clamp(0%, {{system.percent.stamina}}%, 100%);"></div>
+          </div>
+        </div>
+        <div class="hero-energy-pool mana {{#if sheetOptions.compactEnergyBars}}energy-compact{{/if}}" style="--energy-radius: {{#if system.sheetOptions.manaBarRounded}}999px{{else}}0px{{/if}};">
+          <div class="hero-energy-heading">
+            <span class="hero-energy-label">{{localize 'VEILRUNNER.Mana'}}</span>
+            <span class="hero-energy-value">
+              {{#if editMode}}
+                <input type="number" name="system.resources.mana.value" value="{{system.resources.mana.value}}" aria-label="{{localize 'VEILRUNNER.Mana'}}" />
+              {{else}}
+                {{system.resources.mana.value}}
+              {{/if}}
+              / {{system.resources.mana.max}}
+            </span>
+          </div>
+          <div class="hero-energy-track" role="meter" aria-label="{{localize 'VEILRUNNER.Mana'}}" aria-valuemin="0" aria-valuemax="{{system.resources.mana.max}}" aria-valuenow="{{system.resources.mana.value}}">
+            <div class="hero-energy-fill" style="width: clamp(0%, {{system.percent.mana}}%, 100%);"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="hero-resource-divider" aria-hidden="true"></div>
 
-      <section class="stat-grid-compact">
-        <div class="stat stat-bar health-bar">
-          <label><i class="fa-solid fa-heart-pulse resource-icon health"></i> {{localize 'VEILRUNNER.Health'}}</label>
-          <div class="resource-bar health" style="--resource-color: {{healthColor}};">
+      <section class="stat-grid-compact {{#if sheetOptions.staticHealthColor}}resource-health-static{{/if}} {{#if sheetOptions.disableResourceBarVfx}}resource-vfx-off{{/if}} {{#if sheetOptions.compactResourceBars}}resource-compact{{/if}} {{#if sheetOptions.hideResourceBarIcons}}resource-icons-off{{/if}}">
+        <div class="stat stat-bar health-bar" style="--resource-radius-left: {{#if system.sheetOptions.healthBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.healthBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Health'}}"><i class="fa-solid fa-heart-pulse resource-icon health"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Health'}}</span></label>
+          <div class="resource-bar health" style="--resource-health-dynamic: {{healthColor}};">
             <div class="bar-track horizontal">
               <div class="bar-fill health" style="width: {{healthPercent}}%;"></div>
               {{#if tempHealthPercent}}
@@ -151,9 +159,9 @@
           </div>
         </div>
 
-        <div class="stat stat-bar" data-resource-bar="armor" {{#unless showArmorResource}}hidden{{/unless}}>
-          <label><i class="fa-solid fa-shield-halved resource-icon armor"></i> {{localize 'VEILRUNNER.Armor'}}</label>
-          <div class="resource-bar armor">
+        <div class="stat stat-bar" data-resource-bar="armor" {{#unless showArmorResource}}hidden{{/unless}} style="--resource-radius-left: {{#if system.sheetOptions.armorBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.armorBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Armor'}}"><i class="fa-solid fa-shield-halved resource-icon armor"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Armor'}}</span></label>
+          <div class="resource-bar armor" style="--armor-integrity: {{system.percent.armor}};">
             <div class="bar-track horizontal">
               <div class="bar-fill" style="width: {{system.percent.armor}}%"></div>
               <span class="bar-text">
@@ -169,8 +177,8 @@
             </div>
           </div>
         </div>
-        <div class="stat stat-bar" data-resource-bar="shields" {{#unless showShieldsResource}}hidden{{/unless}}>
-          <label><i class="fa-solid fa-shield resource-icon shields"></i> {{localize 'VEILRUNNER.Shields'}}</label>
+        <div class="stat stat-bar" data-resource-bar="shields" {{#unless showShieldsResource}}hidden{{/unless}} style="--resource-radius-left: {{#if system.sheetOptions.shieldsBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.shieldsBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Shields'}}"><i class="fa-solid fa-shield resource-icon shields"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Shields'}}</span></label>
           <div class="resource-bar shields">
             <div class="bar-track horizontal">
               <div class="bar-fill" style="width: {{system.percent.shields}}%"></div>
@@ -187,8 +195,8 @@
             </div>
           </div>
         </div>
-        <div class="stat stat-bar" data-resource-bar="barriers" {{#unless showBarriersResource}}hidden{{/unless}}>
-          <label><i class="fa-solid fa-hexagon resource-icon barriers"></i> {{localize 'VEILRUNNER.Barriers'}}</label>
+        <div class="stat stat-bar" data-resource-bar="barriers" {{#unless showBarriersResource}}hidden{{/unless}} style="--resource-radius-left: {{#if system.sheetOptions.barriersBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.barriersBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Barriers'}}"><i class="fa-solid fa-hexagon resource-icon barriers"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Barriers'}}</span></label>
           <div class="resource-bar barriers">
             <div class="bar-track horizontal">
               <div class="bar-fill" style="width: {{system.percent.barriers}}%"></div>
@@ -209,13 +217,15 @@
       {{#if showPartyList}}
       <section class="party-view">
         <div class="party-heading">
-          <button type="button" class="party-pan-status" data-action="togglePan" data-pan-state="{{panState}}"
-                  title="{{localize 'VEILRUNNER.PAN.Label'}} {{panConnectedCount}} {{localize 'VEILRUNNER.PAN.Connected'}} {{panStatus}}"
-                  aria-pressed="{{#if panLinked}}true{{else}}false{{/if}}">
-            <span class="party-pan-label">{{localize 'VEILRUNNER.PAN.Label'}}</span>
+          <div class="party-pan-summary">
+            <span class="party-pan-label"><i class="fa-solid fa-fw {{panIcon}}" data-pan-icon aria-hidden="true"></i> {{localize 'VEILRUNNER.PAN.Label'}}</span>
             <span class="party-pan-connected"><strong data-pan-connected-count>{{panConnectedCount}}</strong> {{localize 'VEILRUNNER.PAN.Connected'}}</span>
-            <span class="party-pan-state" data-pan-state-label>{{panStatus}}</span>
-          </button>
+          </div>
+          <div class="party-pan-modes" data-pan-mode="{{panMode}}" role="group" aria-label="{{localize 'VEILRUNNER.PAN.Label'}}">
+            {{#each panModes}}
+              <button type="button" class="party-pan-mode" data-action="setPanMode" data-pan-mode="{{mode}}" aria-pressed="{{#if selected}}true{{else}}false{{/if}}">{{label}}</button>
+            {{/each}}
+          </div>
         </div>
         <div class="party-member-list">
           {{#each partyMembers as |member|}}
@@ -273,6 +283,10 @@
       <nav class="sub-nav-row {{#if (eq section "inventory")}}has-filter-row inventory-sub-nav{{/if}}">
         <div class="nav-indicator" style="--nav-width: {{subTabIndicatorWidth}}%; --nav-offset: {{subTabIndicatorOffset}}%;"></div>
         {{#if (eq section "character")}}
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "loadout")}}active{{/if}}"
+             data-action="setSubTab" data-section="character" data-tab="loadout">
+            <i class="fa-solid fa-toolbox"></i><span>{{localize 'VEILRUNNER.Loadout'}}</span>
+          </button>
           <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "stats")}}active{{/if}}"
              data-action="setSubTab" data-section="character" data-tab="stats">
             <i class="fa-solid fa-chart-simple"></i><span>{{localize 'VEILRUNNER.Stats'}}</span>
@@ -449,7 +463,115 @@
 
       <div class="section-body {{mainTabAnimationClass}}">
         {{#if (eq section "character")}}
-          {{#if (eq subTabs.character "stats")}}
+          {{#if (eq subTabs.character "loadout")}}
+            <div class="loadout-sections">
+              {{#each loadoutSections as |group|}}
+                <section class="loadout-section loadout-section-{{group.key}} {{#if group.twoHanded}}loadout-section-two-handed{{/if}}">
+                  <h1 class="cohesive-section-heading"><span>{{localize group.label}}</span><small>{{group.equippedCount}} {{#if (eq group.key "gear")}}items{{else}}equipped{{/if}}</small></h1>
+                  <div class="loadout-row">
+                  {{#if (eq group.key "armor")}}
+                    <button type="button" class="loadout-row-scroll previous" data-action="scrollArmorLoadout" data-direction="-1" aria-label="Scroll armor left" hidden><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+                    <button type="button" class="loadout-row-scroll next" data-action="scrollArmorLoadout" data-direction="1" aria-label="Scroll armor right"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+                  {{/if}}
+                  {{#if (eq group.key "gear")}}
+                  <div class="loadout-items" data-consumable-grid data-minimum-slots="{{group.consumableSlots.length}}">
+                    {{#each group.consumableSlots as |item|}}
+                      {{#if item.id}}
+                      <button type="button" class="loadout-gear-tile" data-action="openLoadoutItem" data-item-id="{{item.id}}" data-consumable-slot="{{item.slot}}" title="{{item.name}}" aria-label="{{item.name}}"><img src="{{item.img}}" alt="" /></button>
+                      {{else}}
+                      <button type="button" class="loadout-gear-tile loadout-consumable-add" data-action="pickLoadoutConsumable" data-consumable-slot="{{item.slot}}" title="Select consumable" aria-label="Select consumable"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                      {{/if}}
+                    {{/each}}
+                  </div>
+                  <div class="loadout-consumable-picker" hidden>
+                    <button type="button" class="loadout-expansion-close" data-action="closeLoadoutConsumables" aria-label="Close consumable picker"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    <h4>Select consumable</h4>
+                    <div class="loadout-weapon-list">
+                      {{#each group.consumableChoices as |item|}}
+                      <button type="button" class="loadout-weapon-option" data-action="selectLoadoutConsumable" data-item-id="{{item.id}}"><img src="{{item.img}}" alt="" /><span>{{item.name}}</span><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                      {{else}}<p>No owned consumables available.</p>{{/each}}
+                    </div>
+                  </div>
+                  {{else}}
+                  <div class="loadout-items">
+                    {{#each group.items as |item|}}
+                      {{#if item.empty}}
+                      <article class="loadout-item loadout-item-placeholder" data-equipment-slot="{{item.slot}}" aria-label="{{item.slots}}">
+                        <div class="loadout-card-summary">
+                          <span class="loadout-card-slot">{{item.slots}}</span>
+                          <button type="button" class="loadout-add-weapon" data-action="toggleLoadoutPanel" data-panel="weapon" aria-expanded="false" aria-label="{{localize item.pickerLabel}} — {{item.slots}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                        </div>
+                        <div class="loadout-expansion" hidden>
+                          <button type="button" class="loadout-expansion-close" data-action="toggleLoadoutPanel" aria-label="Close panel"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                          <section data-loadout-panel="weapon" hidden>
+                            <h4>{{localize item.pickerLabel}}</h4>
+                            <div class="loadout-weapon-list">
+                              {{#each item.choices as |choice|}}
+                              <button type="button" class="loadout-weapon-option" data-action="equipLoadoutItem" data-item-id="{{choice.id}}"><img src="{{choice.img}}" alt="" /><span>{{choice.name}}</span><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                              {{else}}<p>{{localize item.pickerEmpty}}</p>{{/each}}
+                            </div>
+                          </section>
+                        </div>
+                      </article>
+                      {{else}}
+                      {{#if item.compact}}
+                      <button type="button" class="loadout-gear-tile" data-action="openLoadoutItem" data-item-id="{{item.id}}" title="{{item.name}}" aria-label="{{item.name}}"><img src="{{item.img}}" alt="" /></button>
+                      {{else}}
+                      <article class="loadout-item {{#if item.compact}}loadout-item-compact{{/if}}" style="--loadout-rarity: {{item.rarity.color}}" data-item-id="{{item.id}}" data-equipment-slot="{{item.slot}}" aria-label="{{item.name}} — {{item.slots}}">
+                        <div class="loadout-card-summary">
+                        <span class="loadout-card-slot">{{#if item.compact}}<b>{{item.index}}</b>{{else}}{{item.slots}}<button type="button" class="loadout-menu-toggle" data-action="openLoadoutMenu" aria-label="Item options" title="Item options"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>{{/if}}</span>
+                        <button type="button" class="loadout-card-art" data-action="openLoadoutItem" data-item-id="{{item.id}}" aria-label="Open {{item.name}}"><img src="{{item.img}}" alt="" />{{#if item.compact}}<small>×{{item.quantity}}</small>{{/if}}<span class="loadout-card-traits">{{#each item.traits}}<span>{{this}}</span>{{/each}}</span></button>
+                        <strong class="loadout-card-name">{{item.name}}</strong>
+                        <span class="loadout-card-type"><span>{{item.rarity.name}}</span><span>{{item.typeLabel}}</span></span>
+                        {{#unless item.compact}}
+                          <span class="loadout-card-stats">{{#each item.stats}}<span><i class="fa-solid fa-{{icon}}" aria-hidden="true"></i><b>{{value}}</b><small>{{label}}</small></span>{{/each}}</span>
+                          {{#if (eq group.key "weapon")}}
+                            <span class="loadout-card-resource {{#unless item.ammo}}loadout-card-resource-empty{{/unless}}">
+                              {{#if item.ammo}}
+                                <i class="fa-solid fa-bolt" aria-hidden="true"></i><span><small>{{item.ammo.label}}</small><b>{{item.ammo.value}} / {{item.ammo.max}}</b></span>
+                              {{else}}
+                                <span class="loadout-reload-na" aria-label="Reload not applicable">N/A</span>
+                              {{/if}}
+                            </span>
+                          {{/if}}
+                          <span class="loadout-card-sockets">
+                            <button type="button" class="loadout-socket-mod" data-action="toggleLoadoutPanel" data-panel="mod" aria-expanded="false"><small>Mods</small><span><i class="fa-solid fa-gear" aria-hidden="true"></i></span></button>
+                            <button type="button" class="loadout-socket-rune" data-action="toggleLoadoutPanel" data-panel="rune" aria-expanded="false"><small>Runes</small><span><i class="fa-solid fa-gem" aria-hidden="true"></i></span></button>
+                            <button type="button" class="loadout-socket-glyph" data-action="toggleLoadoutPanel" data-panel="glyph" aria-expanded="false"><small>Glyphs</small><span><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></span></button>
+                          </span>
+                        {{/unless}}
+                        </div>
+                        {{#unless item.compact}}
+                        <div class="loadout-expansion" hidden>
+                          <button type="button" class="loadout-expansion-close" data-action="toggleLoadoutPanel" aria-label="Close panel"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                          <section data-loadout-panel="mod" hidden>
+                            <h4>{{#if (eq group.key "weapon")}}Weapon Mods{{else}}Mods{{/if}}</h4>
+                            {{#if (eq group.key "weapon")}}
+                            <div class="loadout-configurations">
+                              <article><h5>Barrel</h5><span>Not configured</span></article>
+                              <article><h5>Scope</h5><span>Not configured</span></article>
+                              <article><h5>Handle</h5><span>Not configured</span></article>
+                              <article><h5>Stock</h5><span>Not configured</span></article>
+                            </div>
+                            {{else}}<p>No mods configured.</p>{{/if}}
+                          </section>
+                          <section data-loadout-panel="rune" hidden><h4>Runes</h4><p>No runes configured.</p></section>
+                          <section data-loadout-panel="glyph" hidden><h4>Glyphs</h4><p>No glyphs configured.</p></section>
+                        </div>
+                        {{/unless}}
+                      </article>
+                      {{/if}}
+                      {{/if}}
+                    {{else}}
+                      <p class="loadout-empty">{{#if (eq group.key "gear")}}No items.{{else}}{{localize 'VEILRUNNER.LoadoutEmpty'}}{{/if}}</p>
+                    {{/each}}
+                  </div>
+                  {{/if}}
+                  </div>
+                </section>
+              {{/each}}
+            </div>
+          {{else if (eq subTabs.character "stats")}}
             <div class="stats-sections">
               <section class="stats-section stats-attributes-section">
                 <h1>Attributes</h1>
@@ -505,101 +627,7 @@
               </section>
             </div>
           {{else if (eq subTabs.character "progression")}}
-            <div class="overview-panel">
-              <h1 class="cohesive-section-heading">{{localize 'VEILRUNNER.Progression'}}</h1>
-              <div class="progression-card">
-                <div class="progression-summary-grid">
-                  <div class="progression-stat progression-stat-level">
-                    <span>{{localize 'VEILRUNNER.Level'}}</span>
-                    <strong>{{system.level}}</strong>
-                  </div>
-                  <div class="progression-stat progression-stat-xp">
-                    <span>{{localize 'VEILRUNNER.XP'}}</span>
-                    <div class="progression-xp-bar">
-                      <div class="bar-track horizontal xp">
-                        <div class="bar-fill xp" style="width: {{experiencePercent}}%"></div>
-                        <span class="xp-pill-text">
-                          {{#if editMode}}
-                            <input type="number" name="system.experience.value" value="{{experienceValue}}" />
-                            / {{system.experience.max}}
-                          {{else}}
-                            {{experienceValue}} / {{system.experience.max}}
-                          {{/if}}
-                        </span>
-                      </div>
-                    </div>
-                    <small>{{xpToNextLevel}} {{localize 'VEILRUNNER.XPToNextLevel'}}</small>
-                  </div>
-                  <div class="progression-stat">
-                    <span>{{localize 'VEILRUNNER.TotalXPEarned'}}</span>
-                    <strong>{{totalXpEarned}}</strong>
-                  </div>
-                </div>
-                <div class="progression-points-grid">
-                  <div class="progression-points-stat">
-                    <span>Attribute Points (AP)</span>
-                    <div class="progression-points-values">
-                      <label>{{localize 'VEILRUNNER.Available'}}
-                        {{#if editMode}}
-                          <input type="number" name="system.attributePoints.available" value="{{system.attributePoints.available}}" min="0" />
-                        {{else}}
-                          <strong>{{system.attributePoints.available}}</strong>
-                        {{/if}}
-                      </label>
-                      <label>{{localize 'VEILRUNNER.Total'}}
-                        {{#if editMode}}
-                          <input type="number" name="system.attributePoints.total" value="{{system.attributePoints.total}}" min="0" />
-                        {{else}}
-                          <strong>{{system.attributePoints.total}}</strong>
-                        {{/if}}
-                      </label>
-                    </div>
-                  </div>
-                  <div class="progression-points-stat">
-                    <span>Talent Points (TP)</span>
-                    <div class="progression-points-values">
-                      <label>{{localize 'VEILRUNNER.Available'}}
-                        {{#if editMode}}
-                          <input type="number" name="system.talentPoints.available" value="{{system.talentPoints.available}}" min="0" />
-                        {{else}}
-                          <strong>{{system.talentPoints.available}}</strong>
-                        {{/if}}
-                      </label>
-                      <label>{{localize 'VEILRUNNER.Total'}}
-                        {{#if editMode}}
-                          <input type="number" name="system.talentPoints.total" value="{{system.talentPoints.total}}" min="0" />
-                        {{else}}
-                          <strong>{{system.talentPoints.total}}</strong>
-                        {{/if}}
-                      </label>
-                    </div>
-                  </div>
-                  <div class="progression-points-stat">
-                    <span>Skill Points (SP)</span>
-                    <div class="progression-points-values">
-                      <label>{{localize 'VEILRUNNER.Available'}}
-                        {{#if editMode}}
-                          <input type="number" name="system.skillPoints.available" value="{{system.skillPoints.available}}" min="0" />
-                        {{else}}
-                          <strong>{{system.skillPoints.available}}</strong>
-                        {{/if}}
-                      </label>
-                      <label>{{localize 'VEILRUNNER.Total'}}
-                        {{#if editMode}}
-                          <input type="number" name="system.skillPoints.total" value="{{system.skillPoints.total}}" min="0" />
-                        {{else}}
-                          <strong>{{system.skillPoints.total}}</strong>
-                        {{/if}}
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <button type="button" class="progression-view-btn">
-                  <i class="fa-solid fa-chart-line"></i>
-                  <span>{{localize 'VEILRUNNER.ViewProgression'}}</span>
-                </button>
-              </div>
-            </div>
+            {{> "systems/veilrunner/templates/actor/hero/parts/progression.hbs"}}
           {{else if (eq subTabs.character "details")}}
             <div class="overview-identity">
                 {{#if editMode}}
@@ -979,19 +1007,43 @@
                               <div class="inventory-grid-card-image">
                                 <img src="{{item.img}}" alt="" />
                                 <strong class="inventory-grid-card-quantity" title="{{localize 'VEILRUNNER.InventoryList.Quantity'}}">{{item.quantity}}</strong>
+                                {{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}
+                                <details class="inventory-item-menu">
+                                    <summary title="{{localize 'VEILRUNNER.InventoryCard.Actions'}}" aria-label="{{localize 'VEILRUNNER.InventoryCard.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></summary>
+                                    <div>
+                                      {{#if item.canEquip}}
+                                        {{#if item.equipped}}
+                                          <button type="button" data-action="unequipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Unequip'}}</button>
+                                        {{else}}
+                                          <button type="button" data-action="equipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Equip'}}</button>
+                                        {{/if}}
+                                      {{/if}}
+                                      <button type="button" data-action="useInventoryItem"><i class="fa-solid fa-bolt"></i>{{localize 'VEILRUNNER.InventoryCard.Use'}}</button>
+                                      <button type="button" data-action="throwInventoryItem"><i class="fa-solid fa-hand-fist"></i>{{localize 'VEILRUNNER.InventoryCard.Throw'}}</button>
+                                      {{#if item.isJunkMarked}}
+                                        <button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.UnmarkJunk'}}</button>
+                                      {{else}}
+                                        {{#unless item.isJunk}}<button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.MarkJunk'}}</button>{{/unless}}
+                                      {{/if}}
+                                      <button type="button" data-action="showInventoryItemDetails"><i class="fa-solid fa-circle-info"></i>{{localize 'VEILRUNNER.InventoryCard.Details'}}</button>
+                                      <button type="button" class="remove" data-action="removeInventoryItem"><i class="fa-solid fa-trash"></i>{{localize 'VEILRUNNER.InventoryCard.Remove'}}</button>
+                                    </div>
+                                  </details>
                               </div>
                               <div class="inventory-grid-card-body">
                                 <div class="inventory-grid-card-title-row">
                                   {{#if item.isJunk}}<span class="inventory-junk-badge">{{localize 'VEILRUNNER.InventoryCategory.junk'}}</span>{{/if}}
                                   <div class="inventory-grid-card-name" title="{{item.name}}">{{item.name}}</div>
                                 </div>
-                                <span class="inventory-grid-card-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.grade}}</span>
-                                <span class="inventory-grid-card-quality"><em>{{item.rarity.name}}</em></span>
+                                <div class="inventory-grid-card-classification">
+                                  <span class="inventory-grid-card-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.gradeRoman}}</span>
+                                  <span class="inventory-grid-card-quality"><em>{{item.rarity.name}}</em></span>
+                                </div>
                                 <div class="inventory-grid-card-meta">
+                                  {{#if item.isMagazine}}<span><i class="fa-solid fa-bars" aria-hidden="true"></i>{{item.magazineRounds}} / {{item.magazineCapacity}} rounds</span>{{/if}}
                                   <span><i class="fa-solid fa-weight-hanging" aria-hidden="true"></i>{{item.weight}} kg</span>
                                 </div>
                               </div>
-                              {{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}
                             </article>
                           {{/each}}
                         </div>
@@ -1028,8 +1080,8 @@
                           <div class="inventory-list-items">
                               {{#each subtype.items as |item|}}
                                 <article class="inventory-list-row inventory-item-row draggable {{#if item.equipped}}is-equipped{{/if}} {{#if item.isJunk}}is-junk{{/if}}" data-item-id="{{item.id}}" data-item-ids="{{item.itemIds}}" data-stack-quantity="{{item.quantity}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
-                                  <span class="inventory-list-item-main"><img src="{{item.img}}" alt="" />{{#if item.isJunk}}<span class="inventory-junk-badge">{{localize 'VEILRUNNER.InventoryCategory.junk'}}</span>{{/if}}<span><strong>{{item.name}}</strong><small class="inventory-list-item-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.grade}}</small><small class="inventory-list-item-quality"><em>{{item.rarity.name}}</em></small></span>{{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}</span>
-                                  <span>{{item.quantity}}</span>
+                                  <span class="inventory-list-item-main"><img src="{{item.img}}" alt="" />{{#if item.isJunk}}<span class="inventory-junk-badge">{{localize 'VEILRUNNER.InventoryCategory.junk'}}</span>{{/if}}<span><strong>{{item.name}}</strong><span class="inventory-list-item-classification"><small class="inventory-list-item-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.grade}}</small><small class="inventory-list-item-quality"><em>{{item.rarity.name}}</em></small></span></span>{{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}</span>
+                                  <span>{{item.quantity}}{{#if item.isMagazine}}<br /><small>{{item.magazineRounds}} / {{item.magazineCapacity}} rounds</small>{{/if}}</span>
                                   <span>{{item.weight}} kg</span>
                                   <details class="inventory-item-menu">
                                     <summary title="{{localize 'VEILRUNNER.InventoryCard.Actions'}}" aria-label="{{localize 'VEILRUNNER.InventoryCard.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></summary>
@@ -1107,6 +1159,8 @@
               <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CharacterBackgroundImage'}}</span><button type="button" class="appearance-pick-btn" data-action="setCharacterBackgroundImage"><i class="fa-solid fa-image"></i><span>{{localize 'VEILRUNNER.ChangeCharacterBackground'}}</span></button></div>
               <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CharacterBackgroundColor'}}</span><span class="color-picker-control"><button type="button" class="ui-toggle-icon {{#if sheetOptions.characterBackgroundColorEnabled}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="characterBackgroundColorEnabled" aria-pressed="{{#if sheetOptions.characterBackgroundColorEnabled}}true{{else}}false{{/if}}" title="{{localize 'VEILRUNNER.ToggleCharacterBackgroundColor'}}"><i class="fa-solid {{#if sheetOptions.characterBackgroundColorEnabled}}fa-toggle-on{{else}}fa-toggle-off{{/if}}"></i></button><input type="color" name="system.sheetOptions.characterBackgroundColor" value="{{sheetOptions.characterBackgroundColor}}" data-ui-preview="characterBackgroundColor" /><button type="button" data-reset-ui-color="characterBackgroundColor">Default</button></span></div>
               <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CharacterBorderColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.characterBorderColor" value="{{sheetOptions.characterBorderColor}}" data-ui-preview="characterBorderColor" /><button type="button" data-reset-ui-color="characterBorderColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.LoadoutCardColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.loadoutCardColor" value="{{sheetOptions.loadoutCardColor}}" data-ui-preview="loadoutCardColor" /><button type="button" data-reset-ui-color="loadoutCardColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.LoadoutButtonColor'}}</span><span class="color-picker-control"><input type="color" value="{{#if sheetOptions.loadoutButtonColor}}{{sheetOptions.loadoutButtonColor}}{{else}}{{sheetOptions.loadoutCardColor}}{{/if}}" data-loadout-button-color aria-label="{{localize 'VEILRUNNER.LoadoutButtonColor'}}" /><button type="button" data-reset-loadout-button-color title="{{localize 'VEILRUNNER.LoadoutButtonFollowCard'}}" aria-label="{{localize 'VEILRUNNER.LoadoutButtonFollowCard'}}"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></button></span></div>
               <div class="color-picker-row"><span>{{localize 'VEILRUNNER.ManaTextColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.manaTextColor" value="{{sheetOptions.manaTextColor}}" data-ui-preview="manaTextColor" /><button type="button" data-reset-ui-color="manaTextColor">Default</button></span></div>
               <div class="color-picker-row"><span>{{localize 'VEILRUNNER.StaminaTextColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.staminaTextColor" value="{{sheetOptions.staminaTextColor}}" data-ui-preview="staminaTextColor" /><button type="button" data-reset-ui-color="staminaTextColor">Default</button></span></div>
               <h5>{{localize 'VEILRUNNER.LevellingAndXP'}}</h5>
@@ -1117,6 +1171,42 @@
               <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorRate'}}</span><span class="xp-slider-control"><i class="fa-solid fa-turtle" title="Slow"></i><input type="range" name="system.sheetOptions.levelUpIntensity" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpRate}}" data-ui-preview="levelUpIntensity" /><i class="fa-solid fa-bolt" title="Fast"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpRateDescriptor}}" data-ui-value="levelUpIntensity" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpIntensity" title="Reset to 1.00">Default</button></span></label>
               <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorIntensity'}}</span><span class="xp-slider-control"><i class="fa-solid fa-circle" title="Low intensity"></i><input type="range" name="system.sheetOptions.levelUpGlowIntensity" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpGlowIntensity}}" data-ui-preview="levelUpGlowIntensity" /><i class="fa-solid fa-burst" title="High intensity"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpGlowIntensityDescriptor}}" data-ui-value="levelUpGlowIntensity" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpGlowIntensity" title="Reset to 1.00">Default</button></span></label>
               <h5>{{localize 'VEILRUNNER.ResourceBarType'}}</h5>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.staticHealthColor}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="staticHealthColor" aria-pressed="{{#if sheetOptions.staticHealthColor}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.StaticHealthColor'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.staticHealthColor}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              {{#each resourceBarSettings}}
+                <h5>{{localize label}}</h5>
+                <label class="color-picker-row"><span>{{localize 'VEILRUNNER.ResourceBarColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.{{key}}BarColor" value="{{color}}" data-ui-preview="{{key}}BarColor" /></span></label>
+                <button type="button" class="ui-toggle-row ui-toggle-button {{#if roundLeft}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="{{key}}BarRoundLeft" aria-pressed="{{#if roundLeft}}true{{else}}false{{/if}}">
+                  <span>{{localize 'VEILRUNNER.ResourceBarRoundLeft'}}</span><span class="ui-toggle-check {{#if roundLeft}}is-active{{/if}}" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="ui-toggle-row ui-toggle-button {{#if roundRight}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="{{key}}BarRoundRight" aria-pressed="{{#if roundRight}}true{{else}}false{{/if}}">
+                  <span>{{localize 'VEILRUNNER.ResourceBarRoundRight'}}</span><span class="ui-toggle-check {{#if roundRight}}is-active{{/if}}" aria-hidden="true"></span>
+                </button>
+              {{/each}}
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.disableResourceBarVfx}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="disableResourceBarVfx" aria-pressed="{{#if sheetOptions.disableResourceBarVfx}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.DisableResourceBarVfx'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.disableResourceBarVfx}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.compactResourceBars}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="compactResourceBars" aria-pressed="{{#if sheetOptions.compactResourceBars}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.CompactResourceBars'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.compactResourceBars}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.hideResourceBarIcons}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="hideResourceBarIcons" aria-pressed="{{#if sheetOptions.hideResourceBarIcons}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.HideResourceBarIcons'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.hideResourceBarIcons}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.compactEnergyBars}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="compactEnergyBars" aria-pressed="{{#if sheetOptions.compactEnergyBars}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.CompactEnergyBars'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.compactEnergyBars}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              {{#each energyBarSettings}}
+                <h5>{{localize label}}</h5>
+                <button type="button" class="ui-toggle-row ui-toggle-button {{#if rounded}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="{{key}}BarRounded" aria-pressed="{{#if rounded}}true{{else}}false{{/if}}">
+                  <span>{{localize 'VEILRUNNER.ResourceBarRounded'}}</span><span class="ui-toggle-check {{#if rounded}}is-active{{/if}}" aria-hidden="true"></span>
+                </button>
+              {{/each}}
               <p>{{localize 'VEILRUNNER.ResourceBarTypeHint'}}</p>
               <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showAllResourceBars}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showAllResourceBars" aria-pressed="{{#if sheetOptions.showAllResourceBars}}true{{else}}false{{/if}}">
                 <span><i class="fa-solid fa-layer-group"></i> {{localize 'VEILRUNNER.ShowAllResourceBars'}}</span>

@@ -16,12 +16,12 @@ export const PHYSICAL_ITEM_TYPES = Object.freeze([
 
 export const EQUIPMENT_SLOTS = Object.freeze([
   "head", "chest", "arms", "legs", "feet", "mainHand",
-  "ears", "neck", "wrists", "leftRing", "rightRing", "offhand"
+  "ears", "neck", "wrists", "leftRing", "auxiliary", "offhand"
 ]);
 
 export const EQUIPMENT_SLOT_COLUMNS = Object.freeze({
   left: Object.freeze(["head", "chest", "arms", "legs", "feet", "mainHand"]),
-  right: Object.freeze(["ears", "neck", "wrists", "leftRing", "rightRing", "offhand"])
+  right: Object.freeze(["ears", "neck", "wrists", "leftRing", "auxiliary", "offhand"])
 });
 
 export const WEAPON_TYPE_GROUPS = Object.freeze([
@@ -213,6 +213,7 @@ export function compatibilitySchema() {
     flexible: new BooleanField({ required: true, initial: false }),
     caliber: text(),
     ammoTypes: new ArrayField(text(), { initial: () => [] }),
+    magazineTypes: new ArrayField(text(), { initial: () => [] }),
     allowDefinitionIds: new ArrayField(text(), { initial: () => [] }),
     blockDefinitionIds: new ArrayField(text(), { initial: () => [] }),
     allow: new ArrayField(text(), { initial: () => [] }),
@@ -224,6 +225,8 @@ export function compatibilitySchema() {
 export function migratePhysicalItemData(source) {
   if (!source || typeof source !== "object") return source;
   source = migrateItemIdentityData(source);
+  if (source.equipmentSlot === "rightRing") source.equipmentSlot = "leftRing";
+  if (Array.isArray(source.requiredSlots)) source.requiredSlots = [...new Set(source.requiredSlots.map(slot => slot === "rightRing" ? "leftRing" : slot))];
   if (source.requiredSlots === undefined && source.equipmentSlot) source.requiredSlots = [source.equipmentSlot];
   if (source.price === undefined && source.cost !== undefined) source.price = Math.max(0, Number(source.cost) || 0);
   if (source.grade !== undefined) source.grade = Math.max(1, Math.floor(Number(source.grade) || 1));

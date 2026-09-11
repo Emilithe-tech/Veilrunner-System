@@ -1,0 +1,32 @@
+<div class="overview-panel progression-panel">
+  <h1 class="cohesive-section-heading">Overview</h1>
+  <div class="progression-overview">
+    <section class="progression-level"><h2>Level</h2><strong class="progression-level-digits">{{progression.level}}</strong></section>
+    <section class="progression-experience">
+      <div class="progression-experience-main"><h2>Experience</h2>
+        <div class="progression-contained-xp" role="meter" aria-label="Experience" aria-valuemin="0" aria-valuemax="{{experienceMax}}" aria-valuenow="{{experienceValue}}">
+          <div class="progression-contained-fill" style="width: {{experiencePercent}}%"></div>
+          <span>{{#if editMode}}<input type="number" name="system.experience.value" value="{{experienceValue}}" min="0" aria-label="Experience" />{{else}}{{experienceValue}}{{/if}} / {{experienceMax}}</span>
+        </div><small>{{xpToNextLevel}} {{localize 'VEILRUNNER.XPToNextLevel'}}</small>
+      </div>
+      <div class="progression-total"><h2>Total XP</h2><strong><i class="fa-regular fa-star" aria-hidden="true"></i> {{totalXpEarned}}</strong></div>
+    </section>
+    <section class="progression-gains"><h2>Next level gains (Level {{progression.nextLevel}})</h2><div>{{#each progression.pools}}<article class="progression-gain progression-kind-{{key}}"><i class="fa-solid {{icon}}" aria-hidden="true"></i><span>+{{gain}} {{label}} Points</span></article>{{/each}}</div></section>
+  </div>
+  <h2 class="cohesive-section-heading">Available Points</h2>
+  <div class="progression-pool-cards">{{#each progression.pools}}
+    <section class="progression-pool-card progression-kind-{{key}}">
+      <header><i class="fa-solid {{icon}}" aria-hidden="true"></i><div><h3>{{label}} Points</h3><small>{{description}}</small></div><button type="button" data-action="openCharacterCreation" data-progression-destination="{{key}}" aria-label="Allocate {{label}} points"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button></header>
+      <div class="progression-pool-values"><label>Available{{#if ../editMode}}<input type="number" name="system.{{key}}Points.available" value="{{available}}" min="0" />{{else}}<strong>{{available}}</strong>{{/if}}</label><label>{{#if ../editMode}}Total earned<input type="number" name="system.{{key}}Points.total" value="{{total}}" min="0" />{{else}}Total Spent<strong>{{spent}}</strong>{{/if}}</label></div>
+    </section>{{/each}}
+  </div>
+  <section class="progression-planned">
+    <header class="cohesive-section-heading progression-planner-title"><div class="progression-planner-title-row"><span>Level Planner</span><button type="button" data-action="openLevelPlanner"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Open Planner <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button></div></header>
+    <div class="progression-timeline" tabindex="0" aria-label="Planned levels">{{#each progression.levels}}
+      <section class="progression-planned-level"><header><span class="progression-timeline-diamond">{{level}}</span><div><h3>Level {{level}}</h3><small>{{xp}} XP</small></div></header>
+        <div class="progression-timeline-items">{{#each items}}<article class="progression-planned-item progression-kind-{{kind}}"><i class="fa-solid {{icon}}" aria-hidden="true"></i><div><small>{{label}}</small><strong>{{name}}</strong><small>{{detail}}</small></div><div class="progression-plan-actions"><button type="button" data-action="moveProgressionPlan" data-plan-index="{{index}}" aria-label="Move {{name}} earlier" title="Move earlier"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button><button type="button" data-action="removeProgressionPlan" data-plan-index="{{index}}" aria-label="Remove {{name}}" title="Remove"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div></article>{{else}}<p class="progression-plan-empty">No purchases planned.</p>{{/each}}
+        <button type="button" class="progression-plan-add" data-action="openLevelPlanner" data-plan-level="{{level}}"><i class="fa-solid fa-circle-plus" aria-hidden="true"></i> Add Planned Item</button></div>
+      </section>{{/each}}
+    </div>
+  </section>
+</div>

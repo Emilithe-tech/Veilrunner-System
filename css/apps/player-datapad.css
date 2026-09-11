@@ -398,6 +398,7 @@
 .vr-action-item-context-menu button {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 7px;
   width: 100%;
   min-height: 28px;

@@ -1,12 +1,17 @@
 /** System Item. */
 import { isOwnedActionItem } from "../actions/action-sources.mjs";
 import { assertDefinitionIdentityUpdate } from "../data/definitions/identity-update.mjs";
+import { characterLibraryFolder } from "../data/definitions/character-library-folders.mjs";
 
 export class VeilrunnerItem extends Item {
   /** @override */
   async _preCreate(data, options, user) {
     const allowed = await super._preCreate(data, options, user);
     if (allowed === false) return false;
+    if ((this.pack ?? options.pack) === "Veilrunner.character-library" && !this.folder && !data.folder) {
+      const folder = characterLibraryFolder(this);
+      if (folder) this.updateSource({ folder });
+    }
     if (this.img && this.img !== "icons/svg/item-bag.svg") return;
     const defaultImages = {
       armor: "icons/svg/shield.svg",

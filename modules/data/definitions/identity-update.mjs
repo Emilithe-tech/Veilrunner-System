@@ -1,7 +1,8 @@
 /** Identity is assigned by canonical creation and retained by every later edit. */
 export function assertDefinitionIdentityUpdate(item, changes) {
   const current = String(item?._source?.system?.definitionId ?? item?.system?.definitionId ?? "");
-  const system = changes?.system;
+  const operator = globalThis.foundry?.data?.operators?.DataFieldOperator;
+  const system = typeof operator?.get === "function" ? operator.get(changes?.system) : changes?.system;
   const flat = Object.hasOwn(changes ?? {}, "system.definitionId");
   const nested = system && Object.hasOwn(system, "definitionId");
   const removed = Object.hasOwn(changes ?? {}, "system.-=definitionId")

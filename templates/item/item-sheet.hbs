@@ -1,10 +1,11 @@
-<section class="vr-item-sheet">
+<section class="vr-item-sheet" data-item-family="{{overview.presentation.family}}" data-item-type="{{item.type}}">
   <aside class="vr-item-rail" aria-label="Item overview">
     <div class="vr-item-artwork">
       <img src="{{item.img}}" alt="{{item.name}}" />
       {{#if editable}}<button type="button" data-sheet-action="artwork" aria-label="Change artwork" title="Change artwork"><i class="fa-solid fa-image" aria-hidden="true"></i></button>{{/if}}
     </div>
-    {{#if overview.core.length}}<section class="vr-item-panel"><h2 class="section-heading"><i class="fa-solid fa-gauge" aria-hidden="true"></i>Core stats</h2>{{> "systems/veilrunner/templates/item/parts/rows.hbs" rows=overview.core}}</section>{{/if}}
+    {{#if overview.core.length}}<section class="vr-item-panel"><h2 class="section-heading"><i class="fa-solid {{overview.presentation.icon}}" aria-hidden="true"></i>{{overview.presentation.statsLabel}}</h2>{{> "systems/veilrunner/templates/item/parts/rows.hbs" rows=overview.core}}</section>{{/if}}
+    {{#if overview.inventory.length}}<section class="vr-item-panel"><h2 class="section-heading"><i class="fa-solid fa-box" aria-hidden="true"></i>Inventory</h2>{{> "systems/veilrunner/templates/item/parts/rows.hbs" rows=overview.inventory}}</section>{{/if}}
     {{#if overview.requirements.length}}<section class="vr-item-panel"><h2 class="section-heading"><i class="fa-solid fa-lock" aria-hidden="true"></i>Requirements</h2>{{> "systems/veilrunner/templates/item/parts/rows.hbs" rows=overview.requirements}}</section>{{/if}}
     {{#if overview.traits.length}}<section class="vr-item-panel"><h2 class="section-heading"><i class="fa-solid fa-layer-group" aria-hidden="true"></i>Traits</h2><ul class="vr-item-traits">{{#each overview.traits}}<li>{{this}}</li>{{/each}}</ul></section>{{/if}}
     {{#if overview.summary}}<section class="vr-item-panel vr-item-flavor"><p>{{overview.summary}}</p></section>{{/if}}
@@ -14,7 +15,8 @@
       <div class="vr-item-name">
         <h1>{{overview.header.name}}</h1>
         {{#if overview.header.subtype}}<p class="vr-item-subtype">{{overview.header.subtype}}</p>{{/if}}
-        <span class="vr-item-type">{{overview.header.type}}</span>
+        <span class="vr-item-type"><i class="fa-solid {{overview.presentation.icon}}" aria-hidden="true"></i> {{overview.header.type}}</span>
+        {{#if uniqueKind}}<label class="vr-item-unique-kind"><span>Unique type</span><select data-unique-kind aria-label="Unique type" {{#unless canEditUniqueKind}}disabled{{/unless}}>{{#each uniqueKindOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>{{/if}}
       </div>
       {{#if overview.header.grade}}<div class="vr-item-grade-panel"><div><span>{{overview.header.gradeLabel}}</span><strong>{{overview.header.grade}}</strong></div>{{#if overview.header.rarity}}<div class="vr-item-rarity"><span>Rarity</span><b>{{overview.header.rarity}}</b></div>{{/if}}</div>{{else}}{{#if overview.header.rarity}}<div class="vr-item-grade-panel"><div class="vr-item-rarity"><span>Rarity</span><b>{{overview.header.rarity}}</b></div></div>{{/if}}{{/if}}
     </header>

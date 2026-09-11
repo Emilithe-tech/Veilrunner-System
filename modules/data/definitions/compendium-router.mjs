@@ -1,34 +1,34 @@
 import { normalizeSemanticItemType } from "./item-capabilities.mjs";
 
-const REACTION_ROUTE = Object.freeze({ routeKey: "reactions", packNames: Object.freeze(["unique-reactions"]) });
+const REACTION_ROUTE = Object.freeze({ routeKey: "reactions", packNames: Object.freeze(["character-library"]) });
 
 export const DEFAULT_COMPENDIUM_ROUTES = Object.freeze({
-  action: Object.freeze({ routeKey: "actions", packNames: Object.freeze(["unique-actions"]) }),
-  ability: Object.freeze({ routeKey: "abilities", packNames: Object.freeze(["unique-abilities"]) }),
-  spell: Object.freeze({ routeKey: "abilities", packNames: Object.freeze(["unique-abilities"]) }),
-  talent: Object.freeze({ routeKey: "talents-skills", packNames: Object.freeze(["talents-skills"]) }),
-  skill: Object.freeze({ routeKey: "talents-skills", packNames: Object.freeze(["talents-skills"]) }),
-  quality: Object.freeze({ routeKey: "qualities", packNames: Object.freeze(["qualities-perks"]) }),
-  practice: Object.freeze({ routeKey: "progression", packNames: Object.freeze(["progression"]) }),
-  progression: Object.freeze({ routeKey: "progression", packNames: Object.freeze(["progression"]) }),
-  trait: Object.freeze({ routeKey: "traits", packNames: Object.freeze(["unique-traits"]) }),
-  weapon: Object.freeze({ routeKey: "weapons", packNames: Object.freeze(["weapons"]) }),
-  armor: Object.freeze({ routeKey: "armor", packNames: Object.freeze(["armor"]) }),
-  shield: Object.freeze({ routeKey: "armor", packNames: Object.freeze(["armor"]) }),
-  ammunition: Object.freeze({ routeKey: "ammunition", packNames: Object.freeze(["ammunition"]) }),
-  magazine: Object.freeze({ routeKey: "ammunition", packNames: Object.freeze(["ammunition"]) }),
+  action: Object.freeze({ routeKey: "actions", packNames: Object.freeze(["character-library"]) }),
+  ability: Object.freeze({ routeKey: "abilities", packNames: Object.freeze(["character-library"]) }),
+  spell: Object.freeze({ routeKey: "abilities", packNames: Object.freeze(["character-library"]) }),
+  talent: Object.freeze({ routeKey: "talents-skills", packNames: Object.freeze(["character-library"]) }),
+  skill: Object.freeze({ routeKey: "talents-skills", packNames: Object.freeze(["character-library"]) }),
+  quality: Object.freeze({ routeKey: "qualities", packNames: Object.freeze(["character-library"]) }),
+  practice: Object.freeze({ routeKey: "progression", packNames: Object.freeze(["character-library"]) }),
+  progression: Object.freeze({ routeKey: "progression", packNames: Object.freeze(["character-library"]) }),
+  trait: Object.freeze({ routeKey: "traits", packNames: Object.freeze(["character-library"]) }),
+  weapon: Object.freeze({ routeKey: "weapons", packNames: Object.freeze(["equipment"]) }),
+  armor: Object.freeze({ routeKey: "armor", packNames: Object.freeze(["equipment"]) }),
+  shield: Object.freeze({ routeKey: "armor", packNames: Object.freeze(["equipment"]) }),
+  ammunition: Object.freeze({ routeKey: "ammunition", packNames: Object.freeze(["equipment"]) }),
+  magazine: Object.freeze({ routeKey: "ammunition", packNames: Object.freeze(["equipment"]) }),
   accessory: Object.freeze({ routeKey: "equipment", packNames: Object.freeze(["equipment"]) }),
   consumable: Object.freeze({ routeKey: "equipment", packNames: Object.freeze(["equipment"]) }),
   container: Object.freeze({ routeKey: "equipment", packNames: Object.freeze(["equipment"]) }),
   equipment: Object.freeze({ routeKey: "equipment", packNames: Object.freeze(["equipment"]) }),
   treasure: Object.freeze({ routeKey: "equipment", packNames: Object.freeze(["equipment"]) }),
-  species: Object.freeze({ routeKey: "character-origins", packNames: Object.freeze(["species"]) }),
-  origin: Object.freeze({ routeKey: "character-origins", packNames: Object.freeze(["origins"]) }),
-  background: Object.freeze({ routeKey: "character-origins", packNames: Object.freeze(["backgrounds"]) }),
-  archetype: Object.freeze({ routeKey: "character-paths", packNames: Object.freeze(["archetypes"]) }),
-  profession: Object.freeze({ routeKey: "character-paths", packNames: Object.freeze(["professions"]) }),
-  discipline: Object.freeze({ routeKey: "character-paths", packNames: Object.freeze(["disciplines"]) }),
-  language: Object.freeze({ routeKey: "languages", packNames: Object.freeze(["languages"]) })
+  species: Object.freeze({ routeKey: "character-origins", packNames: Object.freeze(["character-library"]) }),
+  origin: Object.freeze({ routeKey: "character-origins", packNames: Object.freeze(["character-library"]) }),
+  background: Object.freeze({ routeKey: "character-origins", packNames: Object.freeze(["character-library"]) }),
+  archetype: Object.freeze({ routeKey: "character-paths", packNames: Object.freeze(["character-library"]) }),
+  profession: Object.freeze({ routeKey: "character-paths", packNames: Object.freeze(["character-library"]) }),
+  discipline: Object.freeze({ routeKey: "character-paths", packNames: Object.freeze(["character-library"]) }),
+  language: Object.freeze({ routeKey: "languages", packNames: Object.freeze(["character-library"]) })
 });
 
 function packName(pack) {

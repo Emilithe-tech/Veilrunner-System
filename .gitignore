@@ -1,3 +1,6 @@
 # Foundry opens directory-backed compendia as LevelDB databases. LOCK files are
 # runtime-only and may be unreadable while Foundry is running.
 packs/**/LOCK
+
+# Local documentation
+/docs

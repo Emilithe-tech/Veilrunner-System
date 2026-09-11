@@ -1,4 +1,5 @@
 import { normalizeCart } from "./cart.mjs";
+import { ammoPackQuantity } from "../../../items/ammunition-quantity.mjs";
 import { itemHasCapability } from "../../../data/definitions/item-capabilities.mjs";
 import { prepareActorOwnedSnapshot } from "../../../data/definitions/provenance.mjs";
 
@@ -39,11 +40,16 @@ export async function buildStorefrontCommit(options) {
     if (source.system?.definitionId !== line.definitionId || !itemHasCapability(source, "marketSellable")) {
       return { ...validation, valid: false, errors: [`Store item ${line.definitionId} returned an invalid owned snapshot.`], documents: [] };
     }
-    source.system ??= {}; source.system.quantity = Math.max(1, Number(source.system.quantity) || 1) * line.quantity;
+    source.system ??= {};
+    const units = source.type === "ammunition" ? ammoPackQuantity(source.system) : source.system.quantity;
+    source.system.quantity = Math.max(1, Number(units) || 1) * line.quantity;
     const record = validation.records.get(line.definitionId);
     if (source.type === "weapon" && record?.weaponType) source.system.weaponType = record.weaponType;
     source.flags ??= {}; source.flags[game.system.id] = { ...(source.flags[game.system.id] ?? {}), storefront: { providerId: provider.id, definitionId: line.definitionId, options: line.options } };
-    documents.push(source);
+    if (source.type === "magazine") {
+      source.system.quantity = 1;
+      for (let index = 0; index < line.quantity; index++) documents.push(structuredClone(source));
+    } else documents.push(source);
   }
   return { ...validation, documents };
 }

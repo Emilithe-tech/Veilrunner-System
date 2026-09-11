@@ -46,8 +46,8 @@ function inventoryStackKey(item) {
 export function stackInventoryItems(items) {
   const stacks = new Map();
   for (const item of items) {
-    const key = inventoryStackKey(item);
-    const quantity = Math.max(0, Number(item?.quantity) || 1);
+    const key = item?.type === "magazine" ? Symbol(item.id) : inventoryStackKey(item);
+    const quantity = Math.max(0, Number(item?.quantity ?? 1) || 0);
     const current = stacks.get(key);
     if (!current) {
       stacks.set(key, {
@@ -114,7 +114,7 @@ export function groupInventoryItems(items, collapsedKeys = new Set()) {
       };
       group.subtypeRecords.set(subtypeKey, subtype);
     }
-    group.count += Math.max(0, Number(item.quantity) || 1);
+    group.count += Math.max(0, Number(item.quantity ?? 1) || 0);
     subtype.items.push(item);
   }
 
@@ -131,7 +131,7 @@ export function groupInventoryItems(items, collapsedKeys = new Set()) {
         .sort((left, right) => left.order - right.order || NAME_COLLATOR.compare(left.label, right.label))
         .map(subtype => ({
           ...subtype,
-          count: subtype.items.reduce((total, item) => total + Math.max(0, Number(item.quantity) || 1), 0),
+          count: subtype.items.reduce((total, item) => total + Math.max(0, Number(item.quantity ?? 1) || 0), 0),
           entryCount: subtype.items.length,
           collapsed: collapsed.has(subtype.collapseKey)
         }))

@@ -19,8 +19,7 @@ export default class AccessoryData extends foundry.abstract.TypeDataModel {
           ears: "VEILRUNNER.EquipmentSlot.ears",
           neck: "VEILRUNNER.EquipmentSlot.neck",
           wrists: "VEILRUNNER.EquipmentSlot.wrists",
-          leftRing: "VEILRUNNER.EquipmentSlot.leftRing",
-          rightRing: "VEILRUNNER.EquipmentSlot.rightRing"
+          leftRing: "VEILRUNNER.EquipmentSlot.leftRing"
         }
       }),
       weight: new NumberField({ required: true, min: 0, initial: 0, nullable: false }),

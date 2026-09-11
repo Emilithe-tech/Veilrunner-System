@@ -3,8 +3,17 @@ import { applyItemWear } from "./durability.mjs";
 import { getDefinitionId } from "../data/item/identity.mjs";
 import { registerActorActionProvider } from "../actions/action-sources.mjs";
 import { evaluateActionAvailability } from "../apps/action-hud/availability.mjs";
+import { firearmDamageFormula } from "./firearm-damage.mjs";
 
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
+const roundTransfers = new WeakSet();
+
+async function withRoundTransfer(actor, operation) {
+  if (roundTransfers.has(actor)) throw new Error("Another ammunition transfer is still in progress.");
+  roundTransfers.add(actor);
+  try { return await operation(); }
+  finally { roundTransfers.delete(actor); }
+}
 const legacyRefs = item => new Set([item?.id, item?.uuid, item?.name].map(value => String(value ?? "").trim()).filter(Boolean));
 const matchesLegacyRef = (values, item) => [...legacyRefs(item)].some(ref => (values ?? []).includes(ref));
 const matchesDefinitionId = (values, item) => {
@@ -29,31 +38,38 @@ function ammoProfile(ammo) {
 }
 
 export function isAmmoCompatible(host, ammo) {
+  if (!["ammunition", "magazine"].includes(ammo?.type)) return false;
   const profile = ammoProfile(ammo);
   const compatibility = compatibilityFor(host);
+  if (ammo.type === "magazine") ammo = { id: ammo.system?.ammoId, name: ammo.system?.ammoName, system: { definitionId: ammo.system?.ammoDefinitionId } };
   if (matchesDefinitionId(compatibility.blockDefinitionIds, ammo)) return false;
+  if (matchesLegacyRef(compatibility.block, ammo)) return false;
   if (matchesDefinitionId(compatibility.allowDefinitionIds, ammo)) return true;
   // Legacy values remain only for old documents that cannot be safely converted.
-  if (matchesLegacyRef(compatibility.block, ammo)) return false;
   if (matchesLegacyRef(compatibility.allow, ammo)) return true;
   if (compatibility.flexible) return true;
   const caliber = String(compatibility.caliber ?? "").trim();
   const types = Array.isArray(compatibility.ammoTypes) ? compatibility.ammoTypes.filter(Boolean) : [];
   if (caliber && profile.caliber !== caliber) return false;
   if (types.length && !types.includes(profile.ammoType)) return false;
-  return Boolean(caliber || types.length);
+  return types.length > 0;
 }
 
 export function isMagazineCompatible(weapon, magazine) {
-  if (weapon?.type !== "weapon" || magazine?.type !== "magazine") return false;
+  if (Number(magazine?.system?.quantity) > 1) return false;
+  if (weapon?.type !== "weapon" || weapon.system?.weaponKind !== "firearm" || magazine?.type !== "magazine") return false;
   const compatibility = compatibilityFor(weapon);
   if (matchesDefinitionId(compatibility.blockDefinitionIds, magazine)) return false;
-  if (matchesDefinitionId(compatibility.allowDefinitionIds, magazine)) return true;
   if (matchesLegacyRef(compatibility.block, magazine)) return false;
-  if (matchesLegacyRef(compatibility.allow, magazine)) return true;
-  if (compatibility.flexible) return !magazine.system?.rounds || isAmmoCompatible(weapon, magazine);
-  if (compatibility.caliber && magazine.system?.compatibility?.caliber !== compatibility.caliber) return false;
-  return !magazine.system?.rounds || isAmmoCompatible(weapon, magazine);
+  const explicitlyAllowed = matchesDefinitionId(compatibility.allowDefinitionIds, magazine) || matchesLegacyRef(compatibility.allow, magazine);
+  if (!compatibility.flexible && !explicitlyAllowed) {
+    if (compatibility.caliber && magazine.system?.compatibility?.caliber !== compatibility.caliber) return false;
+    const magazineTypes = compatibility.magazineTypes ?? [];
+    if (!magazineTypes.length || !magazineTypes.includes(magazine.system?.magazineType)) return false;
+    const ammoTypes = compatibility.ammoTypes ?? [];
+    if (!ammoTypes.length || !(magazine.system?.compatibility?.ammoTypes ?? []).some(type => ammoTypes.includes(type))) return false;
+  }
+  return !magazine.system?.rounds || (isAmmoCompatible(weapon, magazine) && isAmmoCompatible(magazine, magazine));
 }
 
 function firearms(actor) {
@@ -77,7 +93,7 @@ function compatibleAmmunition(actor, host) {
 }
 
 function compatibleMagazines(actor, weapon) {
-  const loadedElsewhere = new Set(firearms(actor).map(item => item.system?.firearm?.loadedMagazineId).filter(Boolean));
+  const loadedElsewhere = new Set(actor.items.filter(item => item.type === "weapon").map(item => item.system?.firearm?.loadedMagazineId).filter(Boolean));
   return actor.items.filter(item => item.type === "magazine" && !loadedElsewhere.has(item.id) && isMagazineCompatible(weapon, item));
 }
 
@@ -140,12 +156,26 @@ export function firearmActionForItem(weapon, actor = weapon?.actor) {
     activeItemIds: ammo ? [ammo.id] : []
   });
   const system = context ? alteredItemSystem(weapon, context.resolved) : weapon.system;
+  const profile = state.magazine?.system ?? state.internal ?? {};
+  const ammoBase = profile.ammoDamage || ammo?.system?.damage?.base || "";
+  const ammoDamageType = profile.ammoDamageType || ammo?.system?.damage?.type || "";
+  const validDamage = state.mode === "none" || Boolean(firearmDamageFormula(ammoBase, system.damage?.max, { capped: true }));
+  const compatible = state.mode === "none" || (state.magazine ? isMagazineCompatible(weapon, state.magazine)
+    : isAmmoCompatible(weapon, { type: "ammunition", system: { ...state.internal, definitionId: state.internal?.ammoDefinitionId } }));
   const action = generatedAction({ id: weapon.id, name: weapon.name, img: weapon.img, system }, "fire", {
+    status: `${state.rounds}/${state.capacity}`,
     rounds: state.rounds, capacity: state.capacity,
-    disabled: Boolean(actor && state.rounds <= 0),
-    disabledReason: state.mode === "detachable" && !state.magazine ? "No magazine loaded." : "The weapon is empty."
+    disabled: Boolean(actor && (state.rounds <= 0 || !compatible || !validDamage)),
+    disabledReason: state.mode === "detachable" && !state.magazine ? "No magazine loaded." : !compatible ? "The loaded ammunition or magazine is incompatible." : !validDamage ? "Configure ammunition base damage and a valid weapon damage maximum before firing." : "The weapon is empty."
   });
-  action.weaponComposer.ammoDamageModifier = Number(ammo?.system?.damage?.modifier) || 0;
+  action.weaponComposer.ammoDamageModifier = Number(profile.ammoDamage ? profile.ammoDamageModifier : ammo?.system?.damage?.modifier) || 0;
+  if (state.mode !== "none") {
+    action.weaponComposer.damageFormula = ammoBase;
+    action.weaponComposer.capAmmoDamage = true;
+    action.damageValue = ammoBase;
+    action.damageType = ammoDamageType;
+    action.weaponComposer.damageType = ammoDamageType;
+  }
   action.effectiveSystem = system;
   action.weaponComposer.extraDamageDice = (context?.resolved?.damageDice ?? [])
     .filter(rule => ["all", "damage", "firearm", `weapon:${weapon.id}`].includes(rule.selector))
@@ -199,6 +229,14 @@ async function chooseDocument(title, documents) {
 }
 
 async function loadRounds(actor, target, ammo, capacity, current, pathPrefix = "system") {
+  return withRoundTransfer(actor, () => transferRounds(actor, target, ammo, capacity, current, pathPrefix));
+}
+
+async function transferRounds(actor, target, ammo, capacity, current, pathPrefix) {
+  if (!actor.isOwner || actor.items.get(ammo.id) !== ammo || actor.items.get(target.id) !== target || !isAmmoCompatible(target, ammo)) return false;
+  const state = target.type === "magazine" ? target.system : target.system.firearm.internal;
+  const liveRounds = Number(target.type === "magazine" ? state.rounds : state.quantity) || 0;
+  if (liveRounds !== current || (current > 0 && state.ammoId !== ammo.id)) return false;
   const count = Math.min(Math.max(0, capacity - current), Math.max(0, Number(ammo.system?.quantity) || 0));
   if (!count) return false;
   const profile = ammoProfile(ammo);
@@ -211,6 +249,9 @@ async function loadRounds(actor, target, ammo, capacity, current, pathPrefix = "
     "system.ammoImg": profile.img,
     "system.ammoCaliber": profile.caliber,
     "system.ammoType": profile.ammoType,
+    "system.ammoDamage": ammo.system?.damage?.base ?? "",
+    "system.ammoDamageType": ammo.system?.damage?.type ?? "",
+    "system.ammoDamageModifier": Number(ammo.system?.damage?.modifier) || 0,
     "system.ammoDefinitionId": profile.definitionId
   });
   else Object.assign(targetUpdate, {
@@ -221,6 +262,9 @@ async function loadRounds(actor, target, ammo, capacity, current, pathPrefix = "
     [`${pathPrefix}.img`]: profile.img,
     [`${pathPrefix}.caliber`]: profile.caliber,
     [`${pathPrefix}.ammoType`]: profile.ammoType,
+    [`${pathPrefix}.ammoDamage`]: ammo.system?.damage?.base ?? "",
+    [`${pathPrefix}.ammoDamageType`]: ammo.system?.damage?.type ?? "",
+    [`${pathPrefix}.ammoDamageModifier`]: Number(ammo.system?.damage?.modifier) || 0,
     [`${pathPrefix}.ammoDefinitionId`]: profile.definitionId
   });
   await actor.updateEmbeddedDocuments("Item", [
@@ -232,36 +276,110 @@ async function loadRounds(actor, target, ammo, capacity, current, pathPrefix = "
 
 async function reloadWeapon(actor, weapon) {
   const state = firearmLoadedState(actor, weapon);
+  if (state.mode === "none" || (state.mode === "detachable" && !state.magazine)) return false;
   const host = state.magazine ?? weapon;
-  const candidates = compatibleAmmunition(actor, host).filter(ammo => state.rounds <= 0 || ammo.id === (state.magazine?.system?.ammoId ?? state.internal?.ammoId));
+  const candidates = compatibleAmmunition(actor, host).filter(ammo => isAmmoCompatible(weapon, ammo) && (state.rounds <= 0 || ammo.id === (state.magazine?.system?.ammoId ?? state.internal?.ammoId)));
   const ammo = await chooseDocument(`Reload ${weapon.name}`, candidates);
   if (!ammo) return false;
+  const latest = firearmLoadedState(actor, weapon);
+  if (latest.mode !== state.mode || latest.magazine?.id !== state.magazine?.id || latest.rounds !== state.rounds) return false;
+  if (!isAmmoCompatible(host, ammo) || !isAmmoCompatible(weapon, ammo)) return false;
   if (state.magazine) return loadRounds(actor, state.magazine, ammo, state.capacity, state.rounds);
   return loadRounds(actor, weapon, ammo, state.capacity, state.rounds, "system.firearm.internal");
 }
 
 async function unloadRounds(actor, weapon, state) {
+  return withRoundTransfer(actor, () => returnRounds(actor, weapon, state));
+}
+
+async function returnRounds(actor, weapon, state) {
   const rounds = state.rounds;
   if (!rounds) return false;
   const sourceId = state.magazine?.system?.sourceAmmoId ?? state.internal?.sourceAmmoId;
   const source = actor.items.get(sourceId);
+  if (source?.type !== "ammunition") throw new Error("The original ammo stack is missing. Restore it before unloading to preserve its definition and damage.");
   const updates = [];
   if (source?.type === "ammunition") updates.push({ _id: source.id, "system.quantity": Math.max(0, Number(source.system.quantity) || 0) + rounds });
   if (state.magazine) updates.push({ _id: state.magazine.id, "system.rounds": 0, "system.ammoId": "", "system.sourceAmmoId": "" });
   else updates.push({ _id: weapon.id, "system.firearm.internal.quantity": 0, "system.firearm.internal.ammoId": "", "system.firearm.internal.sourceAmmoId": "" });
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
-  if (!source) {
-    const profile = state.magazine ? ammoProfile(state.magazine) : state.internal;
-    await actor.createEmbeddedDocuments("Item", [{
-      name: profile.name || "Recovered Ammunition", type: "ammunition", img: profile.img || "icons/svg/item-bag.svg",
-      system: { quantity: rounds, ammoType: profile.ammoType ?? "", caliber: profile.caliber ?? "" }
-    }]);
-  }
   return true;
+}
+
+export async function executeMagazineAction(actor, magazineId, operation, { ammoId = "" } = {}) {
+  if (!actor?.isOwner) throw new Error("You do not have permission to load this magazine.");
+  const magazine = actor.items.get(magazineId);
+  if (magazine?.type !== "magazine") return false;
+  if (Number(magazine.system.quantity) > 1) throw new Error("Split this magazine stack into separate items before loading rounds.");
+  if (actor.items.some(item => item.type === "weapon" && item.system?.firearm?.loadedMagazineId === magazineId)) {
+    throw new Error("Remove the magazine from its firearm before changing its rounds.");
+  }
+  const current = Number(magazine.system.rounds) || 0;
+  if (operation === "unload") return unloadRounds(actor, magazine, { magazine, rounds: current });
+  if (operation !== "load") return false;
+  const candidates = compatibleAmmunition(actor, magazine).filter(ammo => !current || ammo.id === magazine.system.ammoId);
+  const ammo = ammoId ? candidates.find(entry => entry.id === ammoId) : await chooseDocument(`Load rounds into ${magazine.name}`, candidates);
+  if (!ammo) return false;
+  if (actor.items.some(item => item.type === "weapon" && item.system?.firearm?.loadedMagazineId === magazineId)) return false;
+  const rounds = Number(magazine.system.rounds) || 0;
+  if (!isAmmoCompatible(magazine, ammo) || (rounds > 0 && magazine.system.ammoId !== ammo.id)) return false;
+  return loadRounds(actor, magazine, ammo, Number(magazine.system.capacity) || 0, rounds);
+}
+
+export function firearmLoadingInCombat(actor) {
+  const combat = globalThis.game?.combat;
+  return Boolean(combat?.started && Array.from(combat.combatants ?? []).some(entry => entry.actor?.id === actor?.id));
+}
+
+export async function splitMagazineStack(actor, magazineId) {
+  if (!actor?.isOwner) throw new Error("You do not have permission to split this magazine stack.");
+  return withRoundTransfer(actor, async () => {
+    const magazine = actor.items.get(magazineId);
+    const quantity = Number(magazine?.system?.quantity);
+    if (magazine?.type !== "magazine" || !Number.isSafeInteger(quantity) || quantity <= 1) return false;
+    const source = magazine.toObject();
+    delete source._id;
+    delete source.folder;
+    delete source.sort;
+    source.system.quantity = 1;
+    source.system.rounds = 0;
+    for (const key of ["ammoId", "sourceAmmoId", "ammoName", "ammoImg", "ammoCaliber", "ammoType", "ammoDefinitionId", "ammoDamage", "ammoDamageType"]) source.system[key] = "";
+    source.system.ammoDamageModifier = 0;
+    const created = await actor.createEmbeddedDocuments("Item", Array.from({ length: quantity - 1 }, () => structuredClone(source)));
+    try {
+      if (created.length !== quantity - 1) throw new Error("Not all magazines could be created.");
+      await magazine.update({ "system.quantity": 1 });
+    } catch (error) {
+      await actor.deleteEmbeddedDocuments("Item", created.map(item => item.id));
+      throw error;
+    }
+    return true;
+  });
+}
+
+export async function setLoadedMagazine(actor, weaponId, magazineId = "") {
+  if (!actor?.isOwner) throw new Error("You do not have permission to load this firearm.");
+  if (firearmLoadingInCombat(actor)) throw new Error("Use the equipped firearm's Loadout or Action HUD during combat so action costs are applied.");
+  return withRoundTransfer(actor, async () => {
+    const weapon = actor.items.get(weaponId);
+    if (weapon?.type !== "weapon" || weapon.system?.weaponKind !== "firearm" || weapon.system?.firearm?.magazineMode !== "detachable") return false;
+    if (!magazineId) {
+      if (!weapon.system.firearm.loadedMagazineId) return false;
+      await weapon.update({ "system.firearm.loadedMagazineId": "" });
+      return true;
+    }
+    if (weapon.system.firearm.loadedMagazineId) throw new Error("Remove the current magazine first.");
+    const magazine = compatibleMagazines(actor, weapon).find(entry => entry.id === magazineId);
+    if (!magazine) throw new Error("This magazine is incompatible or already installed in another firearm.");
+    await weapon.update({ "system.firearm.loadedMagazineId": magazine.id });
+    return true;
+  });
 }
 
 async function fire(actor, weapon, { mapPenalty = 0, resolvedAction = null } = {}) {
   const state = firearmLoadedState(actor, weapon);
+  const currentAction = firearmActionForItem(weapon, actor);
+  if (currentAction.disabled) return ui.notifications.warn(currentAction.disabledReason);
     const rawAmmoCost = Number(resolvedAction?.ammoCost);
     const ammoCost = Number.isFinite(rawAmmoCost) ? Math.max(0, rawAmmoCost) : 1;
   if (state.rounds < ammoCost) return ui.notifications.warn(`${weapon.name} does not have enough ammunition for that firing mode.`);
@@ -280,8 +398,11 @@ async function fire(actor, weapon, { mapPenalty = 0, resolvedAction = null } = {
   const extraDice = resolved.damageDice.filter(rule => ["all", "damage", "firearm", `weapon:${weapon.id}`].includes(rule.selector));
   const legacyDice = Math.max(0, Number(system.damage?.dice) || 0);
   const legacyDie = Math.max(2, Number(system.damage?.die) || 6);
-  const baseDamage = String(resolvedAction?.damageFormula ?? "").trim() || String(system.damage?.base ?? "").trim() || `${legacyDice}d${legacyDie}`;
-  const damageModifier = (Number(system.damage?.modifier) || 0) + (Number(ammo?.system?.damage?.modifier) || 0) + (Number(resolvedAction?.damageModifier) || 0);
+  const ammoModifier = currentAction.weaponComposer.ammoDamageModifier;
+  const ammoBase = [currentAction.weaponComposer.damageFormula, ammoModifier ? String(ammoModifier) : ""].filter(Boolean).join(" + ");
+  const baseDamage = firearmDamageFormula(state.mode !== "none" ? ammoBase : String(resolvedAction?.damageFormula ?? "").trim() || currentAction.weaponComposer.damageFormula || `${legacyDice}d${legacyDie}`, system.damage?.max, { capped: state.mode !== "none" });
+  if (!baseDamage) return ui.notifications.warn("Configure ammunition base damage and a valid weapon damage maximum before firing.");
+  const damageModifier = (Number(system.damage?.modifier) || 0) + (state.mode === "none" ? ammoModifier : 0) + (Number(resolvedAction?.damageModifier) || 0);
   const damageFormula = [baseDamage, ...extraDice.map(rule => `${rule.diceNumber}d${rule.dieSize}`), damageModifier ? String(damageModifier) : ""].filter(Boolean).join(" + ");
   const damage = damageFormula ? await new Roll(damageFormula, context.rollData).evaluate() : null;
   if (state.magazine) await state.magazine.update({ "system.rounds": state.rounds - ammoCost });
@@ -289,7 +410,7 @@ async function fire(actor, weapon, { mapPenalty = 0, resolvedAction = null } = {
   await applyItemWear(weapon, 1);
   await attack.toMessage({
     speaker: ChatMessage.getSpeaker({ actor }),
-    flavor: `${escape(weapon.name)} — Fire${damage ? ` | Damage ${escape(damage.total)} (${escape(system.damage?.type ?? "")})` : ""}`
+    flavor: `${escape(weapon.name)} — Fire${damage ? ` | Damage ${escape(damage.total)} (${escape(currentAction.damageType ?? "")})` : ""}`
   });
   return true;
 }
@@ -323,7 +444,7 @@ export async function executeFirearmAction(actor, weaponId, operation, options =
   if (operation === "load") {
     if (state.mode !== "detachable" || state.magazine) return false;
     const magazine = await chooseDocument(`Load ${weapon.name}`, compatibleMagazines(actor, weapon));
-    if (!magazine) return false;
+    if (!magazine || !compatibleMagazines(actor, weapon).some(entry => entry.id === magazine.id)) return false;
     return weapon.update({ "system.firearm.loadedMagazineId": magazine.id });
   }
   if (operation === "unload") {
