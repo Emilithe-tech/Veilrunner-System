@@ -1,0 +1,249 @@
+/* Compact list view. */
+.veilrunner.sheet.actor .inventory-list-columns,
+.veilrunner.sheet.actor .inventory-list-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px 72px 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor .inventory-list-columns{
+  min-height: 26px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--vr-tech-divider);
+  color: color-mix(in srgb, var(--vr-theme-text, #ffffff) 66%, transparent);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .inventory-list-columns span:not(:first-child),
+.veilrunner.sheet.actor .inventory-list-row > span:not(:first-child){
+  text-align: right;
+}
+
+.veilrunner.sheet.actor .inventory-list-groups .inventory-family-content{
+  display: grid;
+  gap: 4px;
+}
+
+.veilrunner.sheet.actor .inventory-list-items{
+  display: grid;
+}
+
+.veilrunner.sheet.actor .inventory-list-row{
+  position: relative;
+  min-height: 44px;
+  padding: 4px 7px;
+  border-bottom: 1px solid var(--vr-tech-divider);
+  background: color-mix(in srgb, var(--vr-tech-control) 86%, transparent);
+  color: var(--vr-theme-control-text, #ffffff);
+}
+
+.veilrunner.sheet.actor .inventory-list-row:hover,
+.veilrunner.sheet.actor .inventory-list-row:focus-within{
+  background: color-mix(in srgb, var(--vr-accent) 7%, var(--vr-tech-control-hover));
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--vr-item-rarity, var(--vr-accent)) 72%, transparent);
+}
+
+.veilrunner.sheet.actor .inventory-list-item-main{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  text-align: left !important;
+}
+
+.veilrunner.sheet.actor .inventory-list-item-main img{
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.veilrunner.sheet.actor .inventory-list-item-main > span:not(.inventory-equipped-badge){
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .inventory-list-item-main strong,
+.veilrunner.sheet.actor .inventory-list-item-main small{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .inventory-list-item-main strong{
+  font-size: calc(0.62rem + 1pt);
+  letter-spacing: 0.075em;
+}
+
+.veilrunner.sheet.actor .inventory-list-item-main small{
+  color: color-mix(in srgb, var(--vr-theme-control-text, #ffffff) 66%, transparent);
+  font-size: calc(0.56rem + 1pt);
+}
+
+/* Native details keeps item actions available in every view and input mode. */
+.veilrunner.sheet.actor .inventory-item-menu{
+  position: relative;
+  justify-self: end;
+  z-index: 8;
+}
+
+.veilrunner.sheet.actor .inventory-item-menu summary{
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--vr-tech-divider);
+  border-radius: 3px;
+  background: var(--vr-tech-control);
+  color: var(--vr-theme-control-text, #ffffff);
+  cursor: pointer;
+  list-style: none;
+}
+
+.veilrunner.sheet.actor .inventory-item-menu summary::-webkit-details-marker{
+  display: none;
+}
+
+.veilrunner.sheet.actor .inventory-item-menu[open] summary,
+.veilrunner.sheet.actor .inventory-item-menu summary:hover{
+  border-color: color-mix(in srgb, var(--vr-accent) 72%, var(--vr-tech-border-strong));
+  color: var(--vr-accent);
+}
+
+.veilrunner.sheet.actor .inventory-item-menu > div{
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 160;
+  display: grid;
+  width: 130px;
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--vr-accent) 40%, var(--vr-tech-border-strong));
+  border-radius: 4px;
+  background: var(--vr-tech-surface-raised);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.56);
+}
+
+.veilrunner.sheet.actor .inventory-item-menu button{
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-height: 29px;
+  padding: 4px 7px;
+  border: 0 !important;
+  border-radius: 2px;
+  background: transparent !important;
+  color: var(--vr-theme-raised-text, #ffffff);
+  font-size: var(--font-size-14);
+  text-align: left;
+}
+
+.veilrunner.sheet.actor .inventory-item-menu button:hover{
+  background: color-mix(in srgb, var(--vr-accent) 12%, var(--vr-tech-control-hover)) !important;
+  color: var(--vr-accent);
+}
+
+.veilrunner.sheet.actor .inventory-item-menu button.remove{
+  color: #fca5a5;
+}
+
+.veilrunner.sheet.actor .inventory-item-menu button.remove:hover,
+.veilrunner.sheet.actor .inventory-item-menu button.remove:focus-visible{
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #fecaca;
+}
+
+/* Lift an open list menu and its grouping ancestors above later item rows. */
+.veilrunner.sheet.actor .inventory-list-row:has(> .inventory-item-menu[open]){
+  z-index: 180;
+}
+
+.veilrunner.sheet.actor .inventory-subtype-section:has(.inventory-item-menu[open]),
+.veilrunner.sheet.actor .inventory-family-section:has(.inventory-item-menu[open]){
+  position: relative;
+  z-index: 170;
+}
+
+.veilrunner.sheet.actor .inventory-carry-footer{
+  min-height: 42px;
+  border-top-color: color-mix(in srgb, var(--vr-accent) 36%, var(--vr-tech-border));
+  background: var(--vr-tech-surface-soft);
+}
+
+@media (max-width: 900px){
+  .veilrunner.sheet.actor .inventory-toolbar{
+    grid-template-columns: minmax(130px, 1fr) auto auto;
+  }
+
+  .veilrunner.sheet.actor .inventory-sort-control{
+    grid-column: 1 / span 2;
+    grid-row: 2;
+  }
+
+  .veilrunner.sheet.actor .inventory-layout-controls{
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .veilrunner.sheet.actor .inventory-filter-popover{
+    right: 0;
+  }
+
+  .veilrunner.sheet.actor .inventory-grid-groups .inventory-subtype-section{
+    grid-column: span 1 !important;
+  }
+
+  .veilrunner.sheet.actor .inventory-carry-footer{
+    grid-template-columns: auto minmax(48px, 1fr) auto;
+  }
+
+  .veilrunner.sheet.actor .inventory-carry-footer > strong{
+    grid-column: 1 / span 2;
+    grid-row: 2;
+  }
+
+  .veilrunner.sheet.actor .inventory-encumbrance-status{
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}
+
+@media (max-width: 620px){
+  .veilrunner.sheet.actor .inventory-toolbar{
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .veilrunner.sheet.actor .inventory-filter-toggle{
+    grid-column: 2;
+  }
+
+  .veilrunner.sheet.actor .inventory-sort-control{
+    grid-column: 1;
+  }
+
+  .veilrunner.sheet.actor .inventory-layout-controls{
+    grid-column: 2;
+  }
+
+  .veilrunner.sheet.actor .inventory-filter-popover .inventory-weapon-filters{
+    grid-template-columns: 1fr;
+  }
+
+  .veilrunner.sheet.actor .inventory-list-columns,
+  .veilrunner.sheet.actor .inventory-list-row{
+    grid-template-columns: minmax(0, 1fr) 38px 32px;
+  }
+
+  .veilrunner.sheet.actor .inventory-list-columns span:nth-child(3),
+  .veilrunner.sheet.actor .inventory-list-row > span:nth-child(3){
+    display: none;
+  }
+}
+

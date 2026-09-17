@@ -18,3 +18,11 @@ export function fitHeroViewport(position, viewport, requested = position) {
     top: Math.max(0, Math.min(requested.top ?? maxTop / 2, maxTop))
   };
 }
+
+/** Convert viewport bounds to CSS units before animating inside the scaled sheet. */
+export function unscaleHeroRect(rect, scale = 1) {
+  const factor = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  return Object.fromEntries(
+    ["left", "top", "right", "bottom", "width", "height"].map(key => [key, rect[key] / factor])
+  );
+}

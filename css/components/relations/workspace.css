@@ -1,0 +1,57 @@
+.vr-rel-workspace{--rel-accent:#bd9b74;--rel-text:#c7b59e;--rel-panel:#302832;--rel-line:#403841;color:var(--rel-text);background:#100d17;font:12px/1.45 sans-serif;min-width:0;width:100%;box-sizing:border-box;padding:0;container:relations / inline-size;}
+.vr-rel-workspace button{font:inherit; color:inherit; background:rgba(130,145,160,.1); border:1px solid rgba(150,165,180,.25); border-radius:3px; padding:5px 8px; height:auto; white-space:normal;}
+.vr-rel-workspace button:hover,.vr-rel-workspace .is-selected{border-color:var(--rel-accent); background:rgba(110,180,200,.15);}
+.vr-rel-tabs,.vr-rel-controls{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+:is(.veilrunner.sheet.actor,.veilrunner.vr-player-datapad,.veilrunner.vr-rel-manager) .vr-rel-workspace .vr-rel-context{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr)); gap:10px; margin-bottom:14px; align-items:end;}
+:is(.veilrunner.sheet.actor,.veilrunner.vr-player-datapad,.veilrunner.vr-rel-manager) .vr-rel-context > label{display:grid; grid-template-columns:minmax(0,1fr); min-width:0; width:auto; gap:5px; margin:0; white-space:normal; line-height:1.35; text-align:left;}
+:is(.veilrunner.sheet.actor,.veilrunner.vr-player-datapad,.veilrunner.vr-rel-manager) .vr-rel-workspace :is(button,input,select,textarea){box-sizing:border-box; min-width:0; max-width:100%; line-height:1.35; letter-spacing:normal;}
+:is(.veilrunner.sheet.actor,.veilrunner.vr-player-datapad,.veilrunner.vr-rel-manager) .vr-rel-workspace button{width:auto; height:auto; min-height:30px; white-space:normal; overflow-wrap:anywhere; flex:none;}
+:is(.veilrunner.sheet.actor,.veilrunner.vr-player-datapad,.veilrunner.vr-rel-manager) .vr-rel-workspace :is(input,select){height:32px; min-height:32px;}
+.vr-rel-workspace select,.vr-rel-workspace input,.vr-rel-workspace textarea{width:100%; color:inherit; background:rgba(0,0,0,.2); border:1px solid rgba(150,165,180,.35); font:inherit;}
+.vr-rel-layout{display:grid; grid-template-columns:minmax(155px, .7fr) minmax(0,2fr); gap:14px; min-height:180px;}
+.vr-rel-directory{display:flex; flex-direction:column; gap:8px; min-width:0; border-right:1px solid rgba(150,165,180,.25); padding-right:10px; align-self:start; max-height:580px; overflow-y:auto; overflow-x:hidden;}
+.vr-rel-directory button{text-align:left;}
+.vr-rel-workspace [hidden]{display:none!important;}
+.vr-rel-detail{min-width:0; overflow-wrap:anywhere;}
+.vr-rel-detail h2,.vr-rel-detail h3,.vr-rel-detail h4{font:inherit; font-weight:600; border:0; margin:10px 0;}
+.vr-rel-tools{margin-bottom:12px; min-width:0;}
+.vr-rel-tools summary{white-space:normal; overflow-wrap:anywhere; line-height:1.4; cursor:pointer;}
+.vr-rel-tools[open] > button{margin:6px 4px 0 0;}
+.vr-rel-manager .window-content{overflow:auto; background:var(--vr-surface,#171d25);}
+.vr-rel-datapad-host{margin-bottom:18px; border-bottom:1px solid rgba(150,165,180,.25);}
+.vr-rel-layout{grid-template-columns:190px minmax(0,1fr);gap:0;min-height:480px}
+.vr-rel-directory{padding:10px;gap:10px;align-self:stretch;max-height:none;border-color:var(--rel-line)}
+.vr-rel-detail{padding:20px}
+.vr-rel-workspace button{background:var(--rel-panel);border-color:transparent;color:var(--rel-text)}
+.vr-rel-workspace button:hover,.vr-rel-workspace button:focus-visible{background:#443744;border-color:var(--rel-accent)}
+.vr-rel-workspace button.is-selected{background:#42301f;border-color:#856643;color:#e5c7a0}
+.vr-rel-workspace :is(input,select,textarea){background:#211b25;border-color:var(--rel-line);color:var(--rel-text)}
+:is(.veilrunner.sheet.actor,.veilrunner.vr-player-datapad,.veilrunner.vr-rel-manager) .vr-rel-workspace .vr-rel-context{grid-template-columns:minmax(0,1fr);gap:7px;padding:9px;margin:0;background:var(--rel-panel);border-radius:4px}
+:is(.veilrunner.sheet.actor,.veilrunner.vr-player-datapad,.veilrunner.vr-rel-manager) .vr-rel-context > label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;gap:2px}
+.vr-rel-context select{font-weight:600}
+.vr-rel-tools{font-size:11px;margin:0}
+.vr-rel-search{position:relative}
+.vr-rel-search > i{position:absolute;top:9px;left:8px;opacity:.6;pointer-events:none}
+.vr-rel-search input{padding-left:27px}
+.vr-rel-tree{flex:1}
+.vr-rel-group{padding:7px 0;border-bottom:1px solid var(--rel-line)}
+.vr-rel-group summary{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;text-transform:uppercase;cursor:pointer;padding:4px 0 8px}
+.vr-rel-group summary::before{content:'›';font-size:16px}
+.vr-rel-group[open] summary::before{transform:rotate(90deg)}
+.vr-rel-group summary small{margin-left:auto;opacity:.65}
+.vr-rel-workspace .vr-rel-tree-row{display:flex;align-items:center;gap:7px;width:calc(100% - var(--rel-depth,0)*8px)!important;margin:3px 0 3px calc(var(--rel-depth,0)*8px);padding:4px;text-align:left}
+.vr-rel-tree-row img,.vr-rel-tree-row .vr-rel-avatar{width:27px;height:27px;object-fit:cover;flex-shrink:0;border-radius:3px}
+.vr-rel-tree-row > span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vr-rel-avatar{display:inline-flex;align-items:center;justify-content:center;background:#221d28;color:#9d8a78}
+.vr-rel-empty-group{font-size:11px;opacity:.6;margin:5px 0}
+.vr-rel-workspace .vr-rel-add{background:transparent;font-size:11px;opacity:.8}
+.vr-rel-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin-top:auto;margin-bottom:0;padding-top:8px}
+.vr-rel-tabs button,.vr-rel-controls button{font-size:10px}
+.vr-rel-detail h2{font-size:20px;color:var(--rel-text)}
+.vr-rel-detail h3{font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+.vr-rel-placeholder{display:flex;min-height:320px;align-items:center;justify-content:center;flex-direction:column;text-align:center;color:#a38e7d}
+.vr-rel-placeholder > i{font-size:42px;opacity:.35;margin-bottom:14px}
+.vr-rel-placeholder p{max-width:260px;opacity:.7}
+.vr-rel-manager .window-content{background:#100d17}
+@container relations (max-width:520px){.vr-rel-layout{grid-template-columns:150px minmax(0,1fr)}.vr-rel-directory{padding:7px}.vr-rel-detail{padding:12px}.vr-rel-profile{flex-wrap:wrap}}
+@container relations (max-width:360px){.vr-rel-layout{grid-template-columns:minmax(0,1fr)}.vr-rel-directory{border-right:0;border-bottom:1px solid var(--rel-line)}.vr-rel-tree{max-height:220px;overflow:auto}.vr-rel-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}

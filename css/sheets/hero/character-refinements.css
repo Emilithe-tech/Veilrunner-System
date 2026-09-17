@@ -1,0 +1,487 @@
+/* Cohesive character workspace: solid readable type and Stats-led section rhythm. */
+.veilrunner.sheet.actor .window-content{
+  color: var(--vr-theme-text, #ffffff);
+}
+
+.veilrunner.sheet.actor .window-content :not(i),
+.veilrunner.sheet.actor .window-content :not(i)::before,
+.veilrunner.sheet.actor .window-content :not(i)::after{
+  text-shadow: none !important;
+}
+
+/* Hero-column readability: add one point without compounding inherited text sizes. */
+.veilrunner.sheet.actor .hero-column .sidecar-identity .name-input{
+  font-size: calc(1.18rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .sidecar-discipline-icon{
+  font-size: calc(0.7rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .sidecar-discipline-name{
+  font-size: calc(0.78rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .header-resolve-label{
+  font-size: calc(0.64rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .hero-status-label{
+  font-size: calc(0.56rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .hero-vital-diamond span,
+.veilrunner.sheet.actor .hero-column .hero-vital-diamond input{
+  font-size: calc(1.32rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .hero-energy-heading{
+  font-size: clamp(9px, 9.5cqi, calc(0.65rem + 1pt));
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .hero-column .stat-grid-compact .stat > label{
+  font-size: calc(0.62rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .bar-track.horizontal .bar-text{
+  font-size: calc(0.74rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .bar-track.horizontal .bar-text input{
+  font-size: calc(0.68rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .bar-text.health-text .bar-parameter{
+  font-size: calc(0.66rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .stat-value{
+  font-size: calc(0.82rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .party-heading{
+  font-size: calc(0.68rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .party-pan-connected strong{
+  font-size: calc(0.72rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .party-member-data{
+  font-size: calc(0.6rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .party-member-data strong{
+  font-size: calc(0.7rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .party-resource-label,
+.veilrunner.sheet.actor .hero-column .party-resource-status{
+  font-size: calc(0.58rem + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .party-empty{
+  font-size: calc(1em + 1pt);
+}
+
+.veilrunner.sheet.actor .hero-column .sidecar-identity .name-input{
+  height: 35px;
+}
+
+.veilrunner.sheet.actor .hero-column .sidecar-discipline-name{
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+.veilrunner.sheet.actor .hero-column .hero-status-label{
+  line-height: 1.25;
+  margin-bottom: 5px;
+}
+
+.veilrunner.sheet.actor .hero-column .hero-vital-pips{
+  min-height: 64px;
+  padding-bottom: 5px;
+}
+
+.veilrunner.sheet.actor .hero-column .hero-energy-heading{
+  line-height: 1.3;
+  row-gap: 4px;
+  margin-bottom: 6px;
+}
+
+.veilrunner.sheet.actor .hero-column .stat-grid-compact{
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor .hero-column .stat-grid-compact .stat > label{
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.veilrunner.sheet.actor .hero-column .stat-grid-compact .resource-bar .bar-track.horizontal{
+  height: 22px;
+  min-height: 22px;
+}
+
+/* Resource presentation preferences share the existing values and edit controls. */
+.veilrunner.sheet.actor .hero-column .hero-resource-divider:has(+ .resource-compact){
+  margin-bottom:0;
+}
+.veilrunner.sheet.actor .hero-column .stat-grid-compact.resource-compact{
+  align-content:center;
+  margin-block:0;
+  padding-block:0;
+}
+.veilrunner.sheet.actor .hero-column .stat-grid-compact .resource-bar.health{
+  --resource-color: var(--resource-health-dynamic);
+}
+.veilrunner.sheet.actor .hero-column .stat-grid-compact.resource-health-static .resource-bar.health{
+  --resource-color: var(--vr-resource-health);
+}
+.veilrunner.sheet.actor .hero-column .stat-grid-compact .resource-bar .bar-track.horizontal{
+  border-radius: var(--resource-radius-left, 0px) var(--resource-radius-right, 0px) var(--resource-radius-right, 0px) var(--resource-radius-left, 0px);
+}
+.veilrunner.sheet.actor .hero-column .resource-icons-off .resource-icon{
+  display: none;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact .stat-bar{
+  position: relative;
+  padding: 0;
+  min-width: 0;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact .stat-bar > label{
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 32px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  font-size: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--resource-radius-left, 0px) 0 0 var(--resource-radius-left, 0px);
+  background: rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact .resource-label-text{
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact .resource-bar .bar-track.horizontal{
+  height: 24px;
+  min-height: 24px;
+  border-radius: var(--resource-radius-left, 0px) var(--resource-radius-right, 0px) var(--resource-radius-right, 0px) var(--resource-radius-left, 0px);
+}
+.veilrunner.sheet.actor .hero-column .resource-compact .resource-bar .bar-text{
+  padding: 0 10px 0 42px;
+  justify-content: flex-start;
+  text-align: left;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact.resource-icons-off .stat-bar > label{
+  width: 0;
+  border: 0;
+  background: none;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact.resource-icons-off .resource-bar .bar-text{
+  padding-left: 10px;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact:not(.resource-icons-off) .resource-bar{
+  margin-left:32px;
+  width:calc(100% - 32px);
+  min-width:0;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact:not(.resource-icons-off) .resource-bar .bar-track.horizontal{
+  border-top-left-radius:0;
+  border-bottom-left-radius:0;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact:not(.resource-icons-off) .resource-bar .bar-text{
+  padding-left:10px;
+}
+.veilrunner.sheet.actor .hero-column .resource-compact:not(.resource-icons-off) .stat-bar > label{
+  box-sizing:border-box;
+  height:24px;
+  margin-bottom:0;
+  border:1px solid var(--vr-tech-border);
+  border-right:0;
+}
+.veilrunner.sheet.actor .hero-column .resource-vfx-off .resource-bar .bar-track,
+.veilrunner.sheet.actor .hero-column .resource-vfx-off .resource-bar .bar-fill,
+.veilrunner.sheet.actor .hero-column .resource-vfx-off .resource-icon{
+  animation: none !important;
+  transition: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+.veilrunner.sheet.actor .hero-column .resource-vfx-off .bar-track::before,
+.veilrunner.sheet.actor .hero-column .resource-vfx-off .bar-track::after,
+.veilrunner.sheet.actor .hero-column .resource-vfx-off .bar-fill::before,
+.veilrunner.sheet.actor .hero-column .resource-vfx-off .bar-fill::after{
+  content: none !important;
+  animation: none !important;
+}
+
+.veilrunner.sheet.actor .hero-column .bar-track.horizontal .bar-text input{
+  height: 18px;
+}
+
+.veilrunner.sheet.actor .hero-column .party-pan-status{
+  flex-wrap: wrap;
+  height: auto;
+  min-height: 28px;
+  line-height: 1.3;
+  row-gap: 4px;
+}
+
+.veilrunner.sheet.actor .hero-column .party-resource,
+.veilrunner.sheet.actor .hero-column .party-resource-label{
+  line-height: 1.3;
+}
+
+
+.veilrunner.sheet.actor .hero-column .hero-energy-label,
+.veilrunner.sheet.actor .hero-column .stat-grid-compact .stat > label{
+  font-weight: 800;
+}
+
+/* Softer hero-column typography with restrained contrast against the sheet art. */
+.veilrunner.sheet.actor .window-content .hero-column,
+.veilrunner.sheet.actor .window-content .hero-column :not(i),
+.veilrunner.sheet.actor .window-content .hero-column :not(i)::before,
+.veilrunner.sheet.actor .window-content .hero-column :not(i)::after,
+.veilrunner.sheet.actor .window-content .hero-column input::placeholder,
+.veilrunner.sheet.actor .window-content .hero-column textarea::placeholder{
+  font-family: "Segoe UI", sans-serif !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65) !important;
+}
+
+.veilrunner.sheet.actor .window-content .hero-column .hero-energy-value,
+.veilrunner.sheet.actor .window-content .hero-column .hero-energy-value input{
+  text-shadow: none !important;
+}
+
+.veilrunner.sheet.actor .window-content .hero-column .energy-compact .hero-energy-value,
+.veilrunner.sheet.actor .window-content .hero-column .energy-compact .hero-energy-value input{
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: calc(0.74rem + 1pt);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow:
+    1px 0 1px rgba(0, 0, 0, 0.96),
+    -1px 0 1px rgba(0, 0, 0, 0.96),
+    0 1px 1px rgba(0, 0, 0, 0.96),
+    0 -1px 1px rgba(0, 0, 0, 0.96) !important;
+}
+
+.veilrunner.sheet.actor :is(.bottom-nav, .sub-nav-row){
+  color: var(--vr-theme-header-text, #ffffff);
+}
+
+.veilrunner.sheet.actor :is(
+  .attribute-row,
+  .stats-summary-row,
+  .progression-points-values label,
+  .character-details-core > .detail-field,
+  .character-details-core > .detail-line,
+  .profession-details-grid > .detail-field,
+  .profession-details-grid > .detail-line,
+  .qualities-flaws-column > .detail-field,
+  .qualities-flaws-column > .detail-line,
+  .settings-group .color-picker-row,
+  .settings-group label,
+  .settings-group .theme-reset-row,
+  .ui-toggle-row
+){
+  color: var(--vr-theme-control-text, #ffffff) !important;
+}
+
+.veilrunner.sheet.actor :is(
+  .attribute-row .attribute-label,
+  .attribute-row strong,
+  .stats-summary-row > span,
+  .stats-summary-row strong,
+  .stats-summary-row input,
+  .progression-points-values label,
+  .progression-points-values strong,
+  .settings-group select,
+  .settings-group select option,
+  .settings-group .xp-slider-control .xp-value-input,
+  .settings-group .color-picker-control button,
+  .settings-group .theme-reset-btn
+){
+  color: var(--vr-theme-control-text, #ffffff) !important;
+}
+
+.veilrunner.sheet.actor :is(
+  .attribute-group-heading,
+  .progression-stat > span,
+  .progression-stat strong,
+  .progression-stat small,
+  .progression-points-stat > span,
+  .character-details-heading,
+  .qualities-flaws-heading
+){
+  color: var(--vr-theme-raised-text, #ffffff) !important;
+}
+
+.veilrunner.sheet.actor .settings-group :is(.color-picker-control, .xp-slider-control) button i{
+  color: var(--vr-theme-control-text, #ffffff) !important;
+}
+
+/* PAN belongs to the sidecar surface instead of floating in its own panel. */
+.veilrunner.sheet.actor .party-view{
+  overflow: visible;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Attributes, Combat, and Saves share one uninterrupted Character surface. */
+.veilrunner.sheet.actor .stats-sections{
+  gap: 0;
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section{
+  overflow: visible;
+  padding: 0 0 2px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section::before{
+  content: none !important;
+  display: none !important;
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-groups,
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-grid{
+  padding: 8px 0 10px;
+}
+
+/* Reuse the Stats heading treatment across the requested Character workspaces. */
+.veilrunner.sheet.actor :is(
+  .stats-sections > .stats-section > h1,
+  .cohesive-section-heading,
+  .character-details-heading,
+  .qualities-flaws-heading,
+  .ui-settings-panel > .settings-group > h4:first-child
+){
+  position: relative;
+  display: block;
+  margin: 0 0 6px;
+  padding: 22px 0 4px 24px;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 38%, var(--vr-tech-border));
+  background: transparent !important;
+  color: var(--vr-theme-text, #ffffff) !important;
+  font-size: 0.96rem;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor :is(
+  .stats-sections > .stats-section > h1,
+  .cohesive-section-heading,
+  .character-details-heading,
+  .qualities-flaws-heading,
+  .ui-settings-panel > .settings-group > h4:first-child
+)::before{
+  content: "";
+  position: absolute;
+  top: auto;
+  bottom: 9px;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  background: var(--vr-accent);
+  box-shadow:
+    0 7px 0 color-mix(in srgb, var(--vr-accent) 28%, transparent),
+    0 12px 0 color-mix(in srgb, var(--vr-accent) 15%, transparent);
+}
+
+.veilrunner.sheet.actor :is(
+  .stats-sections > .stats-section > h1,
+  .cohesive-section-heading,
+  .character-details-heading,
+  .qualities-flaws-heading,
+  .ui-settings-panel > .settings-group > h4:first-child
+)::after{
+  content: "";
+  position: absolute;
+  right: auto;
+  bottom: -2px;
+  left: 0;
+  flex: none;
+  width: 34px;
+  height: 3px;
+  background: var(--vr-accent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--vr-accent) 42%, transparent);
+}
+
+/* Progression and Biography use the same open surface as Stats. */
+.veilrunner.sheet.actor :is(.overview-panel, .bio-content, .ui-settings-panel){
+  overflow: visible;
+  padding: 0 0 10px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor :is(.overview-panel, .bio-content, .ui-settings-panel)::before{
+  content: none !important;
+  display: none !important;
+}
+
+.veilrunner.sheet.actor .cohesive-section-heading{
+  margin-bottom: 8px;
+}
+
+/* UI settings sections are separated by headings and rhythm, not nested boxes. */
+.veilrunner.sheet.actor .ui-settings-panel{
+  display: grid;
+  gap: 2px;
+}
+
+.veilrunner.sheet.actor .settings-group,
+.veilrunner.sheet.actor .ui-settings-panel > .settings-group:first-child{
+  gap: 8px;
+  padding: 0 0 10px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor .ui-settings-panel > .settings-group > h4:first-child{
+  margin-bottom: 2px;
+}
+
+.veilrunner.sheet.actor .settings-group > h5{
+  margin: 2px 0 0;
+  color: var(--vr-theme-text, #ffffff);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor :is(.character-details-heading, .qualities-flaws-heading){
+  color: var(--vr-theme-raised-text, #ffffff) !important;
+}
+

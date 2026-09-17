@@ -1,0 +1,147 @@
+/* Final character-sheet hierarchy: neutral work surfaces, themed accents, and grouped inventory. */
+.veilrunner.sheet:is(.actor, .vr-universal-item){
+  --vr-tech-canvas: color-mix(in srgb, var(--vr-ui-color) 12%, var(--vr-vision-bg));
+  --vr-tech-header: color-mix(in srgb, var(--vr-ui-color) 18%, #11141c);
+  --vr-tech-surface: color-mix(in srgb, var(--vr-ui-color) 14%, #080a0f);
+  --vr-tech-surface-raised: color-mix(in srgb, var(--vr-ui-color) 18%, #11151d);
+  --vr-tech-surface-soft: color-mix(in srgb, var(--vr-ui-color) 10%, #0a0c12);
+  --vr-tech-control: color-mix(in srgb, var(--vr-ui-color) 14%, #090b11);
+  --vr-tech-control-hover: color-mix(in srgb, var(--vr-ui-color) 20%, #10141c);
+  --vr-tech-border: color-mix(in srgb, var(--vr-ui-color) 24%, #56606d);
+  --vr-tech-border-strong: color-mix(in srgb, var(--vr-ui-color) 30%, #7d8794);
+  --vr-tech-divider: color-mix(in srgb, var(--vr-ui-color) 20%, #343c47);
+  --vr-panel-alt: color-mix(in srgb, var(--vr-ui-color) 18%, #11151d);
+}
+
+.veilrunner.sheet.actor :is(.main-panel, .equipment-panel, .details-panel){
+  color: var(--vr-theme-text, #ffffff);
+}
+
+.veilrunner.sheet.actor :is(.main-panel, .equipment-panel, .details-panel) :is(button, input, select, textarea){
+  color: var(--vr-theme-control-text, #ffffff);
+}
+
+.veilrunner.sheet.actor :is(.main-panel, .equipment-panel, .details-panel) :is(input, textarea)::placeholder{
+  color: color-mix(in srgb, var(--vr-theme-control-text, #ffffff) 62%, transparent);
+  opacity: 1;
+}
+
+.veilrunner.sheet.actor .main-panel{
+  padding: 12px 14px;
+}
+
+.veilrunner.sheet.actor .section-body{
+  padding: 10px 0 6px;
+}
+
+.veilrunner.sheet.actor :is(.stats-sections, .progression-summary-grid, .progression-points-grid, .character-details-fields, .qualities-flaws-grid){
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor :is(.overview-panel, .bio-content, .actions-workspace-list, .about-preview, .setting-panel){
+  padding: 0 0 8px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor :is(.overview-panel, .bio-content, .actions-workspace-list, .about-preview, .setting-panel)::before{
+  content: none !important;
+}
+
+.veilrunner.sheet.actor :is(.character-details-box, .qualities-flaws-box, .profession-reference-card){
+  padding: 0 0 8px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor .progression-summary-grid,
+.veilrunner.sheet.actor .progression-points-grid,
+.veilrunner.sheet.actor .character-details-core,
+.veilrunner.sheet.actor .profession-details-grid,
+.veilrunner.sheet.actor .qualities-flaws-grid{
+  padding-inline: var(--vr-category-pad-x);
+}
+
+.veilrunner.sheet.actor :is(.progression-stat, .progression-points-stat){
+  min-height: 52px;
+  border-color: var(--vr-tech-divider) !important;
+  background: var(--vr-tech-control);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--vr-accent) 58%, transparent);
+}
+
+.veilrunner.sheet.actor .bio-content{
+  min-height: 140px;
+  padding-inline: 2px;
+}
+
+.veilrunner.sheet.actor .empty-row,
+.veilrunner.sheet.actor .empty-tab,
+.veilrunner.sheet.actor .overview-hint{
+  padding: 16px 10px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: color-mix(in srgb, var(--vr-theme-text, #ffffff) 66%, transparent);
+  text-align: center;
+}
+
+/* Settings retain field-level affordances without stacking panels inside panels. */
+.veilrunner.sheet.actor .ui-settings-panel,
+.veilrunner.sheet.actor .settings-group,
+.veilrunner.sheet.actor .ui-settings-panel > .settings-group:first-child{
+  padding: 0 0 8px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor .settings-group :is(.color-picker-row, label:not(.xp-slider-row), .theme-reset-row),
+.veilrunner.sheet.actor .ui-toggle-row,
+.veilrunner.sheet.actor .settings-group label.xp-slider-row{
+  border-width: 0 0 1px 2px !important;
+  border-color: var(--vr-tech-divider) !important;
+  border-left-color: color-mix(in srgb, var(--vr-accent) 58%, var(--vr-tech-divider)) !important;
+  border-radius: 0 3px 3px 0 !important;
+  background: var(--vr-tech-control) !important;
+}
+
+.veilrunner.sheet.actor .settings-group :is(button, select, input:not([type="range"]):not([type="color"])){
+  border-color: var(--vr-tech-border) !important;
+  background: var(--vr-tech-surface-raised) !important;
+  color: var(--vr-theme-raised-text, #ffffff) !important;
+}
+
+.veilrunner.sheet.actor .settings-group :is(button, select):hover:not(:disabled),
+.veilrunner.sheet.actor .settings-group :is(button, select):focus-visible{
+  border-color: color-mix(in srgb, var(--vr-accent) 68%, var(--vr-tech-border-strong)) !important;
+  background: color-mix(in srgb, var(--vr-accent) 10%, var(--vr-tech-control-hover)) !important;
+}
+
+/* The side drawers inherit the same canvas instead of reading as separate themes. */
+.veilrunner.sheet.actor [data-application-part="equipment"],
+.veilrunner.sheet.actor [data-application-part="details"],
+.veilrunner.sheet.actor :is(.equipment-panel, .details-panel){
+  background: var(--vr-tech-canvas) !important;
+  color: var(--vr-theme-text, #ffffff) !important;
+}
+
+.veilrunner.sheet.actor :is(.action-details-drawer, .discipline-reference-card, .party-drawer-section, .skill-category){
+  padding: 8px 0;
+  border: 0 !important;
+  border-bottom: 1px solid var(--vr-tech-divider) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.veilrunner.sheet.actor :is(.party-drawer-member, .party-drawer-item, .skill-row, .reputation-row, .relationship-row, .condition-row, .custom-effect-row){
+  border-color: var(--vr-tech-divider) !important;
+  background: var(--vr-tech-control) !important;
+  color: var(--vr-theme-control-text, #ffffff) !important;
+}
+

@@ -2,6 +2,7 @@ import { evaluateRequirements } from "../../rules/requirement-evaluator.mjs";
 import { qualityRequirements } from "../../data/item/legacy-quality-requirements.mjs";
 
 export const QUALITY_TIERS = Object.freeze(["Minor", "Moderate", "Significant", "Major", "Extreme"]);
+export const PERK_ICON = "fa-medal";
 export const QUALITY_PILLARS = Object.freeze(["Physical", "Social", "Magical", "Technical"]);
 export const QUALITY_TIER_COSTS = Object.freeze({ Minor: 1, Moderate: 2, Significant: 3, Major: 4, Extreme: 5 });
 export const QUALITY_LIMITS = Object.freeze({ flawMinimum: 20, minorFlawMaximum: 8, pillarMaximum: 10 });

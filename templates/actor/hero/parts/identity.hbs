@@ -1,0 +1,23 @@
+      <section class="sidecar-identity" aria-label="{{localize 'VEILRUNNER.Section.character'}}">
+        <input class="name-input" type="text" name="name" value="{{actor.name}}"
+               placeholder="{{localize 'VEILRUNNER.Name'}}" />
+        <div class="sidecar-discipline-row">
+          <span class="identity-discipline-icon sidecar-discipline-icon" aria-label="{{localize 'VEILRUNNER.Discipline'}}">{{disciplineInitial}}</span>
+          <strong class="sidecar-discipline-name">{{#if system.discipline}}{{system.discipline}}{{else}}{{localize 'VEILRUNNER.Discipline'}}{{/if}}</strong>
+        </div>
+        <div class="header-resolve-track" aria-label="{{localize 'VEILRUNNER.Resolve'}}">
+          <span class="header-resolve-label">{{localize 'VEILRUNNER.Resolve'}}</span>
+          <div class="header-resolve-icons">
+            {{#each resolvePoints}}
+              <button type="button"
+                      class="header-resolve-pip {{#if active}}active{{/if}}"
+                      data-action="setStatusTrack"
+                      data-track="resolve"
+                      data-value="{{value}}"
+                      title="{{localize 'VEILRUNNER.Resolve'}} {{value}}">
+              </button>
+            {{/each}}
+          </div>
+        </div>
+        <div class="sidecar-identity-separator-line" aria-hidden="true"></div>
+      </section>

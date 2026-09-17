@@ -1,0 +1,82 @@
+      <section class="stat-grid-compact {{#if sheetOptions.staticHealthColor}}resource-health-static{{/if}} {{#if sheetOptions.disableResourceBarVfx}}resource-vfx-off{{/if}} {{#if sheetOptions.compactResourceBars}}resource-compact{{/if}} {{#if sheetOptions.hideResourceBarIcons}}resource-icons-off{{/if}}">
+        <div class="stat stat-bar health-bar" style="--resource-radius-left: {{#if system.sheetOptions.healthBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.healthBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Health'}}"><i class="fa-solid fa-heart-pulse resource-icon health"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Health'}}</span></label>
+          <div class="resource-bar health" style="--resource-health-dynamic: {{healthColor}};">
+            <div class="bar-track horizontal">
+              <div class="bar-fill health" style="width: {{healthPercent}}%;"></div>
+              {{#if tempHealthPercent}}
+                <div class="bar-fill temp-health" style="left: {{healthPercent}}%; width: {{tempHealthPercent}}%;"></div>
+              {{/if}}
+              <span class="bar-text health-text">
+                {{#if editMode}}
+                  <span class="stat-value editable health-edit">
+                    <input type="number" name="system.resources.health.value" value="{{system.resources.health.value}}" />
+                    / {{#if isGM}}<input type="number" name="system.resources.health.max" value="{{system.resources.health.max}}" />{{else}}{{system.resources.health.max}}{{/if}}
+                    {{#if hasTempHealth}}<span class="bar-parameter">+{{tempHealthValue}}</span>{{/if}}
+                  </span>
+                {{else}}
+                  <span class="bar-value">{{system.resources.health.value}} / {{system.resources.health.max}}</span>
+                  {{#if hasTempHealth}}
+                    <span class="bar-parameter">+{{tempHealthValue}} {{localize 'VEILRUNNER.TempHealth'}}</span>
+                  {{/if}}
+                {{/if}}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat stat-bar" data-resource-bar="armor" {{#unless showArmorResource}}hidden{{/unless}} style="--resource-radius-left: {{#if system.sheetOptions.armorBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.armorBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Armor'}}"><i class="fa-solid fa-shield-halved resource-icon armor"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Armor'}}</span></label>
+          <div class="resource-bar armor" style="--armor-integrity: {{system.percent.armor}};">
+            <div class="bar-track horizontal">
+              <div class="bar-fill" style="width: {{system.percent.armor}}%"></div>
+              <span class="bar-text">
+                {{#if editMode}}
+                  <span class="stat-value editable">
+                    <input type="number" name="system.resources.armor.value" value="{{system.resources.armor.value}}" />
+                    / {{#if isGM}}<input type="number" name="system.resources.armor.max" value="{{system.resources.armor.max}}" />{{else}}{{system.resources.armor.max}}{{/if}}
+                  </span>
+                {{else}}
+                  {{system.resources.armor.value}} / {{system.resources.armor.max}}
+                {{/if}}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="stat stat-bar" data-resource-bar="shields" {{#unless showShieldsResource}}hidden{{/unless}} style="--resource-radius-left: {{#if system.sheetOptions.shieldsBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.shieldsBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Shields'}}"><i class="fa-solid fa-shield resource-icon shields"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Shields'}}</span></label>
+          <div class="resource-bar shields">
+            <div class="bar-track horizontal">
+              <div class="bar-fill" style="width: {{system.percent.shields}}%"></div>
+              <span class="bar-text">
+                {{#if editMode}}
+                  <span class="stat-value editable">
+                    <input type="number" name="system.resources.shields.value" value="{{system.resources.shields.value}}" />
+                    / {{#if isGM}}<input type="number" name="system.resources.shields.max" value="{{system.resources.shields.max}}" />{{else}}{{system.resources.shields.max}}{{/if}}
+                  </span>
+                {{else}}
+                  {{system.resources.shields.value}} / {{system.resources.shields.max}}
+                {{/if}}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="stat stat-bar" data-resource-bar="barriers" {{#unless showBarriersResource}}hidden{{/unless}} style="--resource-radius-left: {{#if system.sheetOptions.barriersBarRoundLeft}}999px{{else}}0px{{/if}}; --resource-radius-right: {{#if system.sheetOptions.barriersBarRoundRight}}999px{{else}}0px{{/if}};">
+          <label title="{{localize 'VEILRUNNER.Barriers'}}"><i class="fa-solid fa-hexagon resource-icon barriers"></i> <span class="resource-label-text">{{localize 'VEILRUNNER.Barriers'}}</span></label>
+          <div class="resource-bar barriers">
+            <div class="bar-track horizontal">
+              <div class="bar-fill" style="width: {{system.percent.barriers}}%"></div>
+              <span class="bar-text">
+                {{#if editMode}}
+                  <span class="stat-value editable">
+                    <input type="number" name="system.resources.barriers.value" value="{{system.resources.barriers.value}}" />
+                    / {{#if isGM}}<input type="number" name="system.resources.barriers.max" value="{{system.resources.barriers.max}}" />{{else}}{{system.resources.barriers.max}}{{/if}}
+                  </span>
+                {{else}}
+                  {{system.resources.barriers.value}} / {{system.resources.barriers.max}}
+                {{/if}}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>

@@ -1,224 +1,371 @@
-/* Progression is contained within the character pane, including its XP track. */
-.veilrunner.sheet.actor .progression-panel > .progression-overview,
-.veilrunner.sheet.actor .progression-panel > .progression-pool-cards {
-  padding-top: 18px;
-}
-.veilrunner.sheet.actor .progression-planned > .progression-timeline {
-  padding-top: 18px;
-}
-.veilrunner.sheet.actor .section-body:has(> .progression-panel) {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 0;
-}
-.veilrunner.sheet.actor .section-body > .progression-panel {
-  display: flex;
-  flex-direction: column;
-  flex: 1 0 auto;
-  padding-bottom: 0;
-}
-.veilrunner.sheet.actor .progression-panel > * { flex-shrink: 0; }
-.veilrunner.sheet.actor .progression-panel > .progression-planned {
-  display: flex;
-  flex-direction: column;
-  flex: 1 0 auto;
-}
-.veilrunner.sheet.actor .progression-planned > .progression-timeline {
-  flex: 1 0 auto;
-  max-height: none;
-  min-height: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  padding-bottom: 0;
-  overflow: visible;
-}
-.veilrunner.sheet.actor .progression-timeline > .progression-planned-level {
-  display: flex;
-  flex-direction: column;
-}
-.veilrunner.sheet.actor .progression-planned-level > .progression-timeline-items {
-  flex: 0 0 auto;
-  min-height: 0;
-  padding-bottom: 0;
-  border-left: 0;
-  position: relative;
-}
-.veilrunner.sheet.actor .progression-planned-level > .progression-timeline-items::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 22px;
-  border-left: 1px solid var(--progression-cyan);
-}
-.veilrunner.sheet.actor .progression-panel .progression-planner-title {
-  display: block;
-  width: 100%;
-}
-.veilrunner.sheet.actor .progression-panel .progression-planner-title-row {
-  display: flex;
-  flex-flow: row nowrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-}
-.veilrunner.sheet.actor .progression-planner-title button {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: auto;
-  height: 28px;
-  padding: 4px 12px;
-  border: 1px solid var(--vr-accent);
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--vr-accent) 18%, var(--vr-tech-control));
-  color: var(--vr-theme-control-text, #ffffff);
-  font-size: 11px;
-  letter-spacing: normal;
-  white-space: nowrap;
-  flex: 0 0 auto;
-  margin-left: auto;
-}
-.veilrunner.sheet.actor .progression-planner-title-row > span {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
+/* Three-page progression workspace. Scoped to the hero's progression panel. */
 .veilrunner.sheet.actor .progression-panel {
-  --progression-cyan: var(--vr-accent);
-  --progression-line: color-mix(in srgb, var(--vr-accent) 28%, var(--vr-tech-control));
-  color: var(--vr-theme-text, #ffffff);
-  min-width: 0;
-  container-type: inline-size;
+  --progression-gutter: 16px;
+  --progression-space-1: 4px;
+  --progression-space-2: 8px;
+  --progression-space-3: 12px;
+  --progression-space-4: 16px;
+  --progression-space-5: 24px;
+  --progression-space-6: 32px;
+  --progression-radius-sm: 4px;
+  --progression-radius-md: 6px;
+  --progression-btn-sm: 30px;
+  --progression-btn-md: 34px;
+  --progression-panel-border: color-mix(in srgb, var(--vr-theme-text, #a096b9) 20%, transparent);
+  --progression-divider: color-mix(in srgb, var(--vr-theme-text, #fff) 9%, transparent);
+  --progression-line: var(--progression-panel-border);
+  --progression-surface: color-mix(in srgb, var(--vr-theme-text, #fff) 2%, var(--vr-tech-control, #0b1016));
+  display: flex; flex-direction: column; gap: 0; min-width: 0; container-type: inline-size;
+  color: var(--vr-theme-text, #fff); padding-bottom: 20px;
 }
-.veilrunner.sheet.actor .progression-panel :is(h1, h2, h3, p):not(.cohesive-section-heading) { margin: 0; border: 0; }
-.veilrunner.sheet.actor .progression-panel :is(h1, h2, h3) { color: var(--vr-theme-text, #ffffff); text-shadow: none; }
-.veilrunner.sheet.actor .progression-panel :is(section, article, header, div) { box-sizing: border-box; }
-.veilrunner.sheet.actor .progression-panel h2:not(.cohesive-section-heading) { font-size: 12px; font-weight: 700; text-transform: uppercase; }
-.veilrunner.sheet.actor .progression-panel h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; }
-.veilrunner.sheet.actor .progression-panel small { color: color-mix(in srgb, var(--vr-accent) 35%, var(--vr-theme-text, #ffffff)); font-size: 12px; }
-.veilrunner.sheet.actor .progression-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 2px solid var(--progression-cyan); padding: 18px 2px 9px; margin-bottom: 16px; }
-.veilrunner.sheet.actor .progression-heading h1 { font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; }
-.veilrunner.sheet.actor .progression-heading i { color: var(--progression-cyan); margin-right: 8px; }
-.veilrunner.sheet.actor .progression-heading small { font-size: 11px; text-transform: uppercase; }
-.veilrunner.sheet.actor .progression-overview { display: grid; grid-template-columns: minmax(110px, .8fr) minmax(0, 3fr); gap: 8px; }
-.veilrunner.sheet.actor .progression-overview > section { min-width: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.veilrunner.sheet.actor .progression-level { grid-row: span 2; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; gap: 24px; padding: 14px 8px; box-shadow: none; }
-.veilrunner.sheet.actor .progression-level-digits { font-size: 64px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .04em; text-shadow: 0 0 18px color-mix(in srgb, var(--vr-accent) 33%, transparent); }
-.veilrunner.sheet.actor .progression-experience { display: grid; grid-template-columns: minmax(0, 1fr) minmax(100px, .43fr); gap: 20px; padding: 7px; }
-.veilrunner.sheet.actor .progression-experience-main { display: grid; gap: 9px; align-content: center; min-width: 0; padding: 10px 6px; }
-.veilrunner.sheet.actor .progression-contained-xp { position: relative; width: 100%; min-width: 0; height: 30px; overflow: hidden; border: 1px solid var(--progression-cyan); border-radius: 20px; background: var(--vr-tech-control); box-shadow: 0 0 12px color-mix(in srgb, var(--vr-accent) 13%, transparent); }
-.veilrunner.sheet.actor .progression-contained-fill { position: absolute; inset: 0 auto 0 0; max-width: 100%; background: linear-gradient(90deg, var(--vr-accent), color-mix(in srgb, var(--vr-accent) 55%, white)); box-shadow: 2px 0 7px #cfffff; }
-.veilrunner.sheet.actor .progression-contained-xp > span { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; gap: 5px; font-size: 16px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000; }
-.veilrunner.sheet.actor .progression-contained-xp input { width: 7ch; min-width: 0; height: 24px; text-align: center; }
-.veilrunner.sheet.actor .progression-total { display: grid; align-content: center; justify-items: center; gap: 12px; padding: 12px 8px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.veilrunner.sheet.actor .progression-total strong { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 30px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.veilrunner.sheet.actor .progression-total i { color: var(--vr-accent); margin: 0; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--vr-accent) 40%, transparent)); }
-.veilrunner.sheet.actor .progression-gains { padding: 8px; }
-.veilrunner.sheet.actor .progression-gains h2 { color: color-mix(in srgb, var(--vr-accent) 35%, var(--vr-theme-text, #ffffff)); margin: 0 4px 8px; }
-.veilrunner.sheet.actor .progression-gains > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.veilrunner.sheet.actor .progression-gain { display: flex; gap: 12px; align-items: center; padding: 12px 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-size: 12px; }
-.veilrunner.sheet.actor .progression-kind-attribute { --point-color: #ff9c4c; }
-.veilrunner.sheet.actor .progression-kind-talent { --point-color: #27c9ff; }
-.veilrunner.sheet.actor .progression-kind-skill { --point-color: #c67bea; }
-.veilrunner.sheet.actor .progression-gain > i { color: var(--point-color); font-size: 30px; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--point-color) 45%, transparent)); }
-.veilrunner.sheet.actor .progression-panel .progression-rule-heading { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; color: var(--progression-cyan); margin: 18px 0 9px; font-size: 15px; }
-.veilrunner.sheet.actor .progression-rule-heading small { color: inherit; }
-.veilrunner.sheet.actor .progression-rule-heading::after { content: ""; height: 1px; background: var(--progression-cyan); flex: 1; margin-left: 8px; }
-.veilrunner.sheet.actor .progression-pool-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
-.veilrunner.sheet.actor .progression-pool-card { display: grid; grid-row: span 2; grid-template-rows: subgrid; min-width: 0; padding: 12px 10px 10px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.veilrunner.sheet.actor .progression-pool-card header { display: grid; grid-template-columns: 34px minmax(0, 1fr) 25px; align-items: center; gap: 8px; min-height: 58px; padding-bottom: 12px; }
-.veilrunner.sheet.actor .progression-pool-card header > i { color: var(--point-color); font-size: 34px; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--point-color) 40%, transparent)); }
-.veilrunner.sheet.actor .progression-pool-card header > div { flex: 1; min-width: 0; padding-left: 8px; }
-.veilrunner.sheet.actor .progression-panel .progression-pool-card h3 { font-size: 12px; line-height: 16px; margin-bottom: 5px; white-space: nowrap; }
-.veilrunner.sheet.actor .progression-pool-card small { display: block; min-height: 28px; font-size: 10px; line-height: 14px; color: #bccbde; }
-.veilrunner.sheet.actor .progression-pool-card button { flex: 0 0 25px; width: 25px; height: 32px; padding: 0; border: 1px solid var(--progression-line); border-radius: 4px; background: var(--vr-tech-control); color: var(--progression-cyan); }
-.veilrunner.sheet.actor .progression-pool-values { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid color-mix(in srgb, var(--point-color) 20%, transparent); padding-top: 10px; text-align: center; }
-.veilrunner.sheet.actor .progression-pool-values label { display: grid; gap: 6px; font-size: 12px; color: #b0cddd; }
-.veilrunner.sheet.actor .progression-pool-values label + label { border-left: 1px solid #25414b; }
-.veilrunner.sheet.actor .progression-pool-values strong { color: #fff; font-size: 15px; }
-.veilrunner.sheet.actor .progression-pool-values input { width: 80%; min-width: 0; margin: auto; text-align: center; }
-.veilrunner.sheet.actor .progression-planned { margin-top: 20px; }
-.veilrunner.sheet.actor .progression-planned-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; margin-bottom: 10px; }
-.veilrunner.sheet.actor .progression-planned-heading > div { display: contents; }
-.veilrunner.sheet.actor .progression-panel .progression-planned-heading h2 { grid-column: 1; grid-row: 1; font-size: 18px; }
-.veilrunner.sheet.actor .progression-planned-heading h2 i { color: var(--progression-cyan); margin-right: 7px; font-size: 27px; }
-.veilrunner.sheet.actor .progression-panel .progression-planned-heading p { grid-column: 1 / -1; grid-row: 2; font-size: 12px; color: #a4c7d6; margin: 0; }
-.veilrunner.sheet.actor .progression-planned-heading > button { grid-column: 2; grid-row: 1; white-space: nowrap; }
-.veilrunner.sheet.actor .progression-planned-heading button { width: auto; flex-shrink: 0; display: flex; gap: 10px; align-items: center; padding: 9px 13px; border: 1px solid var(--progression-cyan); border-radius: 4px; background: linear-gradient(0deg, color-mix(in srgb, var(--vr-accent) 30%, var(--vr-tech-control)), var(--vr-tech-control)); font-size: 12px; text-transform: uppercase; }
-.veilrunner.sheet.actor .progression-timeline { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 18px; max-height: 520px; min-height: 350px; overflow: auto; padding: 16px 12px 24px; border: 1px solid var(--progression-line); border-radius: 6px; background: linear-gradient(110deg, color-mix(in srgb, var(--vr-accent) 6%, transparent), var(--vr-tech-control)); scrollbar-color: var(--progression-cyan) #05141b; scrollbar-width: thin; }
-.veilrunner.sheet.actor .progression-planned-level { min-width: 0; padding: 0 10px 0 18px; border-right: 1px solid #15333c; }
-.veilrunner.sheet.actor .progression-planned-level > header { display: flex; gap: 18px; align-items: center; margin-bottom: 12px; }
-.veilrunner.sheet.actor .progression-panel .progression-planned-level h3 { font-size: 16px; margin-bottom: 5px; }
-.veilrunner.sheet.actor .progression-timeline-diamond { position: relative; width: 28px; height: 28px; flex-shrink: 0; display: grid; place-items: center; color: #fff; font-size: 14px; }
-.veilrunner.sheet.actor .progression-timeline-diamond::before { content: ""; position: absolute; inset: 0; border: 1px solid var(--progression-cyan); transform: rotate(45deg); box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 27%, transparent); }
-.veilrunner.sheet.actor .progression-timeline-items { border-left: 1px solid var(--progression-cyan); margin-left: 13px; padding: 0 0 70px 19px; min-height: 225px; }
-.veilrunner.sheet.actor .progression-planned-item { position: relative; display: flex; align-items: center; gap: 10px; min-height: 74px; padding: 10px 7px; margin-bottom: 9px; border: 1px solid #193740; border-left-color: var(--point-color); border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--point-color) 9%, #070c12), #050e13); }
-.veilrunner.sheet.actor .progression-planned-item::before { content: ""; position: absolute; left: -26px; top: calc(50% - 6px); width: 11px; height: 11px; border: 2px solid #001016; border-radius: 50%; background: var(--progression-cyan); box-shadow: 0 0 0 1px var(--progression-cyan); }
-.veilrunner.sheet.actor .progression-planned-item > i { color: var(--point-color); font-size: 28px; }
-.veilrunner.sheet.actor .progression-planned-item > div:not(.progression-plan-actions) { display: grid; gap: 4px; flex: 1; min-width: 0; }
-.veilrunner.sheet.actor .progression-planned-item strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
-.veilrunner.sheet.actor .progression-plan-actions { display: grid; gap: 5px; }
-.veilrunner.sheet.actor .progression-plan-actions button { width: 17px; height: 20px; padding: 0; border: 0; background: transparent; font-size: 10px; }
-.veilrunner.sheet.actor .progression-plan-empty { color: #829eae; font-size: 12px; padding: 20px 0; }
-.veilrunner.sheet.actor .progression-plan-add { display: flex; gap: 12px; align-items: center; width: auto; padding: 8px 0; border: 0; background: transparent; font-size: 12px; color: var(--vr-accent); text-align: left; }
-.veilrunner.sheet.actor .progression-plan-add i { font-size: 27px; color: #fff; margin-left: -33px; background: #061118; border-radius: 50%; }
-.veilrunner.sheet.actor .progression-scroll-hint { display: flex; gap: 20px; justify-content: center; padding-top: 8px; color: color-mix(in srgb, var(--vr-accent) 35%, var(--vr-theme-text, #ffffff)); font-size: 12px; }
-.veilrunner.sheet.actor .progression-planner-editor:not([hidden]) { display: grid; grid-template-columns: 70px 100px minmax(0, 1fr) 110px; gap: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--progression-line); border-radius: 5px; background: var(--vr-tech-control); }
-.veilrunner.sheet.actor .progression-planner-editor label { display: grid; gap: 5px; min-width: 0; font-size: 12px; }
-.veilrunner.sheet.actor .progression-planner-editor :is(input, select) { width: 100%; min-width: 0; }
-.veilrunner.sheet.actor .progression-planner-editor > button { grid-column: 1 / -1; }
-/* Keep the same compact metrics on both sides of the hero-column transition. */
-  .veilrunner.sheet.actor .progression-heading small { display: none; }
-  .veilrunner.sheet.actor .progression-overview { grid-template-columns: 90px minmax(0, 1fr); }
-  .veilrunner.sheet.actor .progression-experience { gap: 8px; grid-template-columns: minmax(0, 1fr) 105px; }
-  .veilrunner.sheet.actor .progression-total strong { font-size: 26px; gap: 8px; }
-  .veilrunner.sheet.actor .progression-gain { gap: 6px; padding: 10px 6px; font-size: 11px; }
-  .veilrunner.sheet.actor .progression-gain > i { font-size: 22px; }
-  .veilrunner.sheet.actor .progression-pool-card { padding-inline: 8px; }
-  .veilrunner.sheet.actor .progression-pool-card header { grid-template-columns: 24px minmax(0, 1fr) 22px; gap: 6px; }
-  .veilrunner.sheet.actor .progression-pool-card header > i { font-size: 24px; }
-  .veilrunner.sheet.actor .progression-pool-card button { width: 22px; }
-  .veilrunner.sheet.actor .progression-panel .progression-pool-card h3 { font-size: 11px; }
-  .veilrunner.sheet.actor .progression-timeline { gap: 20px 8px; }
-  .veilrunner.sheet.actor .progression-planned-level { padding-left: 8px; padding-right: 6px; }
-  .veilrunner.sheet.actor .progression-planner-editor:not([hidden]) { grid-template-columns: 1fr 1fr; }
+.veilrunner.sheet.actor .progression-panel :is(section, article, header, div, button) { box-sizing: border-box; }
+.veilrunner.sheet.actor .progression-panel :is(h1, h2, h3, p):not(.cohesive-section-heading) { margin: 0; border: 0; text-shadow: none; }
+.veilrunner.sheet.actor .progression-panel :is(h1, h2, h3) { color: var(--vr-theme-text, #fff); }
+.veilrunner.sheet.actor .progression-panel h2:not(.cohesive-section-heading) { font-size: 18px; font-weight: 700; }
+.veilrunner.sheet.actor .progression-panel h3 { font-size: 15px; font-weight: 700; }
+.veilrunner.sheet.actor .progression-panel :is(p, small) { color: var(--text-secondary, #bac8df); font-size: 12px; line-height: 1.5; }
+.veilrunner.sheet.actor .progression-panel button { cursor: pointer; color: var(--vr-theme-control-text, #fff); }
+.veilrunner.sheet.actor .progression-panel button:focus-visible,
+.veilrunner.sheet.actor .progression-panel summary:focus-visible { outline: 2px solid var(--vr-accent); outline-offset: 3px; }
+.veilrunner.sheet.actor .progression-page-tabs { display: grid; grid-template-columns: repeat(3, 1fr); width: 64%; min-width: 390px; margin: 10px 0 20px; border: 1px solid var(--progression-line); border-radius: 5px; background: var(--progression-surface); }
+.veilrunner.sheet.actor .progression-page-tabs button { position: relative; width: 100%; height: 34px; margin: 0; padding: 0 12px; border: 1px solid transparent; border-radius: 4px; background: transparent; box-shadow: none; font-size: 12px; font-weight: 600; color: var(--text-secondary, #bac8df); }
+.veilrunner.sheet.actor .progression-page-tabs button + button::before { content: ''; position: absolute; left: -1px; top: 9px; bottom: 9px; border-left: 1px solid var(--progression-line); }
+.veilrunner.sheet.actor .progression-page-tabs button.is-active { border-color: var(--vr-accent); color: #fff; background: color-mix(in srgb, var(--vr-accent) 16%, transparent); box-shadow: 0 0 9px color-mix(in srgb, var(--vr-accent) 25%, transparent); }
+.veilrunner.sheet.actor .progression-page-heading { display: block; margin-bottom: 24px; }
+.veilrunner.sheet.actor .progression-page-heading > .cohesive-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.veilrunner.sheet.actor .progression-page-heading p { margin-top: 4px; }
+.veilrunner.sheet.actor .progression-panel :is(.progression-pool-spend, .progression-plan-add:not(.progression-overview-add), .progression-plan-implement) { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: auto; min-height: 34px; margin: 0; padding: 7px 14px; border: 1px solid var(--vr-accent); border-radius: 5px; background: linear-gradient(180deg, color-mix(in srgb, var(--vr-accent) 24%, var(--vr-tech-control, #0b1016)), color-mix(in srgb, var(--vr-accent) 10%, var(--vr-tech-control, #0b1016))); box-shadow: 0 0 7px color-mix(in srgb, var(--vr-accent) 20%, transparent); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.veilrunner.sheet.actor .progression-panel button:not(.progression-xp-mode):not(:disabled):hover { border-color: var(--vr-accent); background-color: color-mix(in srgb, var(--vr-accent) 20%, transparent); }
+.veilrunner.sheet.actor .progression-level h2, .veilrunner.sheet.actor .progression-experience h2 { text-transform: uppercase; font-size: 14px; color: var(--text-secondary, #bac8df); }
+.veilrunner.sheet.actor .progression-xp-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.veilrunner.sheet.actor .progression-toolbar { display: flex; align-items: center; gap: 16px; margin: 10px 0 8px; }
+.veilrunner.sheet.actor .progression-toolbar .progression-page-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1; width: auto; min-width: 0; margin: 0; }
+.veilrunner.sheet.actor .progression-contained-xp { position: relative; width: 100%; height: 34px; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--vr-accent); border-radius: 24px; background: var(--vr-tech-control, #080b11); }
+.veilrunner.sheet.actor .progression-contained-fill { position: absolute; inset: 0 auto 0 0; max-width: 100%; background: linear-gradient(90deg, var(--vr-accent), color-mix(in srgb, var(--vr-accent) 65%, white)); }
+.veilrunner.sheet.actor .progression-contained-xp > span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 20px; font-weight: 700; color: #fff; }
+.veilrunner.sheet.actor .progression-contained-xp input { width: 80px; height: 26px; color: #fff; text-align: right; }
+/* Heading typography, spacing, markers and underline come from Stats' shared
+   .cohesive-section-heading rules in hero/character-refinements.css. */
+.veilrunner.sheet.actor .progression-panel .progression-page-help { margin: 5px 0 18px; }
+.veilrunner.sheet.actor .progression-kind-attribute { --point-color: #ff943e; }
+.veilrunner.sheet.actor .progression-kind-talent { --point-color: #00c8f2; }
+.veilrunner.sheet.actor .progression-kind-skill, .veilrunner.sheet.actor .progression-kind-spell { --point-color: #bd68ed; }
+.veilrunner.sheet.actor .progression-kind-perk { --point-color: #ffd15a; }
+.veilrunner.sheet.actor .progression-pool-values label { display: grid; justify-items: center; gap: 4px; }
+.veilrunner.sheet.actor .progression-pool-values label + label { padding-top: 12px; border-top: 1px solid var(--vr-divider, #394654); }
+.veilrunner.sheet.actor .progression-pool-values input { width: 100%; text-align: center; }
+.veilrunner.sheet.actor .progression-level-marker { display: grid; place-items: center; flex: 0 0 42px; width: 42px; height: 42px; margin: 8px; border: 2px solid #496a78; transform: rotate(45deg); background: var(--vr-tech-control, #090e15); }
+.veilrunner.sheet.actor .progression-level-marker > span { transform: rotate(-45deg); font-size: 22px; font-weight: 700; }
+.veilrunner.sheet.actor .section-body:has(> .progression-panel) { margin-left: -14px; padding-left: 14px; }
+.veilrunner.sheet.actor .progression-roadmap { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 4px 0 22px; }
+.veilrunner.sheet.actor .progression-roadmap::before { content: ''; position: absolute; top: 36px; left: -14px; width: 14px; height: 3px; background: var(--vr-accent); }
+.veilrunner.sheet.actor .progression-roadmap button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; height: auto; min-height: 128px; margin: 0; padding: 6px 4px 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; line-height: 1.4; }
+.veilrunner.sheet.actor .progression-roadmap button > * { flex-shrink: 0; }
+.veilrunner.sheet.actor .progression-roadmap .progression-level-marker { position: relative; z-index: 1; }
+.veilrunner.sheet.actor .progression-roadmap button::before { content: ''; position: absolute; top: 36px; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--vr-accent) var(--column-progress, 0%), #34535f var(--column-progress, 0%)); }
+.veilrunner.sheet.actor .progression-roadmap button::after { content: ''; position: absolute; top: 32px; right: -4px; width: 9px; height: 9px; border: 1px solid #598397; border-radius: 50%; background: #294552; }
+.veilrunner.sheet.actor .progression-roadmap button:last-child::after { right: 0; }
+.veilrunner.sheet.actor .progression-roadmap strong { text-transform: uppercase; font-size: 14px; }
+.veilrunner.sheet.actor .progression-roadmap button:first-child .progression-level-marker,
+.veilrunner.sheet.actor .progression-milestone.is-current .progression-level-marker { border-color: var(--vr-accent); box-shadow: 0 0 10px color-mix(in srgb, var(--vr-accent) 25%, transparent); }
+.veilrunner.sheet.actor .progression-panel summary { display: flex; align-items: center; gap: 18px; padding: 6px 16px; cursor: pointer; list-style: none; }
+.veilrunner.sheet.actor .progression-panel summary::-webkit-details-marker { display: none; }
+.veilrunner.sheet.actor .progression-panel summary > i:last-child { margin-left: auto; color: var(--text-secondary, #bac8df); }
+.veilrunner.sheet.actor .progression-panel details[open] > summary > i:last-child { transform: rotate(180deg); }
+.veilrunner.sheet.actor .progression-planned-item { display: flex; align-items: center; gap: 18px; min-height: 54px; padding: 10px 14px; margin-top: 6px; border: 1px solid var(--vr-divider, #29353e); border-radius: 5px; background: color-mix(in srgb, #233f45 12%, var(--vr-tech-control, #0b1016)); }
+.veilrunner.sheet.actor .progression-planned-item > i { width: 28px; color: var(--point-color); font-size: 26px; text-align: center; }
+.veilrunner.sheet.actor .progression-planned-item > div:nth-child(2) { display: grid; gap: 3px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.veilrunner.sheet.actor .progression-plan-actions { display: flex; gap: 5px; }
+.veilrunner.sheet.actor .progression-plan-actions button { width: 25px; padding: 3px; margin: 0; border: 1px solid var(--progression-line); background: transparent; }
+.veilrunner.sheet.actor .progression-panel .progression-plan-implement { margin-top: 12px; }
+.veilrunner.sheet.actor .progression-panel .progression-empty { padding: 18px 0; color: var(--text-muted, #91a0b4); }
+.veilrunner.sheet.actor .progression-milestones { padding-left: 0; }
+.veilrunner.sheet.actor .progression-milestone { position: relative; margin-left: 32px; border-left: 1px solid #496a78; padding: 0 0 18px 30px; }
+.veilrunner.sheet.actor .progression-milestone:last-child { border-left-color: transparent; }
+.veilrunner.sheet.actor .progression-milestone > summary { position: relative; min-height: 86px; padding: 12px 14px 12px 24px; border-top: 1px solid var(--progression-line); }
+.veilrunner.sheet.actor .progression-milestone .progression-level-marker { position: absolute; left: -60px; top: 10px; }
+.veilrunner.sheet.actor .progression-milestone.is-current { border-left-color: var(--vr-accent); }
+.veilrunner.sheet.actor .progression-milestone.is-current > summary { background: var(--progression-surface); border: 1px solid var(--progression-line); border-bottom: 0; border-radius: 6px 6px 0 0; }
+.veilrunner.sheet.actor .progression-milestone h3 { text-transform: uppercase; }
+.veilrunner.sheet.actor .progression-current-badge { display: inline-block; margin-left: 12px; padding: 3px 8px; border: 1px solid #739847; border-radius: 4px; font-size: 10px; vertical-align: middle; color: #b5d975; }
+.veilrunner.sheet.actor .progression-milestone-body { padding: 0 16px 12px; border: 1px solid var(--progression-line); border-top: 0; border-radius: 0 0 6px 6px; background: var(--progression-surface); }
+.veilrunner.sheet.actor .progression-milestone-body > h3 { padding-top: 12px; font-size: 12px; color: var(--vr-accent); }
+.veilrunner.sheet.actor .progression-reward-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 12px 0 18px; padding: 12px 0; border: 1px solid var(--vr-divider, #29353e); border-radius: 5px; }
+.veilrunner.sheet.actor .progression-reward-strip > div { display: grid; grid-template-columns: 24px 1fr; column-gap: 10px; padding: 0 12px; }
+.veilrunner.sheet.actor .progression-reward-strip > div + div { border-left: 1px solid var(--vr-divider, #29353e); }
+.veilrunner.sheet.actor .progression-reward-strip i { grid-row: span 2; align-self: center; font-size: 24px; color: var(--point-color); }
+.veilrunner.sheet.actor .progression-reward-strip small { font-size: 10px; }
 
-.veilrunner.sheet.actor .progression-panel :is(.progression-experience-main h2, .progression-experience-main > small, .progression-total h2, .progression-gains h2, .progression-pool-values label, .progression-planned-level h3, .progression-planned-level > header small) {
+/* Preserve the previous lit action treatment in every progression page. */
+.veilrunner.sheet.actor .progression-panel :is(.progression-pool-spend, .progression-plan-add:not(.progression-overview-add), .progression-plan-implement, .progression-plan-actions button):not(:disabled) {
+  border-color: color-mix(in srgb, var(--vr-accent) 78%, white);
+  background: color-mix(in srgb, var(--vr-accent) 22%, var(--vr-tech-control));
+  color: var(--vr-theme-control-text, #fff);
+  box-shadow: none;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.veilrunner.sheet.actor .progression-panel :is(.progression-pool-spend, .progression-plan-add:not(.progression-overview-add), .progression-plan-implement, .progression-plan-actions button):not(:disabled):is(:hover, :focus-visible) {
+  border-color: color-mix(in srgb, var(--vr-accent) 45%, white);
+  background: color-mix(in srgb, var(--vr-accent) 36%, var(--vr-tech-control));
+  box-shadow: none;
+}
+.veilrunner.sheet.actor .progression-panel :is(.progression-pool-spend, .progression-plan-add:not(.progression-overview-add), .progression-plan-implement, .progression-plan-actions button):not(:disabled):active {
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 25%);
+}
+.veilrunner.sheet.actor .progression-panel button:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+.veilrunner.sheet.actor .progression-page-tabs button:is(:hover, :focus-visible),
+.veilrunner.sheet.actor .progression-page-tabs button.is-active {
+  color: var(--vr-theme-control-text, #fff);
+  border-color: var(--vr-accent);
+  background: color-mix(in srgb, var(--vr-accent) 24%, var(--vr-tech-control));
+  box-shadow: 0 0 9px color-mix(in srgb, var(--vr-accent) 35%, transparent);
+}
+.veilrunner.sheet.actor .progression-page-tabs button.is-active::before,
+.veilrunner.sheet.actor .progression-page-tabs button.is-active + button::before { display: none; }
+.veilrunner.sheet.actor .progression-roadmap button:is(:hover, :focus-visible) .progression-level-marker {
+  border-color: var(--vr-accent); color: var(--vr-theme-control-text, #fff);
+  background: color-mix(in srgb, var(--vr-accent) 24%, var(--vr-tech-control));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--vr-accent) 45%, transparent);
+}
+.veilrunner.sheet.actor .progression-panel summary:is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--vr-accent) 10%, transparent);
+}
+/* One ascending history and planning rail, with its own stable scroll position. */
+.veilrunner.sheet.actor .section-body:has(.progression-journey) { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.veilrunner.sheet.actor .progression-panel:has(.progression-journey) { flex: 1; min-height: 0; padding-bottom: 0; }
+.veilrunner.sheet.actor .progression-panel:has(.progression-journey) > :is(.progression-toolbar, .progression-page-heading) { flex-shrink: 0; }
+.veilrunner.sheet.actor .progression-planned:has(> .progression-journey) { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.veilrunner.sheet.actor .progression-planned > .progression-roadmap { flex-shrink: 0; }
+.veilrunner.sheet.actor .progression-journey { position: relative; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 12px 10px 18px 0; overflow-anchor: none; }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level { padding: 0 0 var(--progression-space-3) 40px; border-left-color: var(--progression-line); }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level .progression-level-marker { left: -69px; width: 40px; height: 40px; top: 4px; box-shadow: none; }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level:not([open]) > .progression-plan-add { display: none; }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level:not([open]) > summary > i:last-child { margin-left: auto; }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level > summary { min-height: 76px; border: 1px solid var(--progression-line); border-radius: 6px; background: var(--progression-surface); }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level[open] > summary { border-bottom: 0; border-radius: 6px 6px 0 0; }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level:is(:hover, :focus-within) > :is(summary, .progression-milestone-body) {
+  border-color: var(--vr-accent);
+  background: color-mix(in srgb, var(--vr-accent) 14%, var(--vr-tech-control));
+  box-shadow: none;
+}
+.veilrunner.sheet.actor .progression-journey .is-reached { border-left-color: var(--vr-accent); }
+.veilrunner.sheet.actor .progression-journey .is-reached .progression-level-marker { border-color: var(--vr-accent); background: color-mix(in srgb, var(--vr-accent) 30%, var(--vr-tech-control)); }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level { position: relative; }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level > .progression-plan-add { position: absolute; top: var(--progression-space-3); right: calc(var(--progression-gutter) + 32px); }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level[open]:has(> .progression-plan-add) > summary > i:last-child { margin-left: auto; padding-left: 130px; }
+.veilrunner.sheet.actor .progression-purchase-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.veilrunner.sheet.actor .progression-purchase-grid .progression-planned-item { gap: 8px; min-height: 42px; padding: 6px 8px; margin: 0; border-left: 2px solid var(--point-color); }
+.veilrunner.sheet.actor .progression-purchase-grid .progression-planned-item > i { flex: 0 0 18px; width: 18px; font-size: 18px; }
+.veilrunner.sheet.actor .progression-purchase-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 5px; }
+.veilrunner.sheet.actor .progression-purchase-meta small { font-size: 9px; }
+.veilrunner.sheet.actor .progression-purchase-meta small:last-child { color: var(--point-color); white-space: nowrap; }
+.veilrunner.sheet.actor .progression-purchase-grid strong { font-size: 11px; line-height: 1.3; }
+.veilrunner.sheet.actor .progression-purchase-detail { color: var(--text-secondary); font-size: 10px; }
+.veilrunner.sheet.actor .progression-purchase-grid .progression-empty { grid-column: 1 / -1; }
+.veilrunner.sheet.actor .progression-journey .progression-load-more { display: flex; margin: 4px auto 0; }
+/* Compact rhythm shared by Overview and Journey. Keep heading markers and
+   rules from Stats; component content uses a single gutter. */
+.veilrunner.sheet.actor .progression-panel .cohesive-section-heading { padding-top: var(--progression-space-5); border-bottom-color: color-mix(in srgb, var(--vr-accent) 18%, transparent); margin-right: var(--progression-space-2); letter-spacing: .075em; }
+.veilrunner.sheet.actor .progression-panel .progression-page-help { margin: var(--progression-space-1) 0 var(--progression-space-2); }
+.veilrunner.sheet.actor .progression-panel :is(.progression-page-help, .progression-page-heading p) { opacity: .7; }
+.veilrunner.sheet.actor .progression-toolbar { gap: var(--progression-space-4); margin: var(--progression-space-2) 0 0; }
+.veilrunner.sheet.actor .progression-toolbar .progression-page-tabs button { height: var(--progression-btn-md); min-height: var(--progression-btn-md); }
+.veilrunner.sheet.actor .progression-panel :is(.progression-experience-main > small, .progression-page-heading p, .progression-page-help) { font-size: 11px; }
+.veilrunner.sheet.actor .progression-panel :is(.progression-pool-spend, .progression-plan-add:not(.progression-overview-add), .progression-plan-implement) {
+  height: var(--progression-btn-sm); min-height: var(--progression-btn-sm); padding: var(--progression-space-1) var(--progression-space-3); border-radius: var(--progression-radius-sm); font-size: 11px;
+}
+.veilrunner.sheet.actor .progression-panel :is(.progression-pool-spend, .progression-plan-add:not(.progression-overview-add), .progression-plan-implement, .progression-plan-actions button):not(:disabled):not(:hover):not(:focus-visible) { border-color: color-mix(in srgb, var(--vr-accent) 48%, transparent); }
+.veilrunner.sheet.actor .progression-pool-values label { gap: 2px; }
+.veilrunner.sheet.actor .progression-pool-values label + label { display: flex; align-items: center; justify-content: center; gap: 4px; padding-top: 0; border: 0; opacity: .7; }
+.veilrunner.sheet.actor .progression-pool-balance {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   white-space: nowrap;
-  line-height: 16px;
+  text-align: left;
 }
-.veilrunner.sheet.actor .progression-gain > span {
-  display: flex;
-  align-items: center;
-  min-height: 28px;
-  line-height: 14px;
+.veilrunner.sheet.actor .progression-pool-balance:hover strong,
+.veilrunner.sheet.actor .progression-pool-balance:focus-visible strong { color: var(--point-color); }
+.veilrunner.sheet.actor .progression-pool-balance:not(:disabled):hover { border-color: transparent; background: transparent; }
+.veilrunner.sheet.actor .progression-pool-balance:focus-visible { outline: 2px solid var(--vr-accent); outline-offset: 3px; }
+.veilrunner.sheet.actor .progression-pool-values label + label span { text-transform: lowercase; }
+.veilrunner.sheet.actor .progression-pool-values label + label:has(input) { flex-wrap: wrap; opacity: 1; }
+.veilrunner.sheet.actor .progression-pool-spend:not(:disabled):not(:hover):not(:focus-visible) { background: color-mix(in srgb, var(--vr-accent) 8%, var(--vr-tech-control)); border-color: color-mix(in srgb, var(--vr-accent) 25%, transparent); box-shadow: none; font-weight: 500; }
+.veilrunner.sheet.actor .progression-roadmap { margin: 0 0 var(--progression-space-3); }
+.veilrunner.sheet.actor .progression-roadmap button { min-height: 0; padding: var(--progression-space-1) var(--progression-space-1) var(--progression-space-2); gap: var(--progression-space-1); }
+.veilrunner.sheet.actor .progression-roadmap .progression-level-marker { width: 36px; height: 36px; flex-basis: 36px; margin: var(--progression-space-2); }
+.veilrunner.sheet.actor .progression-roadmap .progression-level-marker > span { font-size: 19px; }
+.veilrunner.sheet.actor .progression-roadmap::before, .veilrunner.sheet.actor .progression-roadmap button::before { top: 30px; }
+.veilrunner.sheet.actor .progression-roadmap button::after { top: 26px; }
+.veilrunner.sheet.actor .progression-roadmap small { font-size: 11px; }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level > summary { min-height: 0; padding: var(--progression-space-3) var(--progression-gutter); gap: var(--progression-space-3); }
+.veilrunner.sheet.actor .progression-journey .progression-journey-level h3 { font-size: 13px; text-transform: none; letter-spacing: normal; }
+.veilrunner.sheet.actor .progression-journey summary small { font-size: 10px; }
+.veilrunner.sheet.actor .progression-milestone-body { padding: 0 var(--progression-gutter) var(--progression-space-3); }
+.veilrunner.sheet.actor .progression-journey .progression-milestone-body > h3 { padding-top: var(--progression-space-2); font-size: 12px; }
+.veilrunner.sheet.actor .progression-reward-strip { border: 0; border-radius: 0; background: transparent; padding: 0; margin: var(--progression-space-2) 0 var(--progression-space-3); box-shadow: none; }
+.veilrunner.sheet.actor .progression-reward-strip > div { padding: 0 var(--progression-space-2); }
+.veilrunner.sheet.actor .progression-reward-strip > div:first-child { padding-left: 0; }
+.veilrunner.sheet.actor .progression-purchase-grid { gap: var(--progression-space-2); margin-top: var(--progression-space-2); }
+.veilrunner.sheet.actor .progression-purchase-grid .progression-planned-item { min-height: 0; padding: var(--progression-space-1) var(--progression-space-2); border: 0; border-left: 2px solid color-mix(in srgb, var(--point-color) 55%, transparent); border-radius: 0; background: transparent; box-shadow: none; }
+.veilrunner.sheet.actor .progression-panel .progression-empty { padding: var(--progression-space-2) 0; font-size: 11px; }
+/* Retain a bounded viewport for incremental loading, while keeping rows content-sized. */
+.veilrunner.sheet.actor .progression-journey { scrollbar-width: none; scrollbar-gutter: auto; }
+.veilrunner.sheet.actor .progression-journey::-webkit-scrollbar { display: none; }
+.veilrunner.sheet.actor .progression-page-tabs button:not(.is-active):not(:hover):not(:focus-visible) { color: var(--text-muted); }
+.veilrunner.sheet.actor .progression-milestone-body { box-sizing: border-box; min-height: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .veilrunner.sheet.actor .progression-panel button { transition: none !important; }
 }
-.veilrunner.sheet.actor .progression-panel .progression-pool-card small {
+@container (max-width: 680px) {
+  .veilrunner.sheet.actor .progression-purchase-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .veilrunner.sheet.actor .progression-page-tabs { width: 75%; min-width: 0; }
+  .veilrunner.sheet.actor .progression-panel summary { gap: 10px; padding-inline: 10px; }
+}
+@container (max-width: 480px) {
+  .veilrunner.sheet.actor .progression-toolbar { flex-wrap: wrap; }
+  .veilrunner.sheet.actor .progression-toolbar .progression-page-tabs { flex-basis: 100%; }
+  .veilrunner.sheet.actor .progression-purchase-grid { grid-template-columns: 1fr; }
+  .veilrunner.sheet.actor .progression-page-tabs { width: 100%; }
+  .veilrunner.sheet.actor .progression-page-heading > .cohesive-section-heading { flex-wrap: wrap; }
+  .veilrunner.sheet.actor .progression-reward-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; }
+  .veilrunner.sheet.actor .progression-roadmap .progression-level-marker { width: 30px; height: 30px; flex-basis: 30px; margin-block: 11px; }
+  .veilrunner.sheet.actor .progression-roadmap strong, .veilrunner.sheet.actor .progression-roadmap small { font-size: 10px; }
+}
+
+/* Consolidated Overview layout: keep the existing data and actions while
+   matching the approved flat hierarchy. */
+.veilrunner.sheet.actor .progression-panel .progression-toolbar { margin-bottom: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-page-heading { margin-top: 4px; margin-bottom: 2px; }
+.veilrunner.sheet.actor .progression-panel :is(.progression-page-heading > .cohesive-section-heading, .progression-overview-page > .cohesive-section-heading, .progression-next-level > .cohesive-section-heading) {
+  margin-bottom: 5px;
+  padding-top: 12px;
+  font-size: .96rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.veilrunner.sheet.actor .progression-panel :is(.progression-page-heading > .cohesive-section-heading, .progression-overview-page > .cohesive-section-heading, .progression-next-level > .cohesive-section-heading)::before {
+  bottom: 8px;
+  width: 4px;
+  height: 4px;
+  box-shadow: none;
+}
+.veilrunner.sheet.actor .progression-panel :is(.progression-page-heading > .cohesive-section-heading, .progression-overview-page > .cohesive-section-heading, .progression-next-level > .cohesive-section-heading)::after { content: none; display: none; }
+.veilrunner.sheet.actor .progression-panel .progression-page-description,
+.veilrunner.sheet.actor .progression-panel .progression-section-description { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.veilrunner.sheet.actor .progression-panel .progression-page-description p,
+.veilrunner.sheet.actor .progression-panel .progression-section-description p { flex: 1; min-width: 0; margin: 2px 0 0; }
+.veilrunner.sheet.actor .progression-panel .progression-page-description .progression-xp-mode {
+  flex: 0 0 auto;
+  width: auto;
+  height: 30px;
+  min-height: 30px;
+  margin: 0;
+  padding: 2px;
+  border-radius: var(--control-radius, 4px);
   font-size: 10px;
-  line-height: 14px;
-  min-height: 28px;
+  letter-spacing: .04em;
 }
-.veilrunner.sheet.actor .progression-panel .progression-plan-empty {
-  box-sizing: border-box;
-  min-height: 72px;
-  line-height: 16px;
+.veilrunner.sheet.actor .progression-panel .progression-page-description .progression-xp-mode .vr-segmented-control__option {
+  min-width: 48px;
+  padding-inline: 8px;
 }
-.veilrunner.sheet.actor .progression-plan-add {
-  min-height: 43px;
-  white-space: nowrap;
-  line-height: 16px;
+.veilrunner.sheet.actor .progression-panel .progression-page-description .progression-xp-mode:focus-visible {
+  outline: 2px solid var(--vr-accent);
+  outline-offset: 2px;
 }
-.veilrunner.sheet.actor .progression-planned-item strong {
-  min-height: 32px;
-  line-height: 16px;
+.veilrunner.sheet.actor .progression-panel .progression-overview { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; padding: 2px 0 10px; border: 0; border-radius: 0; background: transparent; }
+.veilrunner.sheet.actor .progression-panel .progression-level { display: flex; flex-direction: column; gap: 4px; justify-content: flex-start; border-right: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-level-digits { font-size: 36px; }
+.veilrunner.sheet.actor .progression-panel .progression-experience { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; min-width: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-experience-main { display: grid; gap: 4px; min-width: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-xp-heading { justify-content: flex-start; }
+.veilrunner.sheet.actor .progression-panel .progression-xp-heading h2 { min-height: 24px; }
+.veilrunner.sheet.actor .progression-panel .progression-contained-xp { height: 32px; }
+.veilrunner.sheet.actor .progression-panel .progression-experience-main > small { text-align: right; line-height: 1.25; }
+.veilrunner.sheet.actor .progression-panel > .progression-overview-page > .cohesive-section-heading { margin-top: var(--progression-space-4); }
+.veilrunner.sheet.actor .progression-panel .progression-page-help { margin: 2px 0 8px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level { margin-top: var(--progression-space-2); }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-section-description { margin-bottom: 14px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-section-description + .progression-subsection-title { margin-top: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-gains + .progression-subsection-title { margin-top: 8px; }
+.veilrunner.sheet.actor .progression-panel .progression-subsection-title { margin: 16px 0 8px; color: #fff; font-size: 14px; font-weight: 700; line-height: 1.2; }
+.veilrunner.sheet.actor .progression-panel .progression-gains > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-gain { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; padding: 8px 12px 10px 0; }
+.veilrunner.sheet.actor .progression-panel .progression-gain i { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; color: var(--point-color); font-size: 27px; }
+.veilrunner.sheet.actor .progression-panel .progression-gain > div { display: grid; gap: 2px; min-width: 0; text-align: left; }
+.veilrunner.sheet.actor .progression-panel .progression-gain strong { display: block; color: #fff; font-size: 20px; }
+.veilrunner.sheet.actor .progression-panel .progression-gain small { display: block; color: var(--text-secondary, #bac8df); font-size: 11px; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-cards { display: grid; grid-template-columns: 1fr; grid-auto-rows: 56px; gap: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-card { display: grid; grid-template-columns: 40px minmax(0, .78fr) minmax(150px, 1.22fr) 90px; align-items: center; column-gap: 14px; row-gap: 12px; min-height: 56px; padding: 8px 0; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--vr-theme-text) 8%, transparent); border-radius: 0; background: transparent; box-shadow: none; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-card:last-child { border-bottom: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-icon { grid-column: 1; display: grid; place-items: center; width: 30px; height: 30px; justify-self: center; color: var(--point-color); font-size: 26px; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-card header { grid-column: 2; display: grid; grid-template-columns: 1fr; align-items: start; gap: 2px; min-width: 0; min-height: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-card header h3 { justify-content: flex-start; min-height: 0; color: var(--point-color); font-size: 13px; line-height: 1.2; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-card header small { min-height: 0; color: var(--text-secondary, #bac8df); font-size: 11px; line-height: 1.3; text-align: left; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-summary { grid-column: 3; display: flex; align-items: left; justify-content: flex-start; align-self: stretch; width: 100%; padding: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-values { display: flex; align-items: center; justify-content: flex-start; width: 100%; height: 100%; text-align: left;
 }
-.veilrunner.sheet.actor .progression-planned-item small {
-  min-height: 16px;
-  line-height: 16px;
+.veilrunner.sheet.actor .progression-panel .progression-pool-balance {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 6px;
+  align-self: center;
+  width: 100%;
+  text-align: left;
+}
+.veilrunner.sheet.actor .progression-panel .progression-pool-value-label {
+  color: var(--text-secondary, #bac8df);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.veilrunner.sheet.actor .progression-panel .progression-pool-value {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.veilrunner.sheet.actor .progression-panel .progression-pool-values strong { font-size: 23px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.veilrunner.sheet.actor .progression-panel .progression-pool-card .progression-pool-spend { grid-column: 4; width: 90px; min-width: 90px; height: 30px; min-height: 30px; align-self: center; margin: 0; padding-inline: 9px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-purchase-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 96px; gap: 14px 28px; align-content: start; margin-top: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-planned-item { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; min-height: 48px; padding: 6px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-planned-item > i { display: grid; place-items: center; width: 30px; height: 30px; color: var(--point-color); font-size: 28px; text-align: center; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-planned-item > div:nth-child(2) { display: grid; gap: 4px; width: 100%; min-width: 0; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-planned-item .progression-plan-actions { grid-column: 2; justify-self: end; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-purchase-meta small { font-size: 10px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-purchase-meta small:last-child { color: var(--point-color); font-size: 15px; font-weight: 600; line-height: 1.1; text-align: right; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-planned-item strong { font-size: 13px; line-height: 1.25; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-purchase-detail { font-size: 11px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-overview-add { display: flex; align-items: center; justify-content: flex-start; gap: 9px; width: 100%; min-height: 48px; padding: 6px 0; border: 0; border-radius: 0; background: transparent; color: var(--text-secondary, #bac8df); box-shadow: none; text-align: left; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-overview-add > i { color: var(--vr-accent); font-size: 18px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-overview-add span { display: grid; gap: 2px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-overview-add strong { color: #fff; font-size: 12px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-overview-add small { font-size: 11px; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-overview-add:is(:hover, :focus-visible) { background: color-mix(in srgb, var(--vr-accent) 8%, transparent); color: #fff; }
+.veilrunner.sheet.actor .progression-panel .progression-next-level .progression-empty { grid-column: auto; padding: 6px 0; font-size: 11px; }
+
+@container (max-width: 560px) {
+  .veilrunner.sheet.actor .progression-panel .progression-pool-card { grid-template-columns: 38px minmax(0, 1fr) minmax(90px, .7fr) 78px; column-gap: 12px; row-gap: 9px; }
+  .veilrunner.sheet.actor .progression-panel .progression-pool-card .progression-pool-spend { width: 78px; min-width: 78px; padding-inline: 6px; }
+}
+@container (max-width: 420px) {
+  .veilrunner.sheet.actor .progression-panel .progression-page-description { display: grid; grid-template-columns: 1fr auto; }
+  .veilrunner.sheet.actor .progression-panel .progression-page-description p { grid-column: 1 / -1; }
+  .veilrunner.sheet.actor .progression-panel .progression-gains > div,
+  .veilrunner.sheet.actor .progression-panel .progression-next-level .progression-purchase-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .veilrunner.sheet.actor .progression-panel .progression-pool-card { grid-template-columns: 30px minmax(0, 1fr) 70px 72px; column-gap: 8px; row-gap: 6px; }
+  .veilrunner.sheet.actor .progression-panel .progression-pool-card .progression-pool-spend { width: 72px; min-width: 72px; padding-inline: 5px; }
 }

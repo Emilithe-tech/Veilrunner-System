@@ -1,0 +1,5 @@
+<div class="vr-rel-editor">
+  {{#if map}}<label>Copy background and grid from Scene<select data-scene>{{#each scenes}}<option value="{{id}}">{{name}}</option>{{/each}}</select></label><button type="button" data-import-scene>Copy Scene settings</button>{{/if}}
+  {{#each fields}}{{> "systems/veilrunner/templates/relations/editor-field.hbs"}}{{/each}}
+  {{#each lists}}<fieldset><legend>{{label}}</legend><div data-list="{{key}}">{{{rows}}}</div><button type="button" data-add-row="{{key}}">Add row</button></fieldset>{{/each}}
+</div>

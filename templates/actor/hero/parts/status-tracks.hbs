@@ -1,0 +1,56 @@
+      <div class="hero-vital-pips">
+        <div class="hero-status-track wounded" aria-label="{{localize 'VEILRUNNER.Wounded'}}">
+          <span class="hero-status-label">{{localize 'VEILRUNNER.Wounded'}}</span>
+          <div class="hero-status-icons">
+            {{#each woundedPoints}}
+              <button type="button"
+                      class="hero-status-pip {{#if active}}active{{/if}}"
+                      data-action="setStatusTrack"
+                      data-track="wounded"
+                      data-value="{{value}}"
+                      title="{{localize 'VEILRUNNER.Wounded'}} {{value}}">
+                <i class="fa-solid fa-heart-pulse"></i>
+              </button>
+            {{/each}}
+          </div>
+        </div>
+
+        {{#if editMode}}
+          <div class="level-diamond hero-vital-diamond {{#if levelUpAvailable}}maxed{{/if}}"
+               style="--level-xp: {{experiencePercent}}%; --level-glow: {{experienceGlow}};">
+            <i class="level-xp-ring" aria-hidden="true"></i>
+            <input type="number" name="system.level" value="{{system.level}}" />
+          </div>
+        {{else if levelUpAvailable}}
+          <button type="button" class="level-diamond level-button hero-vital-diamond maxed"
+                  data-action="openLevelCanvas"
+                  title="{{localize 'VEILRUNNER.LevelUpReady'}}"
+                  aria-label="{{localize 'VEILRUNNER.LevelUpReady'}}"
+                  style="--level-xp: {{experiencePercent}}%; --level-glow: {{experienceGlow}};">
+            <i class="level-xp-ring" aria-hidden="true"></i>
+            <span>{{system.level}}</span>
+          </button>
+        {{else}}
+          <div class="level-diamond hero-vital-diamond"
+               style="--level-xp: {{experiencePercent}}%; --level-glow: {{experienceGlow}};">
+            <i class="level-xp-ring" aria-hidden="true"></i>
+            <span>{{system.level}}</span>
+          </div>
+        {{/if}}
+
+        <div class="hero-status-track dying" aria-label="{{localize 'VEILRUNNER.Dying'}}">
+          <span class="hero-status-label">{{localize 'VEILRUNNER.Dying'}}</span>
+          <div class="hero-status-icons">
+            {{#each dyingPoints}}
+              <button type="button"
+                      class="hero-status-pip {{#if active}}active{{/if}}"
+                      data-action="setStatusTrack"
+                      data-track="dying"
+                      data-value="{{value}}"
+                      title="{{localize 'VEILRUNNER.Dying'}} {{value}}">
+                <i class="fa-solid fa-skull"></i>
+              </button>
+            {{/each}}
+          </div>
+        </div>
+      </div>

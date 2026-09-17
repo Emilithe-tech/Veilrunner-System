@@ -1,7 +1,18 @@
 import { adjustedDegreeOfSuccess, applyResolvedChanges, resolveActorItemRules, stackedModifiers } from "../rules/item-rules.mjs";
+import { microgridTokenUpdate } from "../canvas/microgrid.mjs";
 
 /** System Actor. */
 export class VeilrunnerActor extends Actor {
+  /** Size the unsaved token before Foundry centres and snaps the actor drop. */
+  async getTokenDocument(data = {}, options = {}) {
+    const token = await super.getTokenDocument(data, { ...options });
+    if (token.parent?.useMicrogrid) {
+      const update = microgridTokenUpdate(token._source, this.type, token.parent._source.grid, { fromPrototype: true });
+      if (update) token.updateSource(update);
+    }
+    return token;
+  }
+
   /** Set friendly as the prototype-token default for newly created heroes. */
   async _preCreate(data, options, user) {
     await super._preCreate(data, options, user);

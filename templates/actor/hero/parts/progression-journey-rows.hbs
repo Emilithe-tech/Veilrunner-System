@@ -1,0 +1,12 @@
+    {{#each progression.journey}}
+      <details class="progression-milestone progression-journey-level {{#if reached}}is-reached{{/if}} {{#if current}}is-current{{/if}}" data-journey-level="{{level}}" data-current-level="{{current}}" {{#if open}}open{{/if}}>
+        <summary><span class="progression-level-marker"><span>{{digits}}</span></span><div><h3>Level {{level}} {{#if current}}<span class="progression-current-badge">Current</span>{{/if}}</h3><small>{{xp}} XP{{#if starting}} &bull; Starting Level{{/if}}</small></div><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
+        {{#if future}}<button type="button" class="progression-plan-add" data-action="openLevelPlanner" data-plan-level="{{level}}" aria-label="Open Level {{level}} planner"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Plan Level</button>{{/if}}
+        <div class="progression-milestone-body"><h3>Level Rewards</h3><div class="progression-reward-strip">{{#each gains}}<div class="progression-kind-{{key}}"><i class="fa-solid {{icon}}" aria-hidden="true"></i><strong>+{{gain}}</strong><small>{{label}} Points</small></div>{{/each}}</div>
+        {{#if future}}<h3>Planned Purchases ({{items.length}})</h3><div class="progression-purchase-grid">
+          {{#each items}}<article class="progression-planned-item progression-kind-{{kind}}"><i class="fa-solid {{icon}}" aria-hidden="true"></i><div><div class="progression-purchase-meta"><small>{{label}}</small><small>{{increase}}</small></div><strong>{{name}}{{#if detail}} <span class="progression-purchase-detail">{{detail}}</span>{{/if}}</strong></div>{{#unless plannedPurchase}}<div class="progression-plan-actions"><button type="button" data-action="moveProgressionPlan" data-plan-index="{{index}}" aria-label="Move {{name}} earlier"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button><button type="button" data-action="removeProgressionPlan" data-plan-index="{{index}}" aria-label="Remove {{name}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>{{/unless}}</article>{{else}}<p class="progression-empty">No purchases planned for this level.</p>{{/each}}
+        </div>{{#if canImplement}}<button type="button" class="progression-plan-implement" data-action="implementLevelPlan" data-plan-level="{{level}}">Review &amp; Implement Level {{level}}</button>{{/if}}
+        {{else}}<h3>Purchases</h3><p class="progression-empty">No purchase history recorded for this level.</p>{{/if}}
+        </div>
+      </details>
+    {{/each}}

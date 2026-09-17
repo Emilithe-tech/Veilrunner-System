@@ -3,7 +3,7 @@
   "type": "system",
   "title": "Veilrunner First Edition",
   "description": "The Official FoundryVTT System for Veilrunner",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "license": "Open RPG Community License (ORC)",
   "manifest": "https://github.com/Emilithe-tech/Veilrunner-System/raw/main/system.json",
   "download": "https://github.com/Emilithe-tech/Veilrunner-System",
@@ -63,8 +63,10 @@
     }
   ],
   "grid": {
-    "distance": 2,
-    "units": "m"
+    "type": 1,
+    "distance": 1,
+    "units": "m",
+    "diagonals": 1
   },
   "documentTypes": {
     "Actor": {

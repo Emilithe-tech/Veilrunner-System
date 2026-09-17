@@ -36,11 +36,17 @@ import EquipmentData from "./data/item/equipment.mjs";
 import ConditionData from "./data/active-effect/condition.mjs";
 import { VeilrunnerActor } from "./documents/actor.mjs";
 import { VeilrunnerItem } from "./documents/item.mjs";
+import { VeilrunnerScene } from "./documents/scene.mjs";
+import { VeilrunnerToken } from "./documents/token.mjs";
+import { registerMicrogridMigration } from "./canvas/microgrid.mjs";
 
 /** Register CONFIG. */
 export function registerConfig() {
   CONFIG.Actor.documentClass = VeilrunnerActor;
   CONFIG.Item.documentClass = VeilrunnerItem;
+  CONFIG.Scene.documentClass = VeilrunnerScene;
+  CONFIG.Token.documentClass = VeilrunnerToken;
+  registerMicrogridMigration();
   CONFIG.Combat.initiative = {
     formula: "1d10 + @attributes.social.perception + @attributes.physical.reaction",
     decimals: 0

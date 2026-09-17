@@ -1,0 +1,152 @@
+          {{#if (eq subTabs.arsenal "loadout")}}
+            <div class="loadout-sections">
+              {{#each loadoutSections as |group|}}
+                <section class="loadout-section loadout-section-{{group.key}} {{#if group.twoHanded}}loadout-section-two-handed{{/if}}">
+                  <h1 class="cohesive-section-heading"><span>{{localize group.label}}</span><small>{{group.equippedCount}} {{#if (eq group.key "gear")}}items{{else}}equipped{{/if}}</small></h1>
+                  <div class="loadout-row">
+                  {{#if (eq group.key "armor")}}
+                    <button type="button" class="loadout-row-scroll previous" data-action="scrollArmorLoadout" data-direction="-1" aria-label="Scroll armor left" hidden><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+                    <button type="button" class="loadout-row-scroll next" data-action="scrollArmorLoadout" data-direction="1" aria-label="Scroll armor right"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+                  {{/if}}
+                  {{#if (eq group.key "gear")}}
+                  <div class="loadout-items" data-consumable-grid data-minimum-slots="{{group.consumableSlots.length}}">
+                    {{#each group.consumableSlots as |item|}}
+                      {{#if item.id}}
+                      <button type="button" class="loadout-gear-tile" data-action="openLoadoutItem" data-item-id="{{item.id}}" data-consumable-slot="{{item.slot}}" title="{{item.name}}" aria-label="{{item.name}}"><img src="{{item.img}}" alt="" /></button>
+                      {{else}}
+                      <button type="button" class="loadout-gear-tile loadout-consumable-add" data-action="pickLoadoutConsumable" data-consumable-slot="{{item.slot}}" title="Select consumable" aria-label="Select consumable"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                      {{/if}}
+                    {{/each}}
+                  </div>
+                  <div class="loadout-consumable-picker" hidden>
+                    <button type="button" class="loadout-expansion-close" data-action="closeLoadoutConsumables" aria-label="Close consumable picker"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    <h4>Select consumable</h4>
+                    <div class="loadout-weapon-list">
+                      {{#each group.consumableChoices as |item|}}
+                      <button type="button" class="loadout-weapon-option" data-action="selectLoadoutConsumable" data-item-id="{{item.id}}"><img src="{{item.img}}" alt="" /><span>{{item.name}}</span><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                      {{else}}<p>No owned consumables available.</p>{{/each}}
+                    </div>
+                  </div>
+                  {{else}}
+                  <div class="loadout-items">
+                    {{#each group.items as |item|}}
+                      {{#if item.empty}}
+                      <article class="loadout-item loadout-item-placeholder" data-equipment-slot="{{item.slot}}" aria-label="{{item.slots}}">
+                        <div class="loadout-card-summary">
+                          <span class="loadout-card-slot">{{item.slots}}</span>
+                          <button type="button" class="loadout-add-weapon" data-action="toggleLoadoutPanel" data-panel="weapon" aria-expanded="false" aria-label="{{localize item.pickerLabel}} — {{item.slots}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                        </div>
+                        <div class="loadout-expansion" hidden>
+                          <button type="button" class="loadout-expansion-close" data-action="toggleLoadoutPanel" aria-label="Close panel"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                          <section data-loadout-panel="weapon" hidden>
+                            <h4>{{localize item.pickerLabel}}</h4>
+                            <div class="loadout-weapon-list">
+                              {{#each item.choices as |choice|}}
+                              <button type="button" class="loadout-weapon-option" data-action="equipLoadoutItem" data-item-id="{{choice.id}}"><img src="{{choice.img}}" alt="" /><span>{{choice.name}}</span><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                              {{else}}<p>{{localize item.pickerEmpty}}</p>{{/each}}
+                            </div>
+                          </section>
+                        </div>
+                      </article>
+                      {{else}}
+                      {{#if item.compact}}
+                      <button type="button" class="loadout-gear-tile" data-action="openLoadoutItem" data-item-id="{{item.id}}" title="{{item.name}}" aria-label="{{item.name}}"><img src="{{item.img}}" alt="" /></button>
+                      {{else}}
+                      <article class="loadout-item {{#if item.compact}}loadout-item-compact{{/if}}" style="--loadout-rarity: {{item.rarity.color}}" data-item-id="{{item.id}}" data-equipment-slot="{{item.slot}}" aria-label="{{item.name}} — {{item.slots}}">
+                        <div class="loadout-card-summary">
+                        <span class="loadout-card-slot">{{#if item.compact}}<b>{{item.index}}</b>{{else}}{{item.slots}}<button type="button" class="loadout-menu-toggle" data-action="openLoadoutMenu" aria-label="Item options" title="Item options"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></button>{{/if}}</span>
+                        <button type="button" class="loadout-card-art" data-action="openLoadoutItem" data-item-id="{{item.id}}" aria-label="Open {{item.name}}"><img src="{{item.img}}" alt="" />{{#if item.compact}}<small>×{{item.quantity}}</small>{{/if}}<span class="loadout-card-traits">{{#each item.traits}}<span>{{this}}</span>{{/each}}</span></button>
+                        <strong class="loadout-card-name">{{item.name}}</strong>
+                        <span class="loadout-card-type"><span>{{item.rarity.name}}</span><span>{{item.typeLabel}}</span></span>
+                        {{#unless item.compact}}
+                          <span class="loadout-card-stats">{{#each item.stats}}{{#if panel}}<button type="button" data-action="toggleLoadoutPanel" data-panel="{{panel}}" aria-expanded="false" title="{{title}}">{{#if img}}<img src="{{img}}" alt="{{title}}" />{{else}}<i class="fa-solid fa-{{icon}}" aria-hidden="true"></i>{{/if}}<b>{{value}}</b><small>{{label}}</small></button>{{else}}<span><i class="fa-solid fa-{{icon}}" aria-hidden="true"></i><b>{{value}}</b><small>{{label}}</small></span>{{/if}}{{/each}}</span>
+                          {{#if item.ammo}}
+                          <button type="button" class="loadout-ammo-control" data-action="toggleLoadoutPanel" data-panel="ammo" aria-expanded="false">
+                            {{#if item.ammo.img}}<img src="{{item.ammo.img}}" alt="" />{{else}}<i class="fa-solid fa-box-open" aria-hidden="true"></i>{{/if}}
+                            <strong>{{item.ammo.label}}</strong><b>{{item.ammo.value}} / {{item.ammo.max}}</b>
+                            <small>{{item.ammo.hint}}</small><i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                          </button>
+                          {{/if}}
+                          <span class="loadout-card-sockets">
+                            <button type="button" class="loadout-socket-mod" data-action="toggleLoadoutPanel" data-panel="mod" aria-expanded="false"><small>Mods</small><span><i class="fa-solid fa-gear" aria-hidden="true"></i></span></button>
+                            <button type="button" class="loadout-socket-rune" data-action="toggleLoadoutPanel" data-panel="rune" aria-expanded="false"><small>Runes</small><span><i class="fa-solid fa-gem" aria-hidden="true"></i></span></button>
+                            <button type="button" class="loadout-socket-glyph" data-action="toggleLoadoutPanel" data-panel="glyph" aria-expanded="false"><small>Glyphs</small><span><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></span></button>
+                          </span>
+                        {{/unless}}
+                        </div>
+                        {{#unless item.compact}}
+                        <div class="loadout-expansion" hidden>
+                          <button type="button" class="loadout-expansion-close" data-action="toggleLoadoutPanel" aria-label="Close panel"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                          {{#if (eq group.key "weapon")}}
+                          <section data-loadout-panel="ammo" hidden>
+                            <h4>Ammo</h4>
+                            {{#if item.ammo}}
+                            <p>{{item.ammo.hint}} · {{item.ammo.value}} / {{item.ammo.max}}</p>
+                            <div class="loadout-weapon-list">
+                              {{#each item.ammo.actions as |action|}}
+                              <button type="button" class="loadout-weapon-option" data-action="executeFirearmAction" data-weapon-id="{{item.id}}" data-weapon-action="{{action.operation}}" title="{{action.reason}}" {{#if action.disabled}}disabled{{/if}}>{{action.label}}</button>
+                              {{/each}}
+                              {{#if item.ammo.magazineId}}
+                              <p>To change ammo type, remove the magazine, unload its rounds, then load the new ammunition.</p>
+                              <button type="button" class="loadout-weapon-option" data-action="openLoadoutItem" data-item-id="{{item.ammo.magazineId}}">Magazine ammo settings</button>
+                              {{else}}<p>Unload remaining rounds before selecting a different ammo type.</p>{{/if}}
+                            </div>
+                            {{else}}<p>Ammunition not applicable.</p>{{/if}}
+                          </section>
+                          {{/if}}
+                          <section data-loadout-panel="mod" hidden>
+                            <h4>{{#if (eq group.key "weapon")}}Weapon Mods{{else}}Mods{{/if}}</h4>
+                            {{#if (eq group.key "weapon")}}
+                            <div class="loadout-configurations">
+                              <article><h5>Barrel</h5><span>Not configured</span></article>
+                              <article><h5>Scope</h5><span>Not configured</span></article>
+                              <article><h5>Handle</h5><span>Not configured</span></article>
+                              <article><h5>Stock</h5><span>Not configured</span></article>
+                            </div>
+                            {{else}}<p>No mods configured.</p>{{/if}}
+                          </section>
+                          <section data-loadout-panel="rune" hidden><h4>Runes</h4><p>No runes configured.</p></section>
+                          <section data-loadout-panel="glyph" hidden><h4>Glyphs</h4><p>No glyphs configured.</p></section>
+                        </div>
+                        {{/unless}}
+                      </article>
+                      {{/if}}
+                      {{/if}}
+                    {{else}}
+                      <p class="loadout-empty">{{#if (eq group.key "gear")}}No items.{{else}}{{localize 'VEILRUNNER.LoadoutEmpty'}}{{/if}}</p>
+                    {{/each}}
+                  </div>
+                  {{/if}}
+                  </div>
+                </section>
+              {{/each}}
+            </div>
+          {{else}}
+            <section class="cyberware-console" aria-label="{{localize 'VEILRUNNER.Cyberware'}}">
+              <header class="cyberware-console-header">
+                <h1>{{localize 'VEILRUNNER.Cyberware'}}</h1>
+                <span><i class="fa-solid fa-microchip" aria-hidden="true"></i> Implant overview</span>
+              </header>
+              <div class="cyberware-body-map">
+                <div class="cyberware-scan" aria-hidden="true">
+                  <span class="cyberware-scan-caption">BIO / SCAN</span>
+                  <img class="cyberware-anatomy" src="systems/Veilrunner/assets/img/cyberware-body.svg" alt="" />
+                  <span class="cyberware-scan-baseline">NEURAL INTERFACE</span>
+                </div>
+                {{#each cyberwareRegions as |region|}}
+                  <section class="cyberware-region cyberware-region-{{region.key}}" aria-label="{{region.label}}">
+                    <h2>{{region.label}}</h2>
+                    <div class="cyberware-bays">
+                      {{#each region.slots as |slot|}}
+                        <div class="cyberware-bay" role="img" aria-label="{{region.label}}, slot {{slot}}: empty" data-tooltip="{{region.label}} · Slot {{slot}} · Empty">
+                          <span class="cyberware-bay-number" aria-hidden="true">0{{slot}}</span>
+                          <span class="cyberware-bay-mark" aria-hidden="true"></span>
+                        </div>
+                      {{/each}}
+                    </div>
+                  </section>
+                {{/each}}
+              </div>
+              <footer class="cyberware-console-footer"><span class="cyberware-status-dot" aria-hidden="true"></span>{{localize 'VEILRUNNER.CyberwareEmpty'}}</footer>
+            </section>
+          {{/if}}

@@ -1,0 +1,132 @@
+          {{#if (eq inventoryLayout "grid")}}
+            <div class="inventory-group-list inventory-grid-groups">
+              {{#each inventoryGroups as |group|}}
+                <section class="inventory-family-section {{#if group.collapsed}}is-collapsed{{/if}}">
+                  <button type="button" class="inventory-family-heading" data-action="toggleInventoryGroup" data-collapse-key="{{group.collapseKey}}" aria-expanded="{{#if group.expanded}}true{{else}}false{{/if}}">
+                    <span><i class="{{group.icon}}" aria-hidden="true"></i><strong>{{group.label}}</strong><small>{{group.count}}</small></span>
+                    <i class="fa-solid fa-chevron-{{#if group.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                  </button>
+                  <div class="inventory-family-content">
+                    {{#each group.subtypes as |subtype|}}
+                      <section class="inventory-subtype-section {{#if subtype.collapsed}}is-collapsed{{/if}}" data-item-count="{{subtype.entryCount}}">
+                        <button type="button" class="inventory-subtype-heading" data-action="toggleInventoryGroup" data-collapse-key="{{subtype.collapseKey}}" aria-expanded="{{#if subtype.expanded}}true{{else}}false{{/if}}">
+                          <span><strong>{{subtype.label}}</strong><small>{{subtype.count}}</small></span>
+                          <i class="fa-solid fa-chevron-{{#if subtype.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                        </button>
+                        <div class="inventory-card-grid">
+                          {{#each subtype.items as |item|}}
+                            <article class="inventory-grid-card inventory-item-row draggable {{#if item.equipped}}is-equipped{{/if}} {{#if item.isJunk}}is-junk{{/if}}" data-item-id="{{item.id}}" data-item-ids="{{item.itemIds}}" data-stack-quantity="{{item.quantity}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
+                              <div class="inventory-grid-card-image">
+                                <img src="{{item.img}}" alt="" />
+                                <strong class="inventory-grid-card-quantity" title="{{localize 'VEILRUNNER.InventoryList.Quantity'}}">{{item.quantity}}</strong>
+                                {{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}
+                                <details class="inventory-item-menu">
+                                    <summary title="{{localize 'VEILRUNNER.InventoryCard.Actions'}}" aria-label="{{localize 'VEILRUNNER.InventoryCard.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></summary>
+                                    <div>
+                                      {{#if item.canEquip}}
+                                        {{#if item.equipped}}
+                                          <button type="button" data-action="unequipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Unequip'}}</button>
+                                        {{else}}
+                                          <button type="button" data-action="equipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Equip'}}</button>
+                                        {{/if}}
+                                      {{/if}}
+                                      <button type="button" data-action="useInventoryItem"><i class="fa-solid fa-bolt"></i>{{localize 'VEILRUNNER.InventoryCard.Use'}}</button>
+                                      <button type="button" data-action="throwInventoryItem"><i class="fa-solid fa-hand-fist"></i>{{localize 'VEILRUNNER.InventoryCard.Throw'}}</button>
+                                      {{#if item.isJunkMarked}}
+                                        <button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.UnmarkJunk'}}</button>
+                                      {{else}}
+                                        {{#unless item.isJunk}}<button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.MarkJunk'}}</button>{{/unless}}
+                                      {{/if}}
+                                      <button type="button" data-action="showInventoryItemDetails"><i class="fa-solid fa-circle-info"></i>{{localize 'VEILRUNNER.InventoryCard.Details'}}</button>
+                                      <button type="button" class="remove" data-action="removeInventoryItem"><i class="fa-solid fa-trash"></i>{{localize 'VEILRUNNER.InventoryCard.Remove'}}</button>
+                                    </div>
+                                  </details>
+                              </div>
+                              <div class="inventory-grid-card-body">
+                                <div class="inventory-grid-card-title-row">
+                                  {{#if item.isJunk}}<span class="inventory-junk-badge">{{localize 'VEILRUNNER.InventoryCategory.junk'}}</span>{{/if}}
+                                  <div class="inventory-grid-card-name" title="{{item.name}}">{{item.name}}</div>
+                                </div>
+                                <div class="inventory-grid-card-classification">
+                                  <span class="inventory-grid-card-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.gradeRoman}}</span>
+                                  <span class="inventory-grid-card-quality"><em>{{item.rarity.name}}</em></span>
+                                </div>
+                                <div class="inventory-grid-card-meta">
+                                  {{#if item.isMagazine}}<span><i class="fa-solid fa-bars" aria-hidden="true"></i>{{item.magazineRounds}} / {{item.magazineCapacity}} rounds</span>{{/if}}
+                                  <span><i class="fa-solid fa-weight-hanging" aria-hidden="true"></i>{{item.weight}} kg</span>
+                                </div>
+                              </div>
+                            </article>
+                          {{/each}}
+                        </div>
+                      </section>
+                    {{/each}}
+                  </div>
+                </section>
+              {{else}}
+                <p class="empty-row inventory-empty-state" data-inventory-base-empty>{{localize 'VEILRUNNER.NoItems'}}</p>
+              {{/each}}
+              <p class="empty-row inventory-empty-state" data-inventory-filtered-empty hidden>{{localize 'VEILRUNNER.InventoryFilteredEmpty'}}</p>
+            </div>
+          {{else}}
+            <div class="inventory-group-list inventory-list-groups">
+              <div class="inventory-list-columns" aria-hidden="true">
+                <span>{{localize 'VEILRUNNER.InventoryList.Item'}}</span>
+                <span>{{localize 'VEILRUNNER.InventoryList.Quantity'}}</span>
+                <span>{{localize 'VEILRUNNER.InventoryList.Weight'}}</span>
+                <span></span>
+              </div>
+              {{#each inventoryGroups as |group|}}
+                <section class="inventory-family-section {{#if group.collapsed}}is-collapsed{{/if}}">
+                  <button type="button" class="inventory-family-heading" data-action="toggleInventoryGroup" data-collapse-key="{{group.collapseKey}}" aria-expanded="{{#if group.expanded}}true{{else}}false{{/if}}">
+                    <span><i class="{{group.icon}}" aria-hidden="true"></i><strong>{{group.label}}</strong><small>{{group.count}}</small></span>
+                    <i class="fa-solid fa-chevron-{{#if group.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                  </button>
+                  <div class="inventory-family-content">
+                      {{#each group.subtypes as |subtype|}}
+                        <section class="inventory-subtype-section {{#if subtype.collapsed}}is-collapsed{{/if}}" data-item-count="{{subtype.entryCount}}">
+                          <button type="button" class="inventory-subtype-heading" data-action="toggleInventoryGroup" data-collapse-key="{{subtype.collapseKey}}" aria-expanded="{{#if subtype.expanded}}true{{else}}false{{/if}}">
+                            <span><strong>{{subtype.label}}</strong><small>{{subtype.count}}</small></span>
+                            <i class="fa-solid fa-chevron-{{#if subtype.expanded}}up{{else}}down{{/if}}" aria-hidden="true"></i>
+                          </button>
+                          <div class="inventory-list-items">
+                              {{#each subtype.items as |item|}}
+                                <article class="inventory-list-row inventory-item-row draggable {{#if item.equipped}}is-equipped{{/if}} {{#if item.isJunk}}is-junk{{/if}}" data-item-id="{{item.id}}" data-item-ids="{{item.itemIds}}" data-stack-quantity="{{item.quantity}}" data-rarity="{{item.rarity.slug}}" data-rarity-tier="{{item.rarity.tier}}" style="--vr-item-rarity: {{item.rarity.color}};">
+                                  <span class="inventory-list-item-main"><img src="{{item.img}}" alt="" />{{#if item.isJunk}}<span class="inventory-junk-badge">{{localize 'VEILRUNNER.InventoryCategory.junk'}}</span>{{/if}}<span><strong>{{item.name}}</strong><span class="inventory-list-item-classification"><small class="inventory-list-item-grade">{{localize 'VEILRUNNER.InventoryCard.Grade'}} {{item.grade}}</small><small class="inventory-list-item-quality"><em>{{item.rarity.name}}</em></small></span></span>{{#if item.equipped}}<span class="inventory-equipped-badge">{{localize 'VEILRUNNER.InventoryCard.Equipped'}}</span>{{/if}}</span>
+                                  <span>{{item.quantity}}{{#if item.isMagazine}}<br /><small>{{item.magazineRounds}} / {{item.magazineCapacity}} rounds</small>{{/if}}</span>
+                                  <span>{{item.weight}} kg</span>
+                                  <details class="inventory-item-menu">
+                                    <summary title="{{localize 'VEILRUNNER.InventoryCard.Actions'}}" aria-label="{{localize 'VEILRUNNER.InventoryCard.Actions'}}"><i class="fa-solid fa-ellipsis-vertical" aria-hidden="true"></i></summary>
+                                    <div>
+                                      {{#if item.canEquip}}
+                                        {{#if item.equipped}}
+                                          <button type="button" data-action="unequipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Unequip'}}</button>
+                                        {{else}}
+                                          <button type="button" data-action="equipInventoryItem"><i class="fa-solid fa-shirt"></i>{{localize 'VEILRUNNER.InventoryCard.Equip'}}</button>
+                                        {{/if}}
+                                      {{/if}}
+                                      <button type="button" data-action="useInventoryItem"><i class="fa-solid fa-bolt"></i>{{localize 'VEILRUNNER.InventoryCard.Use'}}</button>
+                                      <button type="button" data-action="throwInventoryItem"><i class="fa-solid fa-hand-fist"></i>{{localize 'VEILRUNNER.InventoryCard.Throw'}}</button>
+                                      {{#if item.isJunkMarked}}
+                                        <button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.UnmarkJunk'}}</button>
+                                      {{else}}
+                                        {{#unless item.isJunk}}<button type="button" data-action="toggleInventoryItemJunk"><i class="fa-solid fa-recycle"></i>{{localize 'VEILRUNNER.InventoryCard.MarkJunk'}}</button>{{/unless}}
+                                      {{/if}}
+                                      <button type="button" data-action="showInventoryItemDetails"><i class="fa-solid fa-circle-info"></i>{{localize 'VEILRUNNER.InventoryCard.Details'}}</button>
+                                      <button type="button" class="remove" data-action="removeInventoryItem"><i class="fa-solid fa-trash"></i>{{localize 'VEILRUNNER.InventoryCard.Remove'}}</button>
+                                    </div>
+                                  </details>
+                                </article>
+                              {{/each}}
+                          </div>
+                        </section>
+                      {{/each}}
+                  </div>
+                </section>
+              {{else}}
+                <p class="empty-row inventory-empty-state" data-inventory-base-empty>{{localize 'VEILRUNNER.NoItems'}}</p>
+              {{/each}}
+              <p class="empty-row inventory-empty-state" data-inventory-filtered-empty hidden>{{localize 'VEILRUNNER.InventoryFilteredEmpty'}}</p>
+            </div>
+          {{/if}}
+

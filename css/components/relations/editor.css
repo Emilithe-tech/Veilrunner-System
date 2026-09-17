@@ -1,0 +1,6 @@
+.vr-rel-editor{display:grid; gap:10px; max-height:65vh; overflow:auto; padding:8px;}
+.vr-rel-field{display:grid; gap:4px;}
+.vr-rel-editor input,.vr-rel-editor select,.vr-rel-editor textarea{width:100%;}
+.vr-rel-editor input[type=checkbox]{width:20px;}
+.vr-rel-editor-row{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; border-bottom:1px solid #65717c; padding:10px 0;}
+.vr-rel-editor-row button{align-self:end;}

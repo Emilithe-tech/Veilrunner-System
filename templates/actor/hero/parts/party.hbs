@@ -1,0 +1,60 @@
+      {{#if showPartyList}}
+      <section class="party-view">
+        <div class="party-heading">
+          <div class="party-pan-summary">
+            <span class="party-pan-label"><i class="fa-solid fa-fw {{panIcon}}" data-pan-icon aria-hidden="true"></i> {{localize 'VEILRUNNER.PAN.Label'}}</span>
+            <span class="party-pan-connected"><strong data-pan-connected-count>{{panConnectedCount}}</strong> {{localize 'VEILRUNNER.PAN.Connected'}}</span>
+          </div>
+          <div class="party-pan-modes vr-segmented-control" data-pan-mode="{{panMode}}" role="group" aria-label="{{localize 'VEILRUNNER.PAN.Label'}}">
+            {{#each panModes}}
+              <button type="button" class="party-pan-mode vr-segmented-control__option" data-action="setPanMode" data-pan-mode="{{mode}}" aria-pressed="{{#if selected}}true{{else}}false{{/if}}">{{label}}</button>
+            {{/each}}
+          </div>
+        </div>
+        <div class="party-member-list">
+          {{#each partyMembers as |member|}}
+            <article class="party-member pan-{{member.panState}}" data-party-member-id="{{member.id}}">
+              <span class="party-member-portrait">
+                <img src="{{member.img}}" alt="{{member.name}}" />
+              </span>
+              <div class="party-member-data">
+                <div class="party-member-title">
+                  <strong class="party-member-name" data-actor-id="{{member.id}}" title="{{member.name}}">{{member.displayName}}</strong>
+                  <button type="button" class="party-member-sheet-open" data-actor-id="{{member.id}}" title="{{localize 'VEILRUNNER.OpenCharacterSheet'}}" aria-label="{{localize 'VEILRUNNER.OpenCharacterSheet'}}">
+                    <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="party-member-resources">
+                  {{#if member.showHealth}}
+                  <span class="party-resource" data-party-resource="health">
+                    <span class="party-resource-label"><i class="fa-solid fa-heart-pulse resource-icon health"></i> {{localize 'VEILRUNNER.Health'}}</span>
+                    <span class="party-resource-status" title="{{member.health}}">{{member.health}}</span>
+                  </span>
+                  {{/if}}
+                  {{#if member.showArmor}}
+                  <span class="party-resource" data-party-resource="armor">
+                    <span class="party-resource-label"><i class="fa-solid fa-shield-halved resource-icon armor"></i> {{localize 'VEILRUNNER.Armor'}}</span>
+                    <span class="party-resource-status" title="{{member.armor}}">{{member.armor}}</span>
+                  </span>
+                  {{/if}}
+                  {{#if member.showShields}}
+                  <span class="party-resource" data-party-resource="shields">
+                    <span class="party-resource-label"><i class="fa-solid fa-shield resource-icon shields"></i> {{localize 'VEILRUNNER.Shields'}}</span>
+                    <span class="party-resource-status" title="{{member.shields}}">{{member.shields}}</span>
+                  </span>
+                  {{/if}}
+                  {{#if member.showBarriers}}
+                  <span class="party-resource" data-party-resource="barriers">
+                    <span class="party-resource-label"><i class="fa-solid fa-hexagon resource-icon barriers"></i> {{localize 'VEILRUNNER.Barriers'}}</span>
+                    <span class="party-resource-status" title="{{member.barriers}}">{{member.barriers}}</span>
+                  </span>
+                  {{/if}}
+                </div>
+              </div>
+            </article>
+          {{else}}
+            <p class="party-empty">{{localize 'VEILRUNNER.NoParty'}}</p>
+          {{/each}}
+        </div>
+      </section>
+      {{/if}}

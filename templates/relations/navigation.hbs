@@ -1,0 +1,17 @@
+<div class="vr-rel-context">
+  <label>{{localize "VEILRUNNER.RelationsUI.Character"}}<select data-rel-context="characterUuid"><option value="">—</option>{{#each characters}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+  <label>{{localize "VEILRUNNER.RelationsUI.Party"}}<select data-rel-context="partyId"><option value="">—</option>{{#each parties}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+  <label>{{localize "VEILRUNNER.RelationsUI.Perspective"}}<select data-rel-context="perspective"><option value="character">{{localize "VEILRUNNER.RelationsUI.Character"}}</option><option value="party" {{#if partyPerspective}}selected{{/if}}>{{localize "VEILRUNNER.RelationsUI.Party"}}</option></select></label>
+  {{#if isGM}}<button type="button" data-rel-action="manage">{{localize "VEILRUNNER.RelationsUI.Manage"}}</button>{{/if}}
+</div>
+<details class="vr-rel-tools"><summary>{{localize "VEILRUNNER.RelationsUI.Access"}}</summary>
+  <p>{{localize "VEILRUNNER.RelationsUI.AccessHint"}}</p>
+  <button type="button" data-rel-action="backup-key">{{localize "VEILRUNNER.RelationsUI.BackupKey"}}</button>
+  <button type="button" data-rel-action="restore-key">{{localize "VEILRUNNER.RelationsUI.RestoreKey"}}</button>
+</details>
+{{#if manage}}<details class="vr-rel-tools"><summary>{{localize "VEILRUNNER.RelationsUI.Tools"}}</summary>
+  <button type="button" data-rel-action="configure">{{localize "VEILRUNNER.RelationsUI.Scale"}}</button>
+  <button type="button" data-rel-action="adopt">{{localize "VEILRUNNER.RelationsUI.Adopt"}}</button>
+  <button type="button" data-rel-action="refresh">{{localize "VEILRUNNER.RelationsUI.Refresh"}}</button>
+  <button type="button" data-rel-action="advance">{{localize "VEILRUNNER.RelationsUI.Advance"}}</button>
+</details>{{/if}}

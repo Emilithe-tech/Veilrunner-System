@@ -14,6 +14,7 @@ import { registerItemCreateDialogGroups } from "./modules/apps/item-create-dialo
 import { registerSettings } from "./modules/settings.mjs";
 import { initializeProgressionCatalog } from "./modules/data/progression/catalog-provider.mjs";
 import { registerProgressionAuthoringRuntime } from "./modules/data/progression/runtime-authoring.mjs";
+import { registerRelations, RELATIONS_PARTIALS } from "./modules/relations/runtime.mjs";
 
 const PARTY_SHEET_PARTIALS = [
   "systems/veilrunner/templates/actor/party/parts/party.hbs",
@@ -40,6 +41,7 @@ const PARTY_SHEET_PARTIALS = [
 
 const HERO_SHEET_PARTIALS = [
   "systems/veilrunner/templates/actor/hero/parts/progression.hbs",
+  "systems/veilrunner/templates/actor/hero/parts/progression-journey-rows.hbs",
   "systems/veilrunner/templates/actor/hero/parts/header.hbs",
   "systems/veilrunner/templates/actor/hero/parts/equipment.hbs",
   "systems/veilrunner/templates/actor/hero/parts/equip-slot.hbs",
@@ -61,7 +63,7 @@ const ACTION_HUD_TEMPLATE_PARTIALS = [
 ];
 
 Hooks.once("init", async () => {
-  await foundry.applications.handlebars.loadTemplates([...PARTY_SHEET_PARTIALS, ...HERO_SHEET_PARTIALS, ...ITEM_SHEET_PARTIALS, ...ACTION_HUD_TEMPLATE_PARTIALS, ...DATAPAD_TEMPLATE_PARTIALS]);
+  await foundry.applications.handlebars.loadTemplates([...PARTY_SHEET_PARTIALS, ...HERO_SHEET_PARTIALS, ...ITEM_SHEET_PARTIALS, ...ACTION_HUD_TEMPLATE_PARTIALS, ...DATAPAD_TEMPLATE_PARTIALS, ...RELATIONS_PARTIALS]);
 
   registerConfig();
   registerSettings();
@@ -69,6 +71,7 @@ Hooks.once("init", async () => {
   registerCharacterCreation();
   registerPartyFolders();
   registerDatapad();
+  registerRelations();
   registerReferenceJournals();
   registerInitiativeBandDecider();
   registerCombatCarousel();

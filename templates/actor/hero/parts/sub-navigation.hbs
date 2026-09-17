@@ -1,0 +1,100 @@
+      <nav class="sub-nav-row {{#if (eq section "inventory")}}has-filter-row inventory-sub-nav{{/if}}">
+        <div class="nav-indicator" style="--nav-width: {{subTabIndicatorWidth}}%; --nav-offset: {{subTabIndicatorOffset}}%;"></div>
+        {{#if (eq section "character")}}
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "stats")}}active{{/if}}"
+             data-action="setSubTab" data-section="character" data-tab="stats">
+            <i class="fa-solid fa-chart-simple"></i><span>{{localize 'VEILRUNNER.Stats'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "skills")}}active{{/if}}"
+             data-action="setSubTab" data-section="character" data-tab="skills">
+            <i class="fa-solid fa-crosshairs"></i><span>{{localize 'VEILRUNNER.Skills'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "progression")}}active{{/if}}"
+             data-action="setSubTab" data-section="character" data-tab="progression">
+            <i class="fa-solid fa-arrow-trend-up"></i><span>{{localize 'VEILRUNNER.Progression'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "relations")}}active{{/if}}"
+             data-action="setSubTab" data-section="character" data-tab="relations">
+            <i class="fa-solid fa-people-arrows"></i><span>{{localize 'VEILRUNNER.Relations'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "details")}}active{{/if}}"
+             data-action="setSubTab" data-section="character" data-tab="details">
+            <i class="fa-solid fa-id-card"></i><span>{{localize 'VEILRUNNER.Details'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.character "biography")}}active{{/if}}"
+             data-action="setSubTab" data-section="character" data-tab="biography">
+            <i class="fa-solid fa-book-open"></i><span>{{localize 'VEILRUNNER.Biography'}}</span>
+          </button>
+
+        {{else if (eq section "actions")}}
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.actions "favorites")}}active{{/if}}"
+             data-action="setSubTab" data-section="actions" data-tab="favorites">
+            <i class="fa-solid fa-star"></i><span>{{localize 'VEILRUNNER.Favorites'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.actions "actions")}}active{{/if}}"
+             data-action="setSubTab" data-section="actions" data-tab="actions">
+            <i class="fa-solid fa-bolt"></i><span>{{localize 'VEILRUNNER.Actions'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.actions "abilities")}}active{{/if}}"
+             data-action="setSubTab" data-section="actions" data-tab="abilities">
+            <i class="fa-solid fa-sparkles"></i><span>{{localize 'VEILRUNNER.Abilities'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.actions "reactions")}}active{{/if}}"
+             data-action="setSubTab" data-section="actions" data-tab="reactions">
+            <i class="fa-solid fa-reply"></i><span>{{localize 'VEILRUNNER.Reactions'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.actions "magic")}}active{{/if}}"
+             data-action="setSubTab" data-section="actions" data-tab="magic">
+            <i class="fa-solid fa-wand-magic-sparkles"></i><span>{{localize 'VEILRUNNER.Magic'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.actions "tech")}}active{{/if}}"
+             data-action="setSubTab" data-section="actions" data-tab="tech">
+            <i class="fa-solid fa-microchip"></i><span>{{localize 'VEILRUNNER.Tech'}}</span>
+          </button>
+
+        {{else if (eq section "inventory")}}
+          {{#each inventoryCategories as |category|}}
+            <button type="button" class="sub-nav-btn {{#if category.active}}active{{/if}}"
+               data-action="setSubTab" data-section="inventory" data-tab="{{category.key}}">
+              <i class="{{category.icon}}"></i>
+              <span>{{localize category.label}}</span>
+            </button>
+          {{/each}}
+
+        {{else if (eq section "arsenal")}}
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.arsenal "loadout")}}active{{/if}}"
+             data-action="setSubTab" data-section="arsenal" data-tab="loadout">
+            <i class="fa-solid fa-toolbox"></i><span>{{localize 'VEILRUNNER.Loadout'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.arsenal "cyberware")}}active{{/if}}"
+             data-action="setSubTab" data-section="arsenal" data-tab="cyberware">
+            <i class="fa-solid fa-microchip"></i><span>{{localize 'VEILRUNNER.Cyberware'}}</span>
+          </button>
+        {{else if (eq section "assets")}}
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.assets "vehicles")}}active{{/if}}"
+             data-action="setSubTab" data-section="assets" data-tab="vehicles">
+            <i class="fa-solid fa-car"></i><span>{{localize 'VEILRUNNER.Vehicles'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.assets "drones")}}active{{/if}}"
+             data-action="setSubTab" data-section="assets" data-tab="drones">
+            <i class="fa-solid fa-helicopter"></i><span>{{localize 'VEILRUNNER.Drones'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.assets "ships")}}active{{/if}}"
+             data-action="setSubTab" data-section="assets" data-tab="ships">
+            <i class="fa-solid fa-shuttle-space"></i><span>{{localize 'VEILRUNNER.Ships'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.assets "entities")}}active{{/if}}"
+             data-action="setSubTab" data-section="assets" data-tab="entities">
+            <i class="fa-solid fa-ghost"></i><span>{{localize 'VEILRUNNER.Entities'}}</span>
+          </button>
+        {{else if (eq section "settings")}}
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.settings "ui")}}active{{/if}}"
+             data-action="setSubTab" data-section="settings" data-tab="ui">
+            <i class="fa-solid fa-palette"></i><span>{{localize 'VEILRUNNER.UserInterface'}}</span>
+          </button>
+          <button type="button" class="sub-nav-btn {{#if (eq subTabs.settings "other")}}active{{/if}}"
+             data-action="setSubTab" data-section="settings" data-tab="other">
+            <i class="fa-solid fa-sliders"></i><span>{{localize 'VEILRUNNER.OtherFunctions'}}</span>
+          </button>
+        {{/if}}
+      </nav>

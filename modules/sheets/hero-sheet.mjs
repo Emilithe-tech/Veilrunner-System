@@ -1,20 +1,24 @@
+import { bindStatsFlyouts } from "./stats-flyouts.mjs";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
 
 import { completedXpBeforeLevel, xpForLevel } from "../data/xp.mjs";
 import { ammunitionAcquisitionQuantity } from "../items/ammunition-quantity.mjs";
-import { progressionPresentation } from "./progression-view.mjs";
-import { fitHeroViewport } from "./hero-viewport.mjs";
+import { progressionPresentation, progressionExperience, levelXpFromTotal } from "./progression-view.mjs";
+import { bindProgressionJourney } from "./progression-journey.mjs";
+import { currentProgressionCatalog, ProgressionCatalogUnavailableError } from "../data/progression/catalog-provider.mjs";
+import { fitHeroViewport, unscaleHeroRect } from "./hero-viewport.mjs";
 import { attributePointsForLevel, skillPointsForLevel, talentPointsForLevel } from "../data/progression.mjs";
 import { VEILRUNNER_PROFESSIONS, findDiscipline } from "../data/professions.mjs";
 import { openCharacterCreation } from "../apps/character-creation.mjs";
 import { openPlayerDatapad } from "../apps/datapad.mjs";
+import { renderRelations, bindRelations } from "../relations/view.mjs";
 import { buildPartyOverview, findPartyActorForFolder, findPartyForHero, getPartyMembers } from "../helpers/party.mjs";
 import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
 import { equipPhysicalItem, itemAcceptsEquipmentSlot, unequipPhysicalItem } from "../items/equipment.mjs";
 import { discoverActorProvidedActions, isOwnedActionItem } from "../actions/action-sources.mjs";
 import { applyItemWear } from "../items/durability.mjs";
-import { firearmLoadedState } from "../items/firearms.mjs";
+import { firearmLoadedState, firearmActionsForActor } from "../items/firearms.mjs";
 import { equipmentBySlot, itemRequiredSlots } from "../rules/item-rules.mjs";
 import { EQUIPMENT_SLOT_COLUMNS, WEAPON_TYPE_GROUPS, itemRarityData, normalizeWeaponType } from "../data/item/physical.mjs";
 import { itemHasCapability } from "../data/definitions/item-capabilities.mjs";
@@ -34,8 +38,10 @@ const DETAILS_CATEGORIES = [
 ];
 const DETAILS_SUBTABS = DETAILS_CATEGORIES.map(category => category.key);
 
-const SECTIONS = ["character", "actions", "inventory", "datapad", "settings"];
-const CHARACTER_SUBTABS = ["loadout", "stats", "progression", "details", "biography"];
+const SECTIONS = ["character", "actions", "inventory", "arsenal", "assets", "settings"];
+const CHARACTER_SUBTABS = ["stats", "skills", "progression", "relations", "details", "biography"];
+const ARSENAL_SUBTABS = ["loadout", "cyberware"];
+const ASSETS_SUBTABS = ["vehicles", "drones", "ships", "entities"];
 const ACTIONS_SUBTABS = ["favorites", "actions", "abilities", "reactions", "magic", "tech"];
 const ACTION_DAMAGE_TYPES = ["pyro", "hydro", "cryo", "floral", "geo", "aero", "electric", "sonic", "light", "void", "slashing", "bludgeoning", "piercing"];
 const ACTION_DAMAGE_ICONS = {
@@ -775,7 +781,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       toggleDetails: VeilrunnerHeroSheet.#onToggleDetails,
       openCharacterCreation: VeilrunnerHeroSheet.#onOpenCharacterCreation,
       toggleProgressionPlanner: VeilrunnerHeroSheet.#onToggleProgressionPlanner,
+      toggleProgressionXp: VeilrunnerHeroSheet.#onToggleProgressionXp,
+      toggleProgressionPoints: VeilrunnerHeroSheet.#onToggleProgressionPoints,
+      setProgressionPage: VeilrunnerHeroSheet.#onSetProgressionPage,
+      focusProgressionLevel: VeilrunnerHeroSheet.#onFocusProgressionLevel,
+      loadProgressionLevels: VeilrunnerHeroSheet.#onLoadProgressionLevels,
       openLevelPlanner: VeilrunnerHeroSheet.#onOpenLevelPlanner,
+      implementLevelPlan: VeilrunnerHeroSheet.#onImplementLevelPlan,
       saveProgressionPlan: VeilrunnerHeroSheet.#onSaveProgressionPlan,
       removeProgressionPlan: VeilrunnerHeroSheet.#onRemoveProgressionPlan,
       moveProgressionPlan: VeilrunnerHeroSheet.#onMoveProgressionPlan,
@@ -795,7 +807,22 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       template: "systems/veilrunner/templates/actor/hero/parts/main.hbs",
       templates: [
         "systems/veilrunner/templates/actor/hero/parts/drawer-handles.hbs",
-        "systems/veilrunner/templates/actor/hero/parts/top-nav.hbs"
+        "systems/veilrunner/templates/actor/hero/parts/top-nav.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/identity.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/portrait.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/status-tracks.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/energy-pools.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/resources.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/party.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/sub-navigation.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/inventory-toolbar.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/arsenal.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/character.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/actions.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/inventory.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/assets.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/settings.hbs",
+        "systems/veilrunner/templates/actor/hero/parts/inventory-footer.hbs"
       ]
     },
     details: { template: "systems/veilrunner/templates/actor/hero/parts/details.hbs" }
@@ -804,6 +831,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   section = "character";
   subTabs = {
     character: "stats",
+    arsenal: "loadout",
+    assets: "vehicles",
     actions: "actions",
     inventory: "all",
     about: "skills",
@@ -837,6 +866,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   #detailsFrameWidth = VeilrunnerHeroSheet.BASE_WIDTH;
   #drawerHandleTop = { left: 50, right: 50 };
   #editMode = false;
+  #progressionXpMode = "level";
+  #progressionSpentPools = new Set();
+  #progressionPage = "overview";
+  #journeyFutureCount = 6;
+  #journeyScrollTop = null;
+  #journeyOpenLevels = new Map();
+  #journeyBinding;
   #heroColumnSave = Promise.resolve();
   #loadoutChange = null;
   #loadoutChanging = false;
@@ -854,6 +890,15 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   #pendingMainTabAnimation = "";
   #pendingDetailsTabAnimation = "";
   #pendingEquipmentTabAnimation = "";
+
+  get detailsOpen() { return this.#detailsOpen; }
+  set detailsOpen(value) { this.#detailsOpen = Boolean(value); }
+  get animateDetails() { return this.#animateDetails; }
+  set animateDetails(value) { this.#animateDetails = Boolean(value); }
+  get clearActionDetailsAfterClose() { return this.#clearActionDetailsAfterClose; }
+  set clearActionDetailsAfterClose(value) { this.#clearActionDetailsAfterClose = Boolean(value); }
+  get clearInventoryDetailsAfterClose() { return this.#clearInventoryDetailsAfterClose; }
+  set clearInventoryDetailsAfterClose(value) { this.#clearInventoryDetailsAfterClose = Boolean(value); }
 
   /* Lifecycle */
 
@@ -901,8 +946,26 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     }, position);
   }
 
+  #clearStatsFlyouts;
+
   async _onRender(context, options) {
     await super._onRender(context, options);
+    this.#journeyBinding?.destroy();
+    this.#journeyBinding = null;
+    const journey = this.element.querySelector("[data-progression-journey]");
+    if (journey) this.#journeyBinding = bindProgressionJourney(journey, {
+      initialScroll: this.#journeyScrollTop,
+      onScroll: value => { this.#journeyScrollTop = value; },
+      onOpen: (level, open) => this.#journeyOpenLevels.set(level, open),
+      loadMore: root => this.#appendJourneyLevels(root)
+    });
+    const relationsHost = this.element.querySelector("[data-hero-relations]");
+    if (relationsHost) {
+      this.relationsOptions ??= { characterUuid: this.actor.uuid, tab: "character" };
+      bindRelations(relationsHost, this.relationsOptions, () => this.render({ parts: ["main"] }));
+    }
+    this.#clearStatsFlyouts?.();
+    this.#clearStatsFlyouts = bindStatsFlyouts(this.element?.querySelector(".stats-sections"));
     const consumableGrid = this.element?.querySelector("[data-consumable-grid]");
     if (consumableGrid) {
       const fill = () => {
@@ -1009,6 +1072,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
 
   /** @override */
   async _onClose(options) {
+    this.#clearStatsFlyouts?.();
     this.#viewportWindow?.removeEventListener("resize", this.#onViewportResize);
     this.#viewportWindow = null;
     this.#closeInventoryItemContextMenu();
@@ -1161,7 +1225,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   #onInventoryItemContextMenu(event) {
-    const loadout = this.section === "character" && this.subTabs.character === "loadout";
+    const loadout = this.section === "arsenal" && this.subTabs.arsenal === "loadout";
     if ((!loadout && this.section !== "inventory") || !this.actor.isOwner) return;
     const row = event.target.closest?.(loadout ? ".loadout-item[data-item-id], .loadout-gear-tile[data-item-id]" : ".inventory-item-row[data-item-id]");
     const item = this.actor.items.get(row?.dataset.itemId);
@@ -2139,9 +2203,9 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const heroColumn = this.element?.querySelector(".hero-column");
     const mainField = this.element?.querySelector(".main-field");
     const content = this.element?.querySelector(".window-content");
-    const heroRect = heroColumn?.getBoundingClientRect();
-    const mainRect = mainField?.getBoundingClientRect();
-    const contentRect = content?.getBoundingClientRect();
+    const heroRect = this.#animationRect(heroColumn);
+    const mainRect = this.#animationRect(mainField);
+    const contentRect = this.#animationRect(content);
     const indicatorOffset = heroRect && mainRect
       ? Math.max(0, (mainRect.left - heroRect.right) / 2)
       : 18;
@@ -2190,6 +2254,22 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const context = await super._prepareContext(options);
     const actor = this.actor;
     const system = actor.system ?? {};
+
+    // Presentation bays only; cyberware installation rules are not defined yet.
+    context.cyberwareRegions = [
+      ["cortex", "Frontal cortex", 3],
+      ["os", "Operating system", 1],
+      ["arms", "Arms", 1],
+      ["face", "Face", 2],
+      ["skeleton", "Skeleton", 3],
+      ["hands", "Hands", 2],
+      ["nervous", "Nervous system", 3],
+      ["circulatory", "Circulatory system", 3],
+      ["skin", "Integumentary system", 3],
+      ["legs", "Legs", 1]
+    ].map(([key, label, count]) => ({
+      key, label, slots: Array.from({ length: count }, (_, index) => index + 1)
+    }));
 
     if (system.resources?.shield && !Object.prototype.hasOwnProperty.call(system.resources, "shields")) {
       system.resources.shields = system.resources.shield;
@@ -2302,11 +2382,27 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.hasTempHealth = hasTempHealth;
     context.experienceValue = experienceValue;
     context.experienceMax = experienceMax;
-    context.progression = progressionPresentation(system, actor.getFlag("Veilrunner", "progressionPlan"));
+    context.progressionExperience = progressionExperience(system.level, experienceValue, this.#progressionXpMode);
+    let progressionCatalog = {};
+    try { progressionCatalog = currentProgressionCatalog(); }
+    catch (error) { if (!(error instanceof ProgressionCatalogUnavailableError)) throw error; }
+    context.progression = progressionPresentation({ ...system, experience: { ...system.experience, value: experienceValue } }, actor.getFlag("Veilrunner", "progressionPlan"), actor.getFlag("Veilrunner", "levelPlans"), progressionCatalog, this.#journeyFutureCount);
+    context.progression.pools = context.progression.pools.map(pool => ({ ...pool,
+      showSpent: this.#progressionSpentPools.has(pool.key) }));
+    context.progression.journey = context.progression.journey.map(entry => ({ ...entry,
+      open: this.#journeyOpenLevels.get(entry.level) ?? (entry.current || entry.level === Number(system.level) + 1) }));
+    context.progressionPages = [
+      { key: "overview", label: "Overview", description: "Your current progress, upcoming rewards, and available points.", icon: "fa-chart-simple" },
+      { key: "journey", label: "Level Journey", description: "Your progression, from earlier levels to future plans.", icon: "fa-map-signs" }
+    ].map(page => ({ ...page, active: page.key === this.#progressionPage }));
+    context.progressionPage = context.progressionPages.find(page => page.active);
+    context.progressionOverview = this.#progressionPage === "overview";
+    context.progressionJourney = this.#progressionPage === "journey";
     context.tempHealthPercent = tempHealthPercent;
     context.experiencePercent = Math.max(0, Math.min(100, Number(system.percent?.experience ?? 0)));
     context.experienceGlow = context.experiencePercent / 100;
     context.levelUpAvailable = levelUpAvailable;
+    context.progressionXpLevelUp = !this.#editMode && levelUpAvailable;
     context.xpToNextLevel = xpToNextLevel;
     context.totalXpEarned = totalXpEarned;
     context.section = this.section;
@@ -2451,11 +2547,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const subList = this.section === "character" ? CHARACTER_SUBTABS
       : this.section === "actions" ? ACTIONS_SUBTABS
       : this.section === "inventory" ? INVENTORY_SUBTABS
-      : this.section === "datapad" ? ABOUT_SUBTABS
+      : this.section === "arsenal" ? ARSENAL_SUBTABS
+      : this.section === "assets" ? ASSETS_SUBTABS
       : this.section === "settings" ? SETTINGS_SUBTABS
       : null;
     context.subNavList = subList;
-    context.subTabIndex = subList ? subList.indexOf(this.section === "datapad" ? this.subTabs.about : this.subTabs[this.section]) : -1;
+    context.subTabIndex = subList ? subList.indexOf(this.subTabs[this.section]) : -1;
     context.subTabCount = subList ? subList.length : 0;
     context.subTabIndicatorWidth = context.subTabCount ? 100 / context.subTabCount : 0;
     context.subTabIndicatorOffset = context.subTabIndex * 100;
@@ -2599,11 +2696,13 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       }).map((item, index) => {
         const data = item.system ?? {};
         const ammo = item.type === "weapon" ? firearmLoadedState(actor, item) : null;
+        const ammoProfile = ammo?.magazine?.system ?? ammo?.internal ?? {};
+        const loadedAmmo = actor.items.get(ammoProfile.ammoId ?? "");
+        const ammoName = ammoProfile.ammoName || loadedAmmo?.name || "No ammunition loaded";
         const stat = (icon, value, label) => ({ icon, value, label });
         const stats = item.type === "weapon" ? [
-          stat("burst", `${data.damage?.base ?? "—"}${data.damage?.modifier ? `${data.damage.modifier > 0 ? "+" : ""}${data.damage.modifier}` : ""}`, "DMG"),
-          stat("bars", ammo?.mode !== "none" ? ammo.capacity : "—", "MAG"),
-          stat("crosshairs", data.range ? `${data.range} m` : "Melee", "RANGE")
+          stat("crosshairs", data.range ? `${data.range} m` : "Melee", "RANGE"),
+          stat("burst", `${data.damage?.base ?? "—"}${data.damage?.modifier ? `${data.damage.modifier > 0 ? "+" : ""}${data.damage.modifier}` : ""}`, "DMG")
         ] : [
           stat("shield-halved", data.armorClass ?? "—", "ARMOR"),
           stat("layer-group", typeof data.capacity === "number" ? data.capacity : data.capacity?.[data.capacity?.mode] ?? "—", "CAPACITY"),
@@ -2618,7 +2717,14 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
           traits: Array.isArray(data.traits) ? data.traits : [],
           ammo: ammo && ammo.mode !== "none" ? {
             value: ammo.rounds, max: ammo.capacity,
-            label: ammo.magazine?.name || ammo.internal?.name || "Ammunition"
+            label: ammo.rounds > 0 ? ammoName : "Ammo",
+            img: ammo.rounds > 0 ? ammoProfile.ammoImg || loadedAmmo?.img || "" : "",
+            hint: ammo.rounds > 0 ? "Reload / change ammo" : "No ammunition loaded",
+            magazineId: ammo.magazine?.id,
+            actions: firearmActionsForActor(actor).filter(action => action.weaponId === item.id && action.operation !== "fire").map(action => ({
+              operation: action.operation, disabled: action.disabled, reason: action.disabledReason,
+              label: { reload: "Select ammo / reload", load: "Select magazine", unload: ammo.mode === "detachable" ? "Remove magazine" : "Unload ammunition" }[action.operation]
+            }))
           } : null,
           slots: section.key === "weapon"
             ? game.i18n.localize(`VEILRUNNER.LoadoutWeaponSlot.${["mainHand", "offhand", "auxiliary"].find(slot => equipmentData[slot] === item.id) ?? "mainHand"}`)
@@ -2807,6 +2913,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     context.conditions = Array.isArray(system.conditions) ? system.conditions : [];
     context.reputation = Array.isArray(system.reputation) ? system.reputation : [];
     context.relationships = Array.isArray(system.relationships) ? system.relationships : [];
+    if (this.section === "character" && this.subTabs.character === "relations") {
+      this.relationsOptions ??= { characterUuid: this.actor.uuid, tab: "character" };
+      context.relationsWorkspace = renderRelations(this.relationsOptions);
+    }
     context.customEffects = Array.isArray(system.customEffects) ? system.customEffects : [];
     context.customEffectsCount = context.customEffects.length;
 
@@ -2816,6 +2926,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   /** @override */
   _prepareSubmitData(event, form, formData) {
     const object = formData.object ?? {};
+    if (Object.hasOwn(object, "progressionTotalXp")) {
+      const xp = levelXpFromTotal(this.actor.system.level, object.progressionTotalXp, storedHeroExperience(this.actor));
+      delete object.progressionTotalXp;
+      if (Object.hasOwn(object, "system.experience.value")) object["system.experience.value"] = xp;
+      foundry.utils.setProperty(object, "system.experience.value", xp);
+    }
     if (foundry.utils.hasProperty(object, "system.assetLinksJson")) {
       try {
         const parsed = JSON.parse(String(foundry.utils.getProperty(object, "system.assetLinksJson") || "[]"));
@@ -2975,6 +3091,8 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const { section, tab } = target.dataset;
     const fromDetailsPanel = section === "about" && !!target.closest(".details-panel");
     const list = section === "character" ? CHARACTER_SUBTABS
+      : section === "arsenal" ? ARSENAL_SUBTABS
+      : section === "assets" ? ASSETS_SUBTABS
       : section === "actions" ? ACTIONS_SUBTABS
       : section === "inventory" ? INVENTORY_SUBTABS
       : section === "settings" ? SETTINGS_SUBTABS
@@ -3052,14 +3170,19 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     this.render({ parts: ["main"] });
   }
 
+  // DOM bounds include the application transform; CSS animation values do not.
+  #animationRect(element) {
+    return element ? unscaleHeroRect(element.getBoundingClientRect(), this.position?.scale) : undefined;
+  }
+
   #sizeConsumableSquares() {
     const row = this.element?.querySelector(".hero-row");
     const grid = row?.querySelector("[data-consumable-grid]");
     if (!grid) return;
-    const rowWidth = row.getBoundingClientRect().width;
+    const rowWidth = this.#animationRect(row).width;
     const normalColumn = Math.max(225, (rowWidth - 36) * .32 / 1.32);
     const field = row.querySelector(".main-field");
-    const inset = field ? field.getBoundingClientRect().width - grid.clientWidth : 0;
+    const inset = field ? this.#animationRect(field).width - grid.clientWidth : 0;
     const previousSize = Math.max(0, (rowWidth - normalColumn - 36 - inset - 36) / 7);
     const size = Math.max(0, (rowWidth - normalColumn - 36 - inset - 30) / 6);
     grid.style.setProperty("--vr-consumable-square-size", `${size}px`);
@@ -3072,10 +3195,10 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const cards = new Map();
     for (const card of root.querySelectorAll(".loadout-item, .loadout-gear-tile")) {
       const key = card.dataset.equipmentSlot || `consumable:${card.dataset.consumableSlot}`;
-      cards.set(key, { rect: card.getBoundingClientRect(), id: card.dataset.itemId,
+      cards.set(key, { rect: this.#animationRect(card), id: card.dataset.itemId,
         expanded: card.classList.contains("is-expanded"),
         panel: card.classList.contains("is-expanded") ? card.querySelector(".loadout-expansion")?.cloneNode(true) : null,
-        summaryWidth: card.querySelector(".loadout-card-summary")?.getBoundingClientRect().width });
+        summaryWidth: this.#animationRect(card.querySelector(".loadout-card-summary"))?.width });
     }
     this.#loadoutChange = {
       cards,
@@ -3098,7 +3221,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     for (const card of root.querySelectorAll(".loadout-item, .loadout-gear-tile")) {
       const key = card.dataset.equipmentSlot || `consumable:${card.dataset.consumableSlot}`;
       const before = previous.cards.get(key);
-      const after = card.getBoundingClientRect();
+      const after = this.#animationRect(card);
       if (revealingPrimary && ["offhand", "auxiliary"].includes(key)) {
         // Freeze the destination dimensions while the primary reveals this
         // card. Never interpolate from its old two-/three-column width.
@@ -3110,7 +3233,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
         // the gaps. Stacking alone allows translucent card surfaces to leak.
         card.animate([
           { ...fixed, clipPath: `inset(0 0 0 ${covered}px)` },
-          { ...fixed, clipPath: `inset(0 0 0 ${Math.min(0, root.querySelector('[data-equipment-slot="mainHand"]').getBoundingClientRect().right - after.left)}px)` }
+          { ...fixed, clipPath: `inset(0 0 0 ${Math.min(0, this.#animationRect(root.querySelector('[data-equipment-slot="mainHand"]')).right - after.left)}px)` }
         ], { ...timing, fill: "backwards" });
         continue;
       }
@@ -3228,12 +3351,12 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
 
   async #animateConsumablePicker(picker, opening) {
     const wasHidden = picker.hidden;
-    const currentBounds = wasHidden ? null : picker.getBoundingClientRect();
+    const currentBounds = wasHidden ? null : this.#animationRect(picker);
     picker.getAnimations().forEach(animation => animation.cancel());
     picker.hidden = false;
     const tile = picker.parentElement?.querySelector(`[data-consumable-slot="${picker.dataset.consumableSlot}"]`);
-    const bounds = picker.getBoundingClientRect();
-    const origin = tile?.getBoundingClientRect() ?? bounds;
+    const bounds = this.#animationRect(picker);
+    const origin = this.#animationRect(tile) ?? bounds;
     const geometry = rect => ({ left: `${rect.left - bounds.left}px`, top: `${rect.top - bounds.top}px`,
       width: `${rect.width}px`, height: `${rect.height}px`, right: "auto", bottom: "auto", overflow: "hidden" });
     const closed = geometry(origin);
@@ -3347,14 +3470,14 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const viewportLeft = grid.scrollLeft;
     const viewportWidth = grid.clientWidth;
     // Capture the displayed geometry before cancelling an interrupted transition.
-    const before = new Map(cards.map(item => [item, item.getBoundingClientRect()]));
-    const gridHeight = grid.getBoundingClientRect().height;
-    const summaryWidths = new Map(cards.map(item => [item, item.querySelector(".loadout-card-summary").getBoundingClientRect().width]));
+    const before = new Map(cards.map(item => [item, this.#animationRect(item)]));
+    const gridHeight = this.#animationRect(grid).height;
+    const summaryWidths = new Map(cards.map(item => [item, this.#animationRect(item.querySelector(".loadout-card-summary")).width]));
     const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const closingPanels = new Map(cards.flatMap(item => {
       const expansion = item.querySelector(".loadout-expansion");
       return !reducedMotion && expansion && !expansion.hidden && !(item === card && opening)
-        ? [[item, expansion.getBoundingClientRect().width]] : [];
+        ? [[item, this.#animationRect(expansion).width]] : [];
     }));
     grid.getAnimations().forEach(animation => animation.cancel());
     for (const item of cards) item.getAnimations({ subtree: true }).forEach(animation => animation.cancel());
@@ -3398,15 +3521,15 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       restoreAutoPlacement();
       return;
     }
-    const after = new Map(cards.map(item => [item, item.getBoundingClientRect()]));
+    const after = new Map(cards.map(item => [item, this.#animationRect(item)]));
     const finalSummaryWidths = new Map(cards.map(item => [item,
-      item.querySelector(".loadout-card-summary").getBoundingClientRect().width
+      this.#animationRect(item.querySelector(".loadout-card-summary")).width
     ]));
-    const finalGridHeight = grid.getBoundingClientRect().height;
+    const finalGridHeight = this.#animationRect(grid).height;
     // Reveal the final panel through the growing card instead of reflowing its
     // heading and two-column contents on every animation frame.
     const expansion = opening ? card.querySelector(".loadout-expansion") : null;
-    if (expansion) expansion.style.width = `${expansion.getBoundingClientRect().width}px`;
+    if (expansion) expansion.style.width = `${this.#animationRect(expansion).width}px`;
     const timing = { duration: 650, easing: "cubic-bezier(.4,0,.2,1)" };
     for (const item of cards) {
       const first = before.get(item);
@@ -3827,16 +3950,16 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     this.#sizeConsumableSquares();
     const main = row.parentElement;
     const handleCenters = [...main.querySelectorAll(":scope > .drawer-handle")].flatMap(handle => {
-      const rect = handle.getBoundingClientRect();
+      const rect = this.#animationRect(handle);
       return rect.height ? [[handle, rect.top + rect.height / 2]] : [];
     });
     const pinHandleCenters = () => {
-      const top = main.getBoundingClientRect().top + main.clientTop;
+      const top = this.#animationRect(main).top + main.clientTop;
       for (const [handle, center] of handleCenters) {
         handle.style.setProperty("--vr-drawer-handle-top", `${center - top}px`);
       }
     };
-    const normalWidth = Math.max(225, (row.getBoundingClientRect().width - 36) * .32 / 1.32);
+    const normalWidth = Math.max(225, (this.#animationRect(row).width - 36) * .32 / 1.32);
     const rowStyle = getComputedStyle(row);
     const firstWidth = parseFloat(rowStyle.gridTemplateColumns) || 0;
     const firstGap = parseFloat(rowStyle.columnGap) || 0;
@@ -3852,7 +3975,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const initialLeft = this.position?.left ?? sheetFrame.offsetLeft;
     const content = this.element.querySelector(".window-content");
     const equipmentPanel = this.element.querySelector('[data-application-part="equipment"]');
-    const initialEquipmentWidth = equipmentPanel?.getBoundingClientRect().width ?? 260;
+    const initialEquipmentWidth = this.#animationRect(equipmentPanel)?.width ?? 260;
     const finalEquipmentWidth = hidden ? 260 : normalWidth + 42;
     this.#leftFrameReveal?.cancel();
     window.clearTimeout(this.#equipmentCloseTimeout);
@@ -3865,7 +3988,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
       content.style.setProperty("--vr-left-drawer-extent", `${extent}px`);
       sheetFrame.style.transition = "none";
       sheetFrame.style.maxWidth = `${VeilrunnerHeroSheet.BASE_WIDTH + VeilrunnerHeroSheet.DRAWER_WIDTH + Math.max(initialDrawerExtent, finalDrawerExtent)}px`;
-      const left = Math.max(0, initialLeft + initialDrawerExtent - extent);
+      const left = Math.max(0, initialLeft + (initialDrawerExtent - extent) * (this.position?.scale ?? 1));
       sheetFrame.style.left = `${left}px`;
       if (this.position) this.position.left = left;
       this.#setSheetFrameWidth(this.#detailsFrameWidth);
@@ -4211,6 +4334,59 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     openCharacterCreation(this.actor, { mode: "levelUp" });
   }
 
+  static #onToggleProgressionXp() {
+    this.#progressionXpMode = this.#progressionXpMode === "level" ? "total" : "level";
+    return this.render({ parts: ["main"] });
+  }
+
+  static #onToggleProgressionPoints(event, target) {
+    const key = target?.dataset.progressionPool;
+    if (!new Set(["attribute", "talent", "skill", "perk"]).has(key)) return;
+    if (this.#progressionSpentPools.has(key)) this.#progressionSpentPools.delete(key);
+    else this.#progressionSpentPools.add(key);
+    return this.render({ parts: ["main"] });
+  }
+
+  static #onSetProgressionPage(event, target) {
+    const page = target.dataset.progressionPage;
+    if (!["overview", "journey"].includes(page)) return;
+    this.#progressionPage = page;
+    return this.render({ parts: ["main"] });
+  }
+
+  static #onFocusProgressionLevel(event, target) {
+    const journey = this.element.querySelector("[data-progression-journey]");
+    const level = Number(target.dataset.planLevel);
+    const row = journey?.querySelector(`[data-journey-level="${level}"]`);
+    if (!row) return;
+    row.open = true;
+    this.#journeyOpenLevels.set(level, true);
+    journey.scrollTop = Math.max(0, row.offsetTop - 12);
+    this.#journeyScrollTop = journey.scrollTop;
+  }
+
+  static #onLoadProgressionLevels() {
+    return this.#journeyBinding?.load();
+  }
+
+  async #appendJourneyLevels(root) {
+    const currentLevel = Number(this.actor.system.level);
+    const offset = this.#journeyFutureCount;
+    let catalog = {};
+    try { catalog = currentProgressionCatalog(); }
+    catch (error) { if (!(error instanceof ProgressionCatalogUnavailableError)) throw error; }
+    const view = progressionPresentation(this.actor.system,
+      this.actor.getFlag("Veilrunner", "progressionPlan"), this.actor.getFlag("Veilrunner", "levelPlans"),
+      catalog, 6, offset);
+    const html = await foundry.applications.handlebars.renderTemplate(
+      "systems/veilrunner/templates/actor/hero/parts/progression-journey-rows.hbs",
+      { progression: { journey: view.levels.map(entry => ({ ...entry, future: true, open: false })) } });
+    if (!root.isConnected || root !== this.element.querySelector("[data-progression-journey]")
+      || Number(this.actor.system.level) !== currentLevel || this.#journeyFutureCount !== offset) return;
+    root.querySelector('[data-action="loadProgressionLevels"]').insertAdjacentHTML("beforebegin", html);
+    this.#journeyFutureCount += 6;
+  }
+
   static #onOpenCharacterCreation(event, target) {
     openCharacterCreation(this.actor, { portraitEditor: this, destination: target?.dataset.progressionDestination });
   }
@@ -4228,6 +4404,14 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
     const level = Number(target.dataset.planLevel ?? Number(this.actor.system.level) + 1);
     if (!this.actor.isOwner || !Number.isInteger(level) || level <= Number(this.actor.system.level)) return;
     return openCharacterCreation(this.actor, { mode: "planning", planningLevel: level, destination: "attribute" });
+  }
+
+  static #onImplementLevelPlan(event, target) {
+    const level = Number(target.dataset.planLevel);
+    if (!this.actor.isOwner || level !== Number(this.actor.system.level) + 1
+      || storedHeroExperience(this.actor) < xpForLevel(this.actor.system.level)
+      || !this.actor.getFlag("Veilrunner", "levelPlans")?.[level]?.state) return;
+    return openCharacterCreation(this.actor, { mode: "levelUp", planningLevel: level, destination: "review" });
   }
 
   static async #onSaveProgressionPlan(event, target) {
@@ -4272,7 +4456,7 @@ export default class VeilrunnerHeroSheet extends HandlebarsApplicationMixin(Acto
   }
 
   static #onOpenPlayerDatapad() {
-    openPlayerDatapad();
+    openPlayerDatapad({ characterUuid: this.actor.uuid });
   }
 
 }

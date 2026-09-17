@@ -1,0 +1,280 @@
+/* Reference-style hierarchy: quiet surfaces, distinct primary/secondary selection, and technical accents. */
+.veilrunner.sheet.actor .window-content{
+  background:
+    radial-gradient(720px 210px at 18% -10%, color-mix(in srgb, var(--vr-accent) 5%, transparent), transparent 68%),
+    var(--vr-bg) !important;
+}
+
+.veilrunner.sheet.actor .bottom-nav,
+.veilrunner.sheet.actor .sub-nav-row{
+  border-color: color-mix(in srgb, var(--vr-sheet-divider) 70%, transparent);
+  background: linear-gradient(180deg, rgba(13, 15, 23, 0.98), rgba(7, 8, 13, 0.98));
+}
+
+.veilrunner.sheet.actor .bottom-nav{
+  min-height: 68px;
+  border-top: 1px solid color-mix(in srgb, var(--vr-accent) 42%, var(--vr-sheet-divider));
+  border-bottom: 1px solid rgba(132, 141, 154, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.veilrunner.sheet.actor .sub-nav-row{
+  min-height: 50px;
+  margin-top: 2px;
+  margin-bottom: 8px;
+  border-top: 1px solid rgba(132, 141, 154, 0.18);
+  border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 28%, var(--vr-sheet-divider));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    0 8px 18px rgba(0, 0, 0, 0.2);
+  overflow: visible;
+}
+
+.veilrunner.sheet.actor .sub-nav-row.has-filter-row{
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .bottom-nav .nav-indicator::before{
+  border-inline: 0;
+  background: radial-gradient(70% 48% at 50% 100%, color-mix(in srgb, var(--vr-accent) 13%, transparent), transparent 76%);
+  box-shadow: inset 0 -3px 0 var(--vr-accent);
+}
+
+.veilrunner.sheet.actor .sub-nav-row .nav-indicator::before{
+  border: 1px solid color-mix(in srgb, var(--vr-accent) 44%, transparent);
+  border-radius: 6px 6px 3px 3px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-accent) 22%, transparent), color-mix(in srgb, var(--vr-accent) 10%, transparent)),
+    rgba(255, 255, 255, 0.018);
+  box-shadow:
+    inset 0 -1px 0 color-mix(in srgb, var(--vr-accent) 70%, transparent),
+    0 0 20px color-mix(in srgb, var(--vr-accent) 12%, transparent);
+}
+
+.veilrunner.sheet.actor .bottom-nav-btn{
+  min-height: 68px;
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor .bottom-nav-btn i{
+  font-size: 1.55rem;
+}
+
+.veilrunner.sheet.actor .bottom-nav-btn span{
+  color: rgba(212, 215, 224, 0.72);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+}
+
+.veilrunner.sheet.actor .bottom-nav-btn.active{
+  background: transparent;
+}
+
+.veilrunner.sheet.actor .main-panel .bottom-nav-btn.active::after{
+  content: none;
+}
+
+.veilrunner.sheet.actor .bottom-nav-btn.active span{
+  color: rgba(247, 247, 250, 0.96);
+}
+
+.veilrunner.sheet.actor .sub-nav-btn{
+  min-height: 48px;
+  padding-top: 7px;
+}
+
+.veilrunner.sheet.actor .sub-nav-btn i{
+  top: 7px;
+  color: rgba(180, 184, 194, 0.56);
+}
+
+.veilrunner.sheet.actor .sub-nav-btn span{
+  bottom: 8px;
+  color: rgba(196, 199, 209, 0.68);
+  letter-spacing: 0.07em;
+}
+
+.veilrunner.sheet.actor .main-panel .sub-nav-btn.active{
+  color: var(--vr-text);
+  background: transparent;
+}
+
+.veilrunner.sheet.actor .main-panel .sub-nav-btn.active span{
+  color: rgba(250, 250, 252, 0.96);
+}
+
+.veilrunner.sheet.actor .main-panel .sub-nav-btn.active::after{
+  left: 50%;
+  right: auto;
+  bottom: -6px;
+  width: 14px;
+  height: 7px;
+  border-radius: 0;
+  background: var(--vr-accent);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform: translateX(-50%);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--vr-accent) 42%, transparent);
+}
+
+.veilrunner.sheet.actor .section-body{
+  padding-top: 6px;
+}
+
+.veilrunner.sheet.actor .stats-attributes-section{
+  position: relative;
+  isolation: isolate;
+  border-color: color-mix(in srgb, var(--vr-sheet-divider) 82%, transparent);
+  border-radius: 2px;
+  background:
+    radial-gradient(520px 150px at 8% 0%, color-mix(in srgb, var(--vr-accent) 4%, transparent), transparent 70%),
+    rgba(6, 8, 13, 0.96);
+  box-shadow:
+    inset 0 0 32px rgba(0, 0, 0, 0.28),
+    0 12px 30px rgba(0, 0, 0, 0.22);
+}
+
+.veilrunner.sheet.actor .stats-attributes-section::before{
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--vr-accent), var(--vr-accent)) left top / 24px 1px no-repeat,
+    linear-gradient(180deg, var(--vr-accent), var(--vr-accent)) left top / 1px 18px no-repeat,
+    linear-gradient(270deg, var(--vr-accent), var(--vr-accent)) right bottom / 24px 1px no-repeat,
+    linear-gradient(0deg, var(--vr-accent), var(--vr-accent)) right bottom / 1px 18px no-repeat;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--vr-accent) 45%, transparent));
+}
+
+.veilrunner.sheet.actor .stats-attributes-section > h1{
+  position: relative;
+  margin: 0 16px;
+  padding: 18px 0 14px 28px;
+  border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 50%, var(--vr-sheet-divider));
+  font-size: 1.08rem;
+  letter-spacing: 0.11em;
+}
+
+.veilrunner.sheet.actor .stats-attributes-section > h1::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22px;
+  width: 5px;
+  height: 5px;
+  background: var(--vr-accent);
+  box-shadow:
+    0 10px 0 color-mix(in srgb, var(--vr-accent) 30%, transparent),
+    0 16px 0 color-mix(in srgb, var(--vr-accent) 18%, transparent);
+}
+
+.veilrunner.sheet.actor .stats-attributes-section > h1::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 42px;
+  height: 3px;
+  background: var(--vr-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 54%, transparent);
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-groups{
+  gap: 10px;
+  padding: 14px 16px 16px;
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-group{
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid rgba(129, 138, 152, 0.24);
+  border-radius: 7px;
+  background: linear-gradient(145deg, rgba(20, 23, 33, 0.78), rgba(8, 10, 15, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-group-heading{
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 4px 4px;
+  background: transparent;
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+}
+
+.veilrunner.sheet.actor .attribute-group-icon{
+  position: relative;
+  display: grid;
+  flex: 0 0 25px;
+  width: 25px;
+  height: 28px;
+  place-items: center;
+  color: var(--vr-accent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--vr-accent) 90%, #ffffff), color-mix(in srgb, var(--vr-accent) 56%, #293140));
+  clip-path: polygon(50% 0, 94% 24%, 94% 76%, 50% 100%, 6% 76%, 6% 24%);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--vr-accent) 28%, transparent));
+}
+
+.veilrunner.sheet.actor .attribute-group-icon::before{
+  content: "";
+  position: absolute;
+  inset: 1px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--vr-accent) 13%, #11141d), #090b11);
+  clip-path: inherit;
+}
+
+.veilrunner.sheet.actor .attribute-group-icon i{
+  position: relative;
+  z-index: 1;
+  font-size: 0.75rem;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--vr-accent) 55%, transparent));
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-grid{
+  gap: 6px;
+  background: transparent;
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-row{
+  position: relative;
+  min-height: 42px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid rgba(117, 126, 142, 0.34);
+  border-radius: 5px;
+  background: linear-gradient(100deg, rgba(10, 12, 18, 0.98), rgba(13, 16, 24, 0.92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-row::before{
+  content: "";
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: -1px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--vr-accent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--vr-accent) 48%, transparent);
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-row .attribute-label{
+  color: rgba(225, 228, 235, 0.9);
+  font-size: 0.8rem;
+}
+
+.veilrunner.sheet.actor .stats-attributes-section .attribute-row strong{
+  font-size: 0.88rem;
+}
+
+@media (max-width: 720px) {
+  .veilrunner.sheet.actor .stats-attributes-section .attribute-groups {
+    gap: 8px;
+  }
+}
+

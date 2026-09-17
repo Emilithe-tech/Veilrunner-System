@@ -1,4 +1,4 @@
-export const PLANNING_STEPS = Object.freeze(["attributes", "talents", "review"]);
+export const PLANNING_STEPS = Object.freeze(["attributes", "qualitiesFlaws", "talents", "review"]);
 
 export function planningValidation(level) {
   return {
@@ -14,7 +14,10 @@ export function normalizePlanningLevel(currentLevel, requestedLevel) {
 }
 
 export function planningState(base, plans, level) {
-  const draft = plans?.[String(level)]?.state;
+  const previous = Object.keys(plans ?? {}).map(Number)
+    .filter(candidate => candidate < level && candidate > Number(base.startingLevel ?? 0) && plans[candidate]?.state)
+    .sort((a, b) => b - a)[0];
+  const draft = plans?.[String(level)]?.state ?? plans?.[previous]?.state;
   return { ...structuredClone(draft ?? base), startingLevel: level, startingLevelLocked: true };
 }
 

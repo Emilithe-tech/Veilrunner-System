@@ -1,6 +1,9 @@
 import { VEILRUNNER_SETTINGS, getVeilrunnerSetting } from "../settings.mjs";
 import { findPartyActorForFolder, findPartyForHero, getPartyFolderMembers, getPartyMembers } from "../helpers/party.mjs";
 import { bringVeilrunnerApplicationToFront } from "../helpers/application-layer.mjs";
+import { renderRelations, bindRelations, renderJournalRelations } from "../relations/view.mjs";
+import { storageKind, readRelations, RELATIONS_HOOK, relationNotebook, notebookTargets } from "../relations/service.mjs";
+import { resolveRelationsNavigation, RELATIONS_SECTION, RELATIONS_TAB } from "../relations/navigation.mjs";
 
 const SECTIONS = [
   { key: "quests", label: "Quests", icon: "fa-solid fa-list-check" },
@@ -56,6 +59,8 @@ function canView(document) {
 }
 
 function categoryForJournal(journal) {
+  if (storageKind(journal)) return "";
+  if (journal.getFlag?.(game.system.id, "relationsNotesOwner")) return "my-journal";
   let folder = journal.folder;
   while (folder) {
     const category = normalize(folder.name);
@@ -233,6 +238,7 @@ async function ensureDatapadFolders() {
   }
 
   for (const journal of game.journal) {
+    if (storageKind(journal)) continue;
     const configured = normalize(journal.getFlag?.(game.system.id, "datapad")?.category ?? journal.getFlag?.(game.system.id, "datapadCategory"));
     const category = configured === "player-journal" ? "my-journal" : configured;
     const folder = datapadFolders.get(category);
@@ -244,6 +250,7 @@ async function ensureDatapadFolders() {
 async function ensureDatapadJournalEditors() {
   if (!game.user.isGM) return;
   for (const journal of game.journal) {
+    if (storageKind(journal)) continue;
     const data = journalDatapadData(journal);
     if (!["my-journal", "shared-journal", "party-journal"].includes(data.category)) continue;
     const ownerUserId = data.ownerUserId || journal.folder?.getFlag?.(game.system.id, "datapadOwnerUserId") || "";
@@ -360,7 +367,8 @@ function addAchievementPageConfig(app, html) {
 }
 
 class PlayerDatapad {
-  constructor({ section = "quests", partyId = null } = {}) {
+  constructor({ section = "quests", partyId = null, ...relationsOptions } = {}) {
+    this.relationsOptions = { characterUuid: game.user.character?.uuid ?? "", ...relationsOptions, partyId };
     this.section = SECTIONS.some(entry => entry.key === section) ? section : "quests";
     this.partyId = partyId;
     this.editingJournal = null;
@@ -403,7 +411,8 @@ class PlayerDatapad {
     this.root.focus({ preventScroll: true });
   }
 
-  show({ section, partyId = null } = {}) {
+  show({ section, partyId = null, ...relationsOptions } = {}) {
+    this.relationsOptions = { ...this.relationsOptions, ...relationsOptions, partyId };
     if (SECTIONS.some(entry => entry.key === section)) this.section = section;
     this.partyId = partyId;
     this.render();
@@ -464,7 +473,15 @@ class PlayerDatapad {
         </article>`;
       }).join("") : `<div class="vr-datapad-empty"><i class="fa-solid fa-folder-open"></i><p>No ${escape(section.label.toLowerCase())} records yet.</p><small>${game.user.isGM ? "Use New to add the first record in this section." : "The GM has not shared any records in this section yet."}</small></div>`}
     </div>`;
-    const workspace = questEditor || directoryWorkspace || recordsWorkspace;
+    const relationsTab = this.section === "characters" && this.relationsOptions.tab === "standings" && game.user.isGM ? "standings" : RELATIONS_TAB[this.section];
+    if (relationsTab && this.relationsOptions.tab !== relationsTab) {
+      this.relationsOptions.tab = relationsTab;
+      const target = [...readRelations().entities, ...readRelations().maps, ...readRelations().events].find(e => e.id === this.relationsOptions.targetId);
+      if (target && target.kind && target.kind !== relationsTab) delete this.relationsOptions.targetId;
+    }
+    const relationsWorkspace = relationsTab ? '<div class="vr-rel-datapad-host" data-datapad-relations>' + renderRelations(this.relationsOptions) + '</div>' : "";
+    const journalLinks = this.viewingJournal && canView(this.viewingJournal) ? '<div data-datapad-relation-links>' + renderJournalRelations(this.viewingJournal) + '</div>' : "";
+    const workspace = relationsWorkspace + (questEditor || directoryWorkspace || recordsWorkspace) + journalLinks;
     const tabTemplate = Handlebars.partials[DATAPAD_TAB_TEMPLATE[this.section]];
     const tabContent = typeof tabTemplate === "function" ? tabTemplate({ workspace }) : workspace;
     this.root.innerHTML = `
@@ -495,6 +512,21 @@ class PlayerDatapad {
     const indicator = this.root.querySelector(".vr-datapad-nav-indicator");
     if (indicator && indicatorFrom !== activeTopIndex) requestAnimationFrame(() => indicator.style.setProperty("--nav-from", activeTopIndex));
     this.navIndicatorFrom = null;
+    bindRelations(this.root.querySelector("[data-datapad-relations]"), this.relationsOptions, navigate => {
+      if (navigate) this.section = RELATIONS_SECTION[this.relationsOptions.tab] ?? this.section;
+      this.render();
+    });
+    bindRelations(this.root.querySelector("[data-datapad-relation-links]"), this.relationsOptions, navigate => {
+      if (navigate) this.section = RELATIONS_SECTION[this.relationsOptions.tab] ?? this.section;
+      this.render();
+    });
+    this.root.querySelectorAll("[data-note-target]").forEach(button => button.addEventListener("click", () => {
+      const state = readRelations(), id = button.dataset.noteTarget;
+      const target = state.entities.find(e => e.id === id);
+      this.relationsOptions.targetId = id;
+      this.section = target ? { character: "characters", faction: "factions", location: "places" }[target.kind] : state.maps.some(m => m.id === id) ? "maps" : "timeline";
+      this.render();
+    }));
     this.root.querySelector('[data-action="close"]')?.addEventListener("click", () => this.close());
     this.root.querySelector('[data-action="fullscreen"]')?.addEventListener("click", () => this.#toggleFullscreen());
     this.root.addEventListener("contextmenu", event => this.#openDatapadContextMenu(event));
@@ -1256,6 +1288,8 @@ class PlayerDatapad {
   }
 
   #journalView(journal) {
+    if (!canView(journal)) return '<p>Unavailable.</p>';
+    if (relationNotebook(journal)) return '<section class="vr-rel-workspace"><h3>Personal relation notes</h3>' + notebookTargets(journal).map(note => '<article><button type="button" data-note-target="' + escape(note.targetId) + '">' + escape(note.name) + '</button><p style="white-space:pre-wrap">' + escape(note.content) + '</p></article>').join("") + '</section>';
     const pages = Array.from(journal.pages?.values?.() ?? []);
     const content = pages.map(page => {
       if (page.type === "text") return `<article class="vr-datapad-journal-page"><h3>${escape(page.name)}</h3><div class="vr-datapad-journal-content">${page.text?.content ?? ""}</div></article>`;
@@ -1421,6 +1455,7 @@ class PlayerDatapad {
 }
 
 export function openPlayerDatapad(options = {}) {
+  options = resolveRelationsNavigation(options, readRelations());
   if (!game.user.isGM && !getVeilrunnerSetting(VEILRUNNER_SETTINGS.allowPlayerDatapad)) {
     ui.notifications?.warn(game.i18n.localize("VEILRUNNER.Settings.DatapadDisabled"));
     return null;
@@ -1436,6 +1471,7 @@ export function openPlayerDatapad(options = {}) {
 }
 
 export function registerDatapad() {
+  Hooks.on(RELATIONS_HOOK, () => datapad?.render());
   game.keybindings.register(game.system.id, "openPlayerDatapad", {
     name: "VEILRUNNER.Keybindings.openPlayerDatapad.Name",
     hint: "VEILRUNNER.Keybindings.openPlayerDatapad.Hint",

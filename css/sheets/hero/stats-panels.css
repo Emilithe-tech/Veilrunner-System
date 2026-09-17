@@ -1,0 +1,120 @@
+/* Carry the Attributes treatment through the remaining Character > Stats panels. */
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section){
+  position: relative;
+  isolation: isolate;
+  border-color: color-mix(in srgb, var(--vr-sheet-divider) 76%, transparent);
+  border-radius: 2px;
+  background:
+    radial-gradient(420px 120px at 8% 0%, color-mix(in srgb, var(--vr-accent) 3%, transparent), transparent 72%),
+    rgba(6, 8, 13, 0.94);
+  box-shadow:
+    inset 0 0 26px rgba(0, 0, 0, 0.22),
+    0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section)::before{
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--vr-accent) 72%, transparent), color-mix(in srgb, var(--vr-accent) 72%, transparent)) left top / 18px 1px no-repeat,
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-accent) 72%, transparent), color-mix(in srgb, var(--vr-accent) 72%, transparent)) left top / 1px 13px no-repeat,
+    linear-gradient(270deg, color-mix(in srgb, var(--vr-accent) 72%, transparent), color-mix(in srgb, var(--vr-accent) 72%, transparent)) right bottom / 18px 1px no-repeat,
+    linear-gradient(0deg, color-mix(in srgb, var(--vr-accent) 72%, transparent), color-mix(in srgb, var(--vr-accent) 72%, transparent)) right bottom / 1px 13px no-repeat;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--vr-accent) 30%, transparent));
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) > h1{
+  position: relative;
+  margin: 0 14px;
+  padding: 14px 0 11px 24px;
+  border-bottom: 1px solid color-mix(in srgb, var(--vr-accent) 38%, var(--vr-sheet-divider));
+  font-size: 0.94rem;
+  letter-spacing: 0.1em;
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) > h1::before{
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  background: color-mix(in srgb, var(--vr-accent) 88%, #ffffff);
+  box-shadow:
+    0 8px 0 color-mix(in srgb, var(--vr-accent) 26%, transparent),
+    0 13px 0 color-mix(in srgb, var(--vr-accent) 14%, transparent);
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) > h1::after{
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 34px;
+  height: 3px;
+  background: color-mix(in srgb, var(--vr-accent) 82%, transparent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--vr-accent) 42%, transparent);
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-grid{
+  gap: 8px;
+  padding: 12px 14px 14px;
+  background: transparent;
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-row{
+  position: relative;
+  min-height: 44px;
+  padding: 9px 11px 9px 13px;
+  border: 1px solid rgba(117, 126, 142, 0.3);
+  border-radius: 5px;
+  background: linear-gradient(100deg, rgba(10, 12, 18, 0.97), rgba(13, 16, 24, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-row::before{
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: -1px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: color-mix(in srgb, var(--vr-accent) 76%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--vr-accent) 34%, transparent);
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-row > span{
+  color: rgba(218, 222, 230, 0.82);
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-row strong{
+  color: rgba(250, 250, 252, 0.96);
+  font-size: 0.88rem;
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-row input{
+  border-color: color-mix(in srgb, var(--vr-accent) 28%, var(--vr-border));
+  background: rgba(8, 10, 16, 0.94);
+  color: rgba(250, 250, 252, 0.96);
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-initiative-value{
+  gap: 5px;
+}
+
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-initiative-value button{
+  border-color: color-mix(in srgb, var(--vr-accent) 34%, var(--vr-border));
+  color: color-mix(in srgb, var(--vr-accent) 78%, #ffffff);
+  background: color-mix(in srgb, var(--vr-accent) 8%, var(--vr-tech-control));
+}
+
+@media (max-width: 720px) {
+  .veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-grid {
+    gap: 6px;
+  }
+}
+

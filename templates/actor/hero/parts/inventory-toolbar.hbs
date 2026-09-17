@@ -1,0 +1,84 @@
+      {{#if (eq section "inventory")}}
+        <div class="inventory-toolbar {{#if hasInventoryFilters}}has-inventory-filters{{else}}no-inventory-filters{{/if}}">
+          <label class="inventory-search-field">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" value="{{inventorySearch}}" data-inventory-search placeholder="{{inventorySearchPlaceholder}}" aria-label="{{inventorySearchPlaceholder}}" />
+          </label>
+          {{#if hasInventoryFilters}}
+            <button type="button" class="inventory-filter-toggle {{#if inventoryFiltersOpen}}active{{/if}} {{#unless inventoryFilterIsDefault}}has-filter{{/unless}}"
+               data-action="toggleInventoryFilters" aria-expanded="{{#if inventoryFiltersOpen}}true{{else}}false{{/if}}"
+               aria-controls="inventory-filter-popover-{{actor.id}}">
+              <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              <span>{{localize 'VEILRUNNER.InventoryFilter.label'}}</span>
+              {{#unless inventoryFilterIsDefault}}<small>{{inventoryFilterLabel}}</small>{{/unless}}
+            </button>
+          {{/if}}
+          <label class="inventory-sort-control">
+            <span>{{localize 'VEILRUNNER.InventorySort.Label'}}</span>
+            <select data-inventory-sort aria-label="{{localize 'VEILRUNNER.InventorySort.Label'}}">
+              {{#each inventorySortOptions as |option|}}
+                <option value="{{option.key}}" {{#if option.active}}selected{{/if}}>{{localize option.label}}</option>
+              {{/each}}
+            </select>
+          </label>
+          <span class="inventory-layout-controls" role="group" aria-label="{{localize 'VEILRUNNER.InventoryLayout.label'}}">
+            <button type="button" class="inventory-layout-btn {{#if (eq inventoryLayout 'list')}}active{{/if}}"
+               data-action="setInventoryLayout" data-layout="list" title="{{localize 'VEILRUNNER.InventoryLayout.list'}}" aria-label="{{localize 'VEILRUNNER.InventoryLayout.list'}}">
+              <i class="fa-solid fa-list" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="inventory-layout-btn {{#if (eq inventoryLayout 'grid')}}active{{/if}}"
+               data-action="setInventoryLayout" data-layout="grid" title="{{localize 'VEILRUNNER.InventoryLayout.grid'}}" aria-label="{{localize 'VEILRUNNER.InventoryLayout.grid'}}">
+              <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+            </button>
+          </span>
+          {{#if hasInventoryFilters}}
+          <div id="inventory-filter-popover-{{actor.id}}" class="inventory-filter-popover {{#if inventoryFiltersOpen}}open{{/if}}"
+               role="dialog" aria-label="{{localize 'VEILRUNNER.InventoryFilter.label'}}" aria-hidden="{{#if inventoryFiltersOpen}}false{{else}}true{{/if}}">
+            <div class="inventory-filter-popover-heading">
+              <span>{{localize 'VEILRUNNER.InventoryFilter.heading'}}</span>
+              <small>{{inventoryFilterLabel}}</small>
+            </div>
+            {{#if inventoryUsesWeaponGroupLayout}}
+              <nav class="inventory-weapon-filters is-weapon-group-layout" aria-label="{{localize 'VEILRUNNER.InventoryFilter.label'}}">
+                {{#with inventoryWeaponFilterAll as |filter|}}
+                  <button type="button" class="inventory-filter-btn inventory-main-filter inventory-filter-reset {{#if filter.active}}active{{/if}}"
+                     data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                     title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                    <i class="{{filter.icon}}" aria-hidden="true"></i><span>{{localize filter.label}}</span>
+                  </button>
+                {{/with}}
+                <div class="inventory-filter-column inventory-filter-column-left">
+                  {{#each inventoryWeaponFilterLeft as |filter|}}
+                    <button type="button" class="inventory-filter-btn inventory-main-filter {{#if filter.active}}active{{/if}}"
+                       data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                       title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                      <i class="{{filter.icon}}" aria-hidden="true"></i><span>{{localize filter.label}}</span>
+                    </button>
+                  {{/each}}
+                </div>
+                <div class="inventory-filter-column inventory-filter-column-right">
+                  {{#each inventoryWeaponFilterRight as |filter|}}
+                    <button type="button" class="inventory-filter-btn inventory-main-filter {{#if filter.active}}active{{/if}}"
+                       data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                       title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                      <i class="{{filter.icon}}" aria-hidden="true"></i><span>{{localize filter.label}}</span>
+                    </button>
+                  {{/each}}
+                </div>
+              </nav>
+            {{else}}
+              <nav class="inventory-weapon-filters" aria-label="{{localize 'VEILRUNNER.InventoryFilter.label'}}">
+                {{#each inventoryMainFilters as |filter|}}
+                  <button type="button" class="inventory-filter-btn inventory-main-filter {{#if filter.active}}active{{/if}}"
+                     data-action="setInventoryWeaponFilter" data-filter="{{filter.key}}"
+                     title="{{localize filter.label}}" aria-label="{{localize filter.label}}" aria-pressed="{{#if filter.active}}true{{else}}false{{/if}}">
+                    {{#if filter.icon}}<i class="{{filter.icon}}" aria-hidden="true"></i>{{/if}}
+                    <span>{{localize filter.label}}</span>
+                  </button>
+                {{/each}}
+              </nav>
+            {{/if}}
+          </div>
+          {{/if}}
+        </div>
+      {{/if}}

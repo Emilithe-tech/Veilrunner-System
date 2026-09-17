@@ -1,0 +1,9 @@
+      {{#if (eq section "inventory")}}
+        <footer class="inventory-carry-footer" data-encumbrance-state="{{inventoryEncumbranceState}}"
+                aria-label="{{localize 'VEILRUNNER.CarryWeight'}}: {{inventoryCarryWeightKg}} kg / {{inventoryCarryCapacityKg}} kg — {{inventoryEncumbranceLabel}}">
+          <span>{{localize 'VEILRUNNER.CarryWeight'}}</span>
+          <span class="inventory-carry-meter" style="--inventory-carry-percent: {{inventoryCarryWeightPercent}}%" aria-hidden="true"></span>
+          <strong>{{inventoryCarryWeightKg}} kg / {{inventoryCarryCapacityKg}} kg</strong>
+          <span class="inventory-encumbrance-status"><i class="fa-solid fa-circle" aria-hidden="true"></i>{{inventoryEncumbranceLabel}}</span>
+        </footer>
+      {{/if}}

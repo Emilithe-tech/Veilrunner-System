@@ -1,3 +1,5 @@
+import { PERK_ICON } from "./quality-rules.mjs";
+
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
 
 const targetAttributes = ({ key = "", pane = "" } = {}) => `data-review-target="${escape(key)}"${pane ? ` data-review-pane="${escape(pane)}"` : ""}`;
@@ -39,7 +41,7 @@ function talentsCard(model) {
 function qualitiesCard(model) {
   const badges = [statusBadge(model.valid ? "Valid" : "Required attention", model.valid ? "complete" : "error")];
   const chips = entries => entries.length ? `<div class="vr-cc-review-chips">${entries.map(entry => `<span>${escape(entry.name)}</span>`).join("")}</div>` : empty("None selected.");
-  return reviewCard({ title: "Perks & Flaws", target: { key: "qualitiesFlaws" }, badges, content: `<div class="vr-cc-review-split"><section><h3>Perks</h3>${chips(model.perks)}</section><section><h3>Flaws</h3>${chips(model.flaws)}</section></div>` });
+  return reviewCard({ title: "Perks & Flaws", target: { key: "qualitiesFlaws" }, badges, content: `<div class="vr-cc-review-split"><section><h3><i class="fa-solid ${PERK_ICON}" aria-hidden="true"></i> Perks</h3>${chips(model.perks)}</section><section><h3>Flaws</h3>${chips(model.flaws)}</section></div>` });
 }
 
 function languagesCard(model) {

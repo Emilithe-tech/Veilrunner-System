@@ -17,7 +17,7 @@ test("planner supports future levels beyond the sheet preview", () => {
   assert.equal(normalizePlanningLevel(4), 5);
   assert.equal(normalizePlanningLevel(4, 2), 5);
   assert.equal(normalizePlanningLevel(4, 25), 25);
-  assert.deepEqual(PLANNING_STEPS, ["attributes", "talents", "review"]);
+  assert.deepEqual(PLANNING_STEPS, ["attributes", "qualitiesFlaws", "talents", "review"]);
 });
 test("reopening a level restores an independent draft", () => {
   const base = { attributes: { agility: 2 } };
@@ -27,7 +27,8 @@ test("reopening a level restores an independent draft", () => {
   assert.equal(reopened.startingLevel, 8);
   reopened.attributes.agility = 6;
   assert.equal(plans[8].state.attributes.agility, 4);
-  assert.equal(planningState(base, plans, 9).attributes.agility, 2);
+  assert.equal(planningState(base, plans, 9).attributes.agility, 4);
+  assert.equal(planningState({ ...base, startingLevel: 8 }, plans, 9).attributes.agility, 2);
 });
 test("saving only writes the selected plan flag, without applying the hero build", async () => {
   const writes = [];
@@ -41,7 +42,8 @@ test("saving only writes the selected plan flag, without applying the hero build
   await assert.rejects(saveLevelPlan({ ...actor, isOwner: false }, 7, state));
 });
 test("sheet planner entry points use chargen planning, not the old inline editor", () => {
-  const template = fs.readFileSync(new URL("../templates/actor/hero/parts/progression.hbs", import.meta.url), "utf8");
+  const template = fs.readFileSync(new URL("../templates/actor/hero/parts/progression.hbs", import.meta.url), "utf8")
+    + fs.readFileSync(new URL("../templates/actor/hero/parts/progression-journey-rows.hbs", import.meta.url), "utf8");
   assert.equal((template.match(/data-action="openLevelPlanner"/g) ?? []).length, 2);
   assert.ok(!template.includes('data-action="toggleProgressionPlanner"'));
   const sheet = fs.readFileSync(new URL("../modules/sheets/hero-sheet.mjs", import.meta.url), "utf8");

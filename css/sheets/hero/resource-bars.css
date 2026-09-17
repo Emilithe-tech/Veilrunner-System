@@ -1,0 +1,936 @@
+/* Portrait-side pools use compact technical meters rather than glowing fantasy rails. */
+.veilrunner.sheet.actor .bar-track.vertical.hud.mana,
+.veilrunner.sheet.actor .bar-track.vertical.hud.stamina{
+  width: 12px;
+  border-radius: 6px;
+  background: rgba(4, 8, 16, 0.68);
+  border-color: color-mix(in srgb, var(--pool-bar-color) 48%, rgba(255, 255, 255, 0.1));
+  box-shadow:
+    inset 0 0 8px rgba(0, 0, 0, 0.62),
+    0 0 7px color-mix(in srgb, var(--pool-bar-color) 18%, transparent);
+}
+
+.veilrunner.sheet.actor .bar-track.vertical.hud.mana{
+  --pool-bar-color: #60a5fa;
+  --pool-bar-deep: #1d4ed8;
+}
+
+.veilrunner.sheet.actor .bar-track.vertical.hud.stamina{
+  --pool-bar-color: #f59e0b;
+  --pool-bar-deep: #b45309;
+}
+
+.veilrunner.sheet.actor .bar-track.vertical.hud.mana::before,
+.veilrunner.sheet.actor .bar-track.vertical.hud.stamina::before{
+  display: none;
+}
+
+.veilrunner.sheet.actor .bar-fill.mana,
+.veilrunner.sheet.actor .bar-fill.stamina{
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 0 rgba(0, 0, 0, 0.36);
+}
+
+.veilrunner.sheet.actor .bar-fill.mana{
+  background: linear-gradient(90deg, #1d4ed8, #60a5fa);
+  color: #60a5fa;
+}
+
+.veilrunner.sheet.actor .bar-fill.stamina{
+  background: linear-gradient(90deg, #b45309, #fbbf24);
+  color: #f59e0b;
+}
+
+.veilrunner.sheet.actor .bar-fill.mana::after,
+.veilrunner.sheet.actor .bar-fill.stamina::after{
+  display: none;
+}
+
+
+.veilrunner.sheet.actor .bar-track.horizontal{
+  position: relative;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .bar-track.horizontal.xp .bar-fill{
+  height: 100%;
+  width: auto;
+  background: linear-gradient(90deg, #22d3ee, #3b82f6 55%, #8b5cf6);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.45);
+}
+
+.veilrunner.sheet.actor .xp-pill-text{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.veilrunner.sheet.actor .xp-pill-text input{
+  width: 3.5ch;
+  background: transparent;
+  border: none;
+  color: var(--vr-text);
+  text-align: center;
+}
+
+.veilrunner.sheet.actor .level-diamond{
+  --level-xp: 0%;
+  --level-glow: 0;
+  position: relative;
+  right: auto;
+  bottom: auto;
+  transform: rotate(45deg);
+  width: 38px;
+  height: 38px;
+  background: #12141c;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 calc(3px + (10px * var(--level-glow))) rgba(34, 211, 238, calc(var(--level-glow) * 0.18)),
+    inset 0 0 calc(3px + (8px * var(--level-glow))) rgba(34, 211, 238, calc(var(--level-glow) * 0.12));
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  flex-shrink: 0;
+}
+
+.veilrunner.sheet.actor button.level-diamond{
+  appearance: none;
+  min-height: 38px;
+  padding: 0;
+  color: var(--vr-text);
+  cursor: pointer;
+}
+
+.veilrunner.sheet.actor button.level-diamond:hover{
+  border-color: rgba(34, 211, 238, 0.72);
+  filter: brightness(1.12);
+}
+
+.veilrunner.sheet.actor .level-xp-ring{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.veilrunner.sheet.actor .level-xp-ring::before{
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 4px solid transparent;
+  border-image:
+    conic-gradient(
+      from -45deg,
+      rgba(34, 211, 238, 0.82) 0 var(--level-xp),
+      transparent var(--level-xp) 100%
+    ) 1;
+  opacity: var(--level-glow);
+  filter: blur(5px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.veilrunner.sheet.actor .level-xp-ring::after{
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 3px solid transparent;
+  border-image:
+    conic-gradient(
+      from -45deg,
+      rgba(34, 211, 238, 0.95) 0 var(--level-xp),
+      transparent var(--level-xp) 100%
+    ) 1;
+  opacity: var(--level-glow);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.veilrunner.sheet.actor .hero-portrait-diamond{
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%) rotate(45deg);
+}
+
+.veilrunner.sheet.actor .hero-vital-pips{
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
+  align-self: center;
+  width: calc(100% - 12px);
+  box-sizing: border-box;
+  align-items: start;
+  gap: 8px;
+  min-height: 60px;
+  margin: -6px 0 0;
+  padding: 16px 5px 2px;
+  z-index: auto;
+  border: 2px solid var(--vr-sheet-divider);
+  border-top-color: var(--vr-sheet-divider-strong);
+  border-radius: 0 0 12px 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
+    rgba(11, 13, 20, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.36);
+}
+
+.veilrunner.sheet.actor .hero-vital-pips::before,
+.veilrunner.sheet.actor .hero-vital-pips::after{
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .hero-vital-pips::before{
+  left: 0;
+  right: calc(50% + 34px);
+}
+
+.veilrunner.sheet.actor .hero-vital-pips::after{
+  left: calc(50% + 34px);
+  right: 0;
+}
+
+.veilrunner.sheet.actor .hero-vital-pips .hero-vital-diamond::before{
+  inset: -8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-image: none;
+  background: rgba(11, 13, 20, 0.82);
+  filter: none;
+  opacity: 1;
+  z-index: -1;
+}
+
+.veilrunner.sheet.actor .hero-vital-pips .hero-vital-diamond::after{
+  inset: -5px;
+  border: 1px solid rgba(34, 211, 238, 0.26);
+  border-image: none;
+  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.18));
+  opacity: 1;
+  z-index: -1;
+}
+
+.veilrunner.sheet.actor .hero-status-track{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 58px;
+  width: 58px;
+  gap: 2px 4px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .hero-status-track.wounded{
+  grid-column: 1;
+  justify-self: end;
+  padding-left: 0;
+}
+
+.veilrunner.sheet.actor .hero-status-track.dying{
+  grid-column: 3;
+  justify-self: start;
+  padding-right: 0;
+}
+
+.veilrunner.sheet.actor .hero-vital-diamond{
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  align-self: start;
+  width: 56px;
+  height: 56px;
+  margin-top: -43px;
+  z-index: 5;
+}
+
+.veilrunner.sheet.actor button.hero-vital-diamond{
+  min-height: 56px;
+}
+
+.veilrunner.sheet.actor .hero-vital-diamond span,
+.veilrunner.sheet.actor .hero-vital-diamond input{
+  font-size: 1.32rem;
+  width: 3ch;
+}
+
+.veilrunner.sheet.actor .hero-status-icons{
+  display: flex;
+  flex-basis: 100%;
+  justify-content: flex-start;
+  gap: 2px;
+}
+
+.veilrunner.sheet.actor .hero-status-pip{
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  background: rgba(8, 10, 16, 0.78);
+  color: rgba(255, 255, 255, 0.35);
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.64rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.veilrunner.sheet.actor .hero-status-pip:hover{
+  border-color: rgba(255, 255, 255, 0.36);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.veilrunner.sheet.actor .wounded .hero-status-pip.active{
+  border-color: rgba(251, 146, 60, 0.68);
+  color: #fdba74;
+  box-shadow: 0 0 8px rgba(251, 146, 60, 0.3);
+}
+
+.veilrunner.sheet.actor .dying .hero-status-pip.active{
+  border-color: rgba(248, 113, 113, 0.62);
+  color: #fca5a5;
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.28);
+}
+
+.veilrunner.sheet.actor .hero-status-label{
+  flex-basis: 100%;
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.56rem;
+  line-height: 1;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.veilrunner.sheet.actor .hero-status-track.dying .hero-status-label{
+  text-align: right;
+}
+
+.veilrunner.sheet.actor .hero-resource-divider{
+  position: relative;
+  height: 1px;
+  margin: 0 0 -6px;
+  background: linear-gradient(90deg, transparent, var(--vr-sheet-divider-strong), transparent);
+}
+
+.veilrunner.sheet.actor .hero-resource-divider::before,
+.veilrunner.sheet.actor .hero-resource-divider::after{
+  content: none;
+}
+
+.veilrunner.sheet.actor .level-diamond.maxed{
+  border-color: rgba(34, 211, 238, 0.34);
+  animation: vr-level-max-pulse 1.35s ease-in-out infinite;
+  box-shadow:
+    0 0 18px rgba(34, 211, 238, 0.48),
+    0 0 30px rgba(34, 211, 238, 0.28),
+    inset 0 0 12px rgba(34, 211, 238, 0.16);
+}
+
+.veilrunner.sheet.actor .level-diamond.maxed .level-xp-ring::before{
+  animation: vr-level-line-blur-pulse 1.35s ease-in-out infinite;
+}
+
+.veilrunner.sheet.actor .level-diamond.maxed .level-xp-ring::after{
+  animation: vr-level-line-pulse 1.35s ease-in-out infinite;
+}
+
+.veilrunner.sheet.actor .level-diamond span,
+.veilrunner.sheet.actor .level-diamond input{
+  transform: rotate(-45deg);
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  width: 3.6ch;
+  border: none;
+  background: transparent;
+  color: var(--vr-text);
+  font-weight: 700;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0px;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .stat{
+  order: initial;
+}
+
+.veilrunner.sheet.actor .stat{
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 2px 0;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor .resource-bar{
+  --resource-icon-color: var(--vr-accent);
+  display: grid;
+  gap: 4px;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar .bar-track.horizontal{
+  position: relative;
+  min-height: 18px;
+  height: 18px;
+  border-radius: 0 999px 999px 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar .bar-fill{
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: var(--vr-accent);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-track.horizontal{
+  --resource-icon-color: #f59e0b;
+  border-radius: 4px;
+  border-color: rgba(251, 191, 36, 0.54);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(15, 23, 42, 0.18) 45%, rgba(0, 0, 0, 0.22)),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.97), rgba(51, 65, 85, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    inset 0 0 12px rgba(251, 191, 36, 0.08),
+    0 0 10px rgba(245, 158, 11, 0.16);
+}
+
+/* Damage remains visible across the empty track, even when armor is depleted. */
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-track::before,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-track::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-repeat: repeat-x;
+  background-size: 96px 100%;
+  transition: opacity 0.3s ease;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-track::before{
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 24' preserveAspectRatio='none'%3E%3Cpath d='M18 0 23 6 19 12 27 17 24 24M19 12 10 15 6 21M67 0 61 8 65 13 58 19 60 24M65 13 75 10 81 14' fill='none' stroke='%23090b10' stroke-width='1.6'/%3E%3Cpath d='M20 0 25 6 21 12M69 0 63 8' fill='none' stroke='%23e2e8f0' stroke-opacity='.45' stroke-width='.7'/%3E%3C/svg%3E");
+  opacity: clamp(0, calc((100 - var(--armor-integrity, 100)) / 75), 1);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-track::after{
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 24' preserveAspectRatio='none'%3E%3Cpath d='M16 0H24L21 7ZM21 10 30 16 23 24H17L22 17ZM58 0H66L60 10 54 6ZM62 13 70 18 66 24H55L58 18ZM36 0 40 8 36 12 45 18 43 24M40 8 49 6M83 0 78 5 85 12 80 24' fill='%2306090e' stroke='%2306090e' stroke-width='1.3'/%3E%3C/svg%3E");
+  opacity: clamp(0, calc((55 - var(--armor-integrity, 100)) / 55), 1);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-text{
+  z-index: 2;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill{
+  background:
+    linear-gradient(90deg, transparent 0 18%, rgba(69, 26, 3, 0.46) 18.4% 19.4%, transparent 19.8% 38%, rgba(69, 26, 3, 0.5) 38.4% 39.4%, transparent 39.8% 58%, rgba(69, 26, 3, 0.5) 58.4% 59.4%, transparent 59.8% 78%, rgba(69, 26, 3, 0.46) 78.4% 79.4%, transparent 79.8%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(251, 191, 36, 0.18) 22%, rgba(146, 64, 14, 0.24) 58%, rgba(69, 26, 3, 0.46)),
+    linear-gradient(90deg, #713f12, #b45309 48%, #fbbf24 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(120, 53, 15, 0.32),
+    0 0 10px rgba(245, 158, 11, 0.28);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::before,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::after{
+  content: "";
+  position: absolute;
+  inset: 2px 5px;
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::before{
+  background:
+    linear-gradient(90deg, transparent 0 17%, rgba(255, 237, 213, 0.28) 17.2% 17.8%, transparent 18.4% 37%, rgba(255, 237, 213, 0.24) 37.2% 37.8%, transparent 38.4% 57%, rgba(255, 237, 213, 0.22) 57.2% 57.8%, transparent 58.4% 77%, rgba(255, 237, 213, 0.2) 77.2% 77.8%, transparent 78.4%),
+    linear-gradient(180deg, rgba(255, 237, 213, 0.32), transparent 42%, rgba(0, 0, 0, 0.18));
+  opacity: 0.9;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::after{
+  background:
+    radial-gradient(circle at 10% 50%, rgba(255, 237, 213, 0.72) 0 1px, rgba(120, 53, 15, 0.4) 1.5px, transparent 2.4px),
+    radial-gradient(circle at 30% 50%, rgba(255, 237, 213, 0.6) 0 1px, rgba(120, 53, 15, 0.36) 1.5px, transparent 2.4px),
+    radial-gradient(circle at 50% 50%, rgba(255, 237, 213, 0.58) 0 1px, rgba(120, 53, 15, 0.34) 1.5px, transparent 2.4px),
+    radial-gradient(circle at 70% 50%, rgba(255, 237, 213, 0.56) 0 1px, rgba(120, 53, 15, 0.32) 1.5px, transparent 2.4px),
+    radial-gradient(circle at 90% 50%, rgba(255, 237, 213, 0.54) 0 1px, rgba(120, 53, 15, 0.3) 1.5px, transparent 2.4px);
+  opacity: 0.7;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-track.horizontal{
+  --resource-icon-color: #22d3ee;
+  border-color: rgba(186, 230, 253, 0.82);
+  background:
+    radial-gradient(circle at 14% 44%, rgba(255, 255, 255, 0.18), transparent 18%),
+    radial-gradient(circle at 45% 56%, rgba(56, 189, 248, 0.24), transparent 24%),
+    radial-gradient(circle at 84% 42%, rgba(125, 211, 252, 0.2), transparent 22%),
+    linear-gradient(180deg, rgba(240, 249, 255, 0.18), rgba(8, 47, 73, 0.08)),
+    linear-gradient(90deg, rgba(7, 89, 133, 0.96), rgba(3, 105, 161, 0.92));
+  box-shadow:
+    inset 0 0 0 1px rgba(240, 249, 255, 0.28),
+    inset 0 0 18px rgba(56, 189, 248, 0.32),
+    0 0 16px rgba(56, 189, 248, 0.34),
+    0 0 30px rgba(14, 165, 233, 0.22);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-fill{
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(56, 189, 248, 0.24) 42%, rgba(2, 132, 199, 0.56)),
+    linear-gradient(90deg, #0284c7, #38bdf8 45%, #e0f2fe 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    inset 0 -1px 0 rgba(8, 47, 73, 0.42),
+    0 0 18px rgba(125, 211, 252, 0.7),
+    0 0 34px rgba(14, 165, 233, 0.38);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-fill::before,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-fill::after{
+  content: "";
+  position: absolute;
+  inset: 1px 4px;
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-fill::before{
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='13.856' viewBox='0 0 24 13.856'%3E%3Cpath d='M0 6.928 4 0H12L16 6.928 12 13.856H4ZM16 6.928H24' fill='none' stroke='%23e0f2fe' stroke-width='0.8'/%3E%3C/svg%3E");
+  background-size: 24px 13.856px;
+  filter: none;
+  opacity: 0.3;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-fill::after{
+  background:
+    radial-gradient(circle at 20% 45%, rgba(255, 255, 255, 0.92) 0 1px, transparent 2px),
+    radial-gradient(circle at 44% 35%, rgba(236, 254, 255, 0.82) 0 1px, transparent 2px),
+    radial-gradient(circle at 72% 62%, rgba(255, 255, 255, 0.86) 0 1px, transparent 2px),
+    radial-gradient(circle at 88% 40%, rgba(186, 230, 253, 0.84) 0 1px, transparent 2px);
+  opacity: 0.85;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-track.horizontal{
+  --resource-icon-color: #c084fc;
+  border-color: rgba(216, 180, 254, 0.68);
+  background:
+    radial-gradient(circle at 14% 56%, rgba(240, 171, 252, 0.22), transparent 33%),
+    radial-gradient(circle at 52% 44%, rgba(167, 243, 208, 0.14), transparent 30%),
+    radial-gradient(circle at 88% 50%, rgba(196, 181, 253, 0.22), transparent 35%),
+    linear-gradient(180deg, rgba(243, 232, 255, 0.12), rgba(46, 16, 101, 0.08)),
+    linear-gradient(90deg, rgba(46, 16, 101, 0.94), rgba(88, 28, 135, 0.9));
+  box-shadow:
+    inset 0 0 0 1px rgba(243, 232, 255, 0.18),
+    inset 0 0 18px rgba(192, 132, 252, 0.28),
+    0 0 14px rgba(192, 132, 252, 0.26),
+    0 0 24px rgba(45, 212, 191, 0.12);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-fill{
+  background:
+    radial-gradient(circle at 16% 48%, rgba(255, 255, 255, 0.5), transparent 8%),
+    radial-gradient(circle at 42% 54%, rgba(167, 243, 208, 0.34), transparent 13%),
+    radial-gradient(circle at 78% 42%, rgba(250, 232, 255, 0.45), transparent 11%),
+    linear-gradient(180deg, rgba(250, 232, 255, 0.52), rgba(168, 85, 247, 0.22) 48%, rgba(76, 29, 149, 0.42)),
+    linear-gradient(90deg, #7e22ce, #a855f7 46%, #d8b4fe 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(250, 232, 255, 0.66),
+    inset 0 -1px 0 rgba(59, 7, 100, 0.46),
+    0 0 16px rgba(192, 132, 252, 0.52),
+    0 0 28px rgba(45, 212, 191, 0.18);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-fill::before,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-fill::after{
+  content: "";
+  position: absolute;
+  inset: 1px 5px;
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-fill::before{
+  background:
+    radial-gradient(ellipse at 20% 50%, transparent 0 26%, rgba(250, 232, 255, 0.5) 27% 29%, transparent 30%),
+    radial-gradient(ellipse at 58% 48%, transparent 0 21%, rgba(167, 243, 208, 0.38) 22% 24%, transparent 25%),
+    radial-gradient(ellipse at 83% 52%, transparent 0 24%, rgba(233, 213, 255, 0.44) 25% 27%, transparent 28%);
+  filter: drop-shadow(0 0 5px rgba(216, 180, 254, 0.58));
+  opacity: 0.9;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-fill::after{
+  background:
+    radial-gradient(circle at 18% 42%, rgba(250, 232, 255, 0.82) 0 1px, transparent 2px),
+    radial-gradient(circle at 36% 62%, rgba(167, 243, 208, 0.72) 0 1px, transparent 2px),
+    radial-gradient(circle at 64% 36%, rgba(250, 232, 255, 0.78) 0 1px, transparent 2px),
+    radial-gradient(circle at 86% 58%, rgba(216, 180, 254, 0.84) 0 1px, transparent 2px);
+  opacity: 0.78;
+}
+
+/* Keep empty defensive-resource tracks subdued so the filled state carries the color. */
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-track.horizontal{
+  border-color: rgba(125, 211, 252, 0.38);
+  background:
+    linear-gradient(180deg, rgba(148, 163, 184, 0.08), rgba(15, 23, 42, 0.18)),
+    linear-gradient(90deg, #0b1722, #102638);
+  box-shadow:
+    inset 0 0 0 1px rgba(186, 230, 253, 0.08),
+    inset 0 0 10px rgba(2, 132, 199, 0.1),
+    0 0 7px rgba(14, 165, 233, 0.1);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-track.horizontal{
+  border-color: rgba(216, 180, 254, 0.38);
+  background:
+    linear-gradient(180deg, rgba(196, 181, 253, 0.07), rgba(30, 27, 75, 0.18)),
+    linear-gradient(90deg, #171326, #251a3d);
+  box-shadow:
+    inset 0 0 0 1px rgba(233, 213, 255, 0.07),
+    inset 0 0 10px rgba(168, 85, 247, 0.1),
+    0 0 7px rgba(168, 85, 247, 0.09);
+}
+
+/* Defensive resources share Health's depth and subtle active-state glow. */
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-track.horizontal{
+  --resource-icon-color: #cbd5e1;
+  border-color: rgba(203, 213, 225, 0.5);
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.12), rgba(15, 23, 42, 0.2)), #111827;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.48),
+    inset 0 0 9px rgba(148, 163, 184, 0.12),
+    0 0 9px rgba(203, 213, 225, 0.15);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill{
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(148, 163, 184, 0.16) 46%, rgba(51, 65, 85, 0.38)), linear-gradient(90deg, #475569, #94a3b8 54%, #e2e8f0);
+  color: #cbd5e1;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    inset 0 -1px 0 rgba(15, 23, 42, 0.46),
+    0 0 12px rgba(203, 213, 225, 0.42);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::before,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::after{
+  display: none;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-fill{
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -1px 0 rgba(8, 47, 73, 0.46),
+    0 0 12px rgba(125, 211, 252, 0.54);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-fill{
+  box-shadow:
+    inset 0 1px 0 rgba(250, 232, 255, 0.66),
+    inset 0 -1px 0 rgba(59, 7, 100, 0.46),
+    0 0 12px rgba(192, 132, 252, 0.48);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::before{
+  display: block;
+  inset: 2px 5px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0 1px, transparent 1px 18px);
+  opacity: 0.58;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.armor .bar-fill::after,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.shields .bar-fill::after,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.barriers .bar-fill::after{
+  display: block;
+  top: 1px;
+  right: 0;
+  bottom: 1px;
+  left: auto;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0 7px rgba(255, 255, 255, 0.52);
+  filter: none;
+  opacity: 1;
+}
+
+.veilrunner.sheet.actor .bar-track.horizontal .bar-text{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 6px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow:
+    1px 0 1px rgba(0, 0, 0, 0.96),
+    -1px 0 1px rgba(0, 0, 0, 0.96),
+    0 1px 1px rgba(0, 0, 0, 0.96),
+    0 -1px 1px rgba(0, 0, 0, 0.96);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .bar-track.horizontal .bar-text input{
+  width: 3ch;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--vr-border);
+  border-radius: 4px;
+  color: var(--vr-text);
+  text-align: center;
+  padding: 0 2px;
+  height: 14px;
+  font-size: 0.68rem;
+  line-height: 1;
+ }
+
+.veilrunner.sheet.actor .bar-track.horizontal .bar-text .stat-value.editable{
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .resource-bar .bar-fill.temp-health{
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.88), rgba(96, 165, 250, 0.68));
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.health .bar-track.horizontal{
+  --resource-icon-color: #f87171;
+  border-radius: 4px;
+  border-color: rgba(248, 113, 113, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02)),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.95), rgba(51, 24, 24, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(248, 113, 113, 0.1),
+    inset 0 0 9px rgba(248, 113, 113, 0.12),
+    0 0 10px rgba(248, 113, 113, 0.16);
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.health .bar-fill{
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 0 10px currentColor;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.health .bar-fill::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), transparent 42%, rgba(0, 0, 0, 0.14)),
+    repeating-linear-gradient(90deg, transparent 0 18px, rgba(255, 255, 255, 0.1) 18px 19px);
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar.health .bar-fill::after{
+  content: "";
+  position: absolute;
+  top: 1px;
+  right: 0;
+  bottom: 1px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .bar-text.health-text{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 10px;
+}
+
+.veilrunner.sheet.actor .bar-text.health-text .bar-value,
+.veilrunner.sheet.actor .bar-text.health-text .bar-parameter{
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.veilrunner.sheet.actor .bar-text.health-text .bar-parameter{
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 1px 6px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.veilrunner.sheet.actor .resource-icon{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  color: var(--resource-icon-color);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--resource-icon-color) 55%, transparent));
+}
+
+.veilrunner.sheet.actor .resource-icon.health{ --resource-icon-color: #f87171; }
+.veilrunner.sheet.actor .resource-icon.armor{ --resource-icon-color: #cbd5e1; }
+.veilrunner.sheet.actor .resource-icon.shields{ --resource-icon-color: #22d3ee; }
+.veilrunner.sheet.actor .resource-icon.barriers{ --resource-icon-color: #c084fc; }
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar .bar-count,
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar .bar-count-text{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--vr-text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 4px 10px;
+  width: fit-content;
+}
+
+.veilrunner.sheet.actor .stat-grid-compact .resource-bar .bar-count .stat-value{
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.veilrunner.sheet.actor .resource-bar .bar-count small{
+  color: var(--vr-text-dim);
+}
+
+.veilrunner.sheet.actor .stat label{
+  display: block;
+  margin-top: 4px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vr-text-dim);
+}
+
+.veilrunner.sheet.actor .stat-value{
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.veilrunner.sheet.actor .stat-value.editable{
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  align-items: center;
+}
+
+.veilrunner.sheet.actor .stat-value input{
+  width: 3.2ch;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--vr-border);
+  border-radius: 4px;
+  color: var(--vr-text);
+  text-align: center;
+  padding: 1px 2px;
+}
+
+.veilrunner.sheet.actor .resource-ring{
+  --ring-color: var(--vr-accent);
+  width: 46px;
+  height: 46px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  background:
+    radial-gradient(circle at center, var(--vr-panel-alt) 58%, transparent 59%),
+    conic-gradient(var(--ring-color) calc(var(--resource-percent, 100) * 1%), var(--vr-ring-track) 0);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ring-color) 35%, transparent);
+}
+
+.veilrunner.sheet.actor .resource-ring i{
+  font-size: 0.95rem;
+  color: var(--ring-color);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ring-color) 55%, transparent));
+}
+
+.veilrunner.sheet.actor .resource-ring.health{ --ring-color: var(--vr-red); }
+.veilrunner.sheet.actor .resource-ring.temp-health{ --ring-color: #fb7185; }
+.veilrunner.sheet.actor .resource-ring.inspiration{ --ring-color: #fbbf24; }
+.veilrunner.sheet.actor .resource-ring.armor{ --ring-color: var(--vr-amber); }
+.veilrunner.sheet.actor .resource-ring.shield{ --ring-color: var(--vr-cyan); }
+.veilrunner.sheet.actor .resource-ring.barriers{ --ring-color: var(--vr-accent); }
+
+.veilrunner.sheet.actor .section-heading.compact{
+  margin: 0;
+  font-size: 0.76rem;
+}
+
+.veilrunner.sheet.actor .main-field{
+  --vr-category-pad-x: 12px;
+  --vr-category-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.veilrunner.sheet.actor .section-body{
+  position: relative;
+  flex: 1;
+  min-height: 180px;
+  padding: 14px 0 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-color: rgba(168, 85, 247, 0.78) rgba(255, 255, 255, 0.055);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+

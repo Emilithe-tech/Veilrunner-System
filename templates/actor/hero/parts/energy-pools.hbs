@@ -1,0 +1,34 @@
+      <div class="hero-energy-panel">
+        <div class="hero-energy-pool stamina {{#if sheetOptions.compactEnergyBars}}energy-compact{{/if}}" style="--energy-radius: {{#if system.sheetOptions.staminaBarRounded}}999px{{else}}0px{{/if}};">
+          <div class="hero-energy-heading">
+            <span class="hero-energy-label">{{localize 'VEILRUNNER.Stamina'}}</span>
+            <span class="hero-energy-value">
+              {{#if editMode}}
+                <input type="number" name="system.resources.stamina.value" value="{{system.resources.stamina.value}}" aria-label="{{localize 'VEILRUNNER.Stamina'}}" />
+              {{else}}
+                {{system.resources.stamina.value}}
+              {{/if}}
+              / {{system.resources.stamina.max}}
+            </span>
+          </div>
+          <div class="hero-energy-track" role="meter" aria-label="{{localize 'VEILRUNNER.Stamina'}}" aria-valuemin="0" aria-valuemax="{{system.resources.stamina.max}}" aria-valuenow="{{system.resources.stamina.value}}">
+            <div class="hero-energy-fill" style="width: clamp(0%, {{system.percent.stamina}}%, 100%);"></div>
+          </div>
+        </div>
+        <div class="hero-energy-pool mana {{#if sheetOptions.compactEnergyBars}}energy-compact{{/if}}" style="--energy-radius: {{#if system.sheetOptions.manaBarRounded}}999px{{else}}0px{{/if}};">
+          <div class="hero-energy-heading">
+            <span class="hero-energy-label">{{localize 'VEILRUNNER.Mana'}}</span>
+            <span class="hero-energy-value">
+              {{#if editMode}}
+                <input type="number" name="system.resources.mana.value" value="{{system.resources.mana.value}}" aria-label="{{localize 'VEILRUNNER.Mana'}}" />
+              {{else}}
+                {{system.resources.mana.value}}
+              {{/if}}
+              / {{system.resources.mana.max}}
+            </span>
+          </div>
+          <div class="hero-energy-track" role="meter" aria-label="{{localize 'VEILRUNNER.Mana'}}" aria-valuemin="0" aria-valuemax="{{system.resources.mana.max}}" aria-valuenow="{{system.resources.mana.value}}">
+            <div class="hero-energy-fill" style="width: clamp(0%, {{system.percent.mana}}%, 100%);"></div>
+          </div>
+        </div>
+      </div>

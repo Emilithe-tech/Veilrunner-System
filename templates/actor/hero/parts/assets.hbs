@@ -1,0 +1,14 @@
+          {{#if (eq subTabs.assets "vehicles")}}
+            <h1>{{localize 'VEILRUNNER.Vehicles'}}</h1>
+            <p class="loadout-empty">{{localize 'VEILRUNNER.AssetsEmpty.vehicles'}}</p>
+          {{else if (eq subTabs.assets "drones")}}
+            <h1>{{localize 'VEILRUNNER.Drones'}}</h1>
+            <p class="loadout-empty">{{localize 'VEILRUNNER.AssetsEmpty.drones'}}</p>
+          {{else if (eq subTabs.assets "ships")}}
+            <h1>{{localize 'VEILRUNNER.Ships'}}</h1>
+            <p class="loadout-empty">{{localize 'VEILRUNNER.AssetsEmpty.ships'}}</p>
+          {{else if (eq subTabs.assets "entities")}}
+            <h1>{{localize 'VEILRUNNER.Entities'}}</h1>
+            <p class="loadout-empty">{{localize 'VEILRUNNER.AssetsEmpty.entities'}}</p>
+          {{/if}}
+

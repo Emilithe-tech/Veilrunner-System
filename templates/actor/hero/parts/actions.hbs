@@ -1,0 +1,77 @@
+          <section class="actions-workspace {{actionWorkspace.view}}">
+            <div class="actions-workspace-list">
+              <header class="actions-workspace-header">
+                <div class="actions-workspace-controls">
+                  {{#if (eq actionWorkspace.view "card")}}
+                    <label class="actions-sort-select">
+                      <select data-action="setActionCardSort" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.Sort'}}">
+                        <option value="type" {{#if (eq actionWorkspace.cardSort "type")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortType'}}</option>
+                        <option value="name-asc" {{#if (eq actionWorkspace.cardSort "name-asc")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortAZ'}}</option>
+                        <option value="name-desc" {{#if (eq actionWorkspace.cardSort "name-desc")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortZA'}}</option>
+                        <option value="cost" {{#if (eq actionWorkspace.cardSort "cost")}}selected{{/if}}>{{localize 'VEILRUNNER.ActionWorkspace.SortCost'}}</option>
+                      </select>
+                    </label>
+                  {{/if}}
+                  <button type="button" class="actions-view-btn {{#if (eq actionWorkspace.view "card")}}active{{/if}}" data-action="setActionView" data-view="card" title="{{localize 'VEILRUNNER.ActionWorkspace.CardMode'}}"><i class="fa-solid fa-table-cells-large"></i></button>
+                  <button type="button" class="actions-view-btn {{#if (eq actionWorkspace.view "list")}}active{{/if}}" data-action="setActionView" data-view="list" title="{{localize 'VEILRUNNER.ActionWorkspace.ListMode'}}"><i class="fa-solid fa-list"></i></button>
+                </div>
+              </header>
+              {{#if (eq actionWorkspace.view "card")}}
+                <div class="actions-card-grid">
+                  {{#each actionWorkspace.items as |item|}}
+                    <article class="actions-card {{#if item.generated}}generated-weapon-action{{/if}}" data-item-id="{{item.id}}" {{#if item.generated}}data-weapon-id="{{item.weaponId}}" data-weapon-action="{{item.operation}}"{{/if}}>
+                      <span class="actions-card-count">{{#if item.economyLabel}}{{item.economyLabel}}{{else}}{{item.actionCount}}{{/if}}</span>
+                      <span class="actions-card-type">{{item.typeLabel}}</span>
+                      <img src="{{item.img}}" alt="" />
+                      <h3>{{item.name}}</h3>
+                      {{#if item.traitsText}}<small class="actions-card-traits">{{item.traitsText}}</small>{{/if}}
+                      <div class="actions-item-buttons">
+                        {{#if item.generated}}
+                          <button type="button" data-action="executeFirearmAction" title="{{#if item.disabled}}{{item.disabledReason}}{{else}}{{item.name}}{{/if}}" {{#if item.disabled}}disabled{{/if}}><i class="fa-solid {{#if (eq item.operation 'fire')}}fa-crosshairs{{else if (eq item.operation 'reload')}}fa-arrows-rotate{{else if (eq item.operation 'load')}}fa-box-open{{else}}fa-eject{{/if}}"></i></button>
+                        {{else}}
+                          <button type="button" data-action="sendActionToChat" title="{{localize 'VEILRUNNER.ActionWorkspace.SendToChat'}}"><i class="fa-solid fa-message"></i></button>
+                          <button type="button" data-action="showActionDetails" title="{{localize 'VEILRUNNER.ActionWorkspace.Details'}}"><i class="fa-solid fa-circle-info"></i></button>
+                          <button type="button" data-action="rollAction" title="{{localize 'VEILRUNNER.ActionWorkspace.Roll'}}"><i class="fa-solid fa-dice-d20"></i></button>
+                        {{/if}}
+                      </div>
+                    </article>
+                  {{else}}
+                    <p class="empty-row">{{localize actionWorkspace.emptyLabel}}</p>
+                  {{/each}}
+                </div>
+              {{else}}
+                <div class="actions-list-table">
+                  <div class="actions-list-head">
+                    <button type="button" data-action="sortActionList" data-sort-key="actions" title="{{localize 'VEILRUNNER.ActionWorkspace.ActionCount'}}" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.ActionCount'}}"><i class="fa-solid fa-list-ol" aria-hidden="true"></i></button>
+                    <button type="button" data-action="sortActionList" data-sort-key="name" title="{{localize 'VEILRUNNER.ActionWorkspace.Name'}}" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.Name'}}"><i class="fa-solid fa-tag" aria-hidden="true"></i></button>
+                    <button type="button" data-action="sortActionList" data-sort-key="type" title="{{localize actionWorkspace.typeLabel}}" aria-label="{{localize actionWorkspace.typeLabel}}"><i class="fa-solid fa-burst" aria-hidden="true"></i></button>
+                    <button type="button" data-action="sortActionList" data-sort-key="cost" title="{{localize 'VEILRUNNER.ActionWorkspace.Cost'}} / {{localize 'VEILRUNNER.ActionWorkspace.Recharge'}}" aria-label="{{localize 'VEILRUNNER.ActionWorkspace.Cost'}} / {{localize 'VEILRUNNER.ActionWorkspace.Recharge'}}"><i class="fa-solid fa-clock" aria-hidden="true"></i></button>
+                    <span></span>
+                  </div>
+                  {{#each actionWorkspace.items as |item|}}
+                    <article class="actions-list-row {{#if item.generated}}generated-weapon-action{{/if}}" data-item-id="{{item.id}}" {{#if item.generated}}data-weapon-id="{{item.weaponId}}" data-weapon-action="{{item.operation}}"{{/if}}>
+                      <span class="actions-list-count">{{#if item.economyLabel}}{{item.economyLabel}}{{else}}{{item.actionCount}}{{/if}}</span>
+                      <strong>{{item.name}}</strong>
+                      <span class="actions-list-damage" title="{{item.damageTooltip}}">
+                        {{#if item.damageValue}}<strong>{{item.damageValue}}</strong>{{/if}}
+                        {{#if item.damageIcon}}<i class="{{item.damageIcon}}" aria-hidden="true"></i>{{/if}}
+                      </span>
+                      <span class="actions-list-recast" title="{{item.cost}}" aria-label="{{item.cost}}"><i class="fa-solid fa-clock" aria-hidden="true"></i></span>
+                      <div class="actions-item-buttons">
+                        {{#if item.generated}}
+                          <button type="button" data-action="executeFirearmAction" title="{{#if item.disabled}}{{item.disabledReason}}{{else}}{{item.name}}{{/if}}" {{#if item.disabled}}disabled{{/if}}><i class="fa-solid {{#if (eq item.operation 'fire')}}fa-crosshairs{{else if (eq item.operation 'reload')}}fa-arrows-rotate{{else if (eq item.operation 'load')}}fa-box-open{{else}}fa-eject{{/if}}"></i></button>
+                        {{else}}
+                          <button type="button" data-action="sendActionToChat" title="{{localize 'VEILRUNNER.ActionWorkspace.SendToChat'}}"><i class="fa-solid fa-message"></i></button>
+                          <button type="button" data-action="showActionDetails" title="{{localize 'VEILRUNNER.ActionWorkspace.Details'}}"><i class="fa-solid fa-circle-info"></i></button>
+                          <button type="button" data-action="rollAction" title="{{localize 'VEILRUNNER.ActionWorkspace.Roll'}}"><i class="fa-solid fa-dice-d20"></i></button>
+                        {{/if}}
+                      </div>
+                    </article>
+                  {{else}}
+                    <p class="empty-row">{{localize actionWorkspace.emptyLabel}}</p>
+                  {{/each}}
+                </div>
+              {{/if}}
+            </div>
+          </section>
+

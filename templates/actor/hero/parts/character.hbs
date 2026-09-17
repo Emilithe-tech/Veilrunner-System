@@ -1,0 +1,359 @@
+          {{#if (eq subTabs.character "stats")}}
+            <div class="stats-sections">
+              <section class="stats-section stats-attributes-section">
+                <h1 data-stats-hint="Your physical, mental, and social attributes.">Attributes</h1>
+                <div class="attribute-groups">
+                  {{#each attributeGroups as |group|}}
+                    <section class="attribute-group attribute-group-{{group.key}}">
+                      <h2 class="attribute-group-heading" data-stats-hint="{{group.heading}} attributes.">
+                        <span class="attribute-group-icon" aria-hidden="true"><i class="{{group.icon}}"></i></span>
+                        <span>{{group.heading}}</span>
+                      </h2>
+                      <div class="attribute-grid">
+                        {{#each group.attributes as |attr|}}
+                          <label class="attribute-row" data-stats-hint="{{attr.label}}: {{attr.hint}}">
+                            <span class="attribute-label">{{attr.label}}</span>
+                            {{#if ../../editMode}}
+                              <input type="number" name="{{attr.path}}" value="{{attr.value}}" />
+                            {{else}}
+                              <strong>{{attr.value}}</strong>
+                            {{/if}}
+                          </label>
+                        {{/each}}
+                      </div>
+                    </section>
+                  {{/each}}
+                </div>
+              </section>
+              <section class="stats-section">
+                <h1 data-stats-hint="Movement, available actions and reactions, resource capacities, and initiative.">Combat</h1>
+                <div class="stats-summary-grid">
+                  {{#each combatStats as |stat|}}
+                    <div class="stats-summary-row{{#if stat.initiative}} stats-initiative-row{{/if}}" data-stats-hint="{{stat.label}}: {{stat.rule}}">
+                      <span>{{stat.label}}</span>
+                      {{#if stat.initiative}}
+                        <div class="stats-initiative-value">
+                          <strong>{{stat.value}}</strong>
+                          <span>+</span>
+                          <button type="button" data-action="rollInitiative" aria-label="Roll initiative: {{stat.initiativeFormula}}"><i class="fa-solid fa-dice-d10"></i></button>
+                        </div>
+                      {{else}}
+                        <strong title="{{stat.rule}}">{{stat.value}}</strong>
+                      {{/if}}
+                    </div>
+                  {{/each}}
+                </div>
+              </section>
+              <section class="stats-section">
+                <h1 data-stats-hint="Your Fortitude, Willpower, and Reflex saving throw values.">Saves</h1>
+                <div class="stats-summary-grid">
+                  {{#each saves as |save|}}
+                    <label class="stats-summary-row" data-stats-hint="{{save.label}}: Your current saving throw value is {{save.value}}."><span>{{save.label}}</span>{{#if ../editMode}}<input type="number" name="{{save.path}}" value="{{save.value}}" min="0" />{{else}}<strong>{{save.value}}</strong>{{/if}}</label>
+                  {{/each}}
+                </div>
+              </section>
+            </div>
+          {{else if (eq subTabs.character "skills")}}
+            <h1>{{localize 'VEILRUNNER.Skills'}}</h1>
+            {{#each skillCategories as |cat|}}
+              <div class="skill-category">
+                <div class="skill-category-heading"><i class="{{cat.icon}}"></i> {{cat.label}}</div>
+                {{#each cat.skills as |skill|}}
+                  <div class="skill-row">
+                    <span class="skill-name">{{skill.label}}</span>
+                    <span class="skill-modifier">+{{skill.modifier}}</span>
+                    <span class="skill-rank rank-{{lowercase skill.rank}}">{{skill.rank}}</span>
+                    <span class="skill-dots">
+                      {{#each skill.dotsArray as |filled|}}
+                        <span class="dot {{#if filled}}filled{{/if}}"></span>
+                      {{/each}}
+                    </span>
+                  </div>
+                {{/each}}
+              </div>
+            {{else}}
+              <div class="empty-row">{{localize 'VEILRUNNER.NoSkills'}}</div>
+            {{/each}}
+          {{else if (eq subTabs.character "progression")}}
+            {{> "systems/veilrunner/templates/actor/hero/parts/progression.hbs"}}
+          {{else if (eq subTabs.character "relations")}}
+            <div data-hero-relations>{{{relationsWorkspace}}}</div>
+          {{else if (eq subTabs.character "details")}}
+            <div class="overview-identity">
+                {{#if editMode}}
+                  <div class="character-details-box">
+                    <div class="character-details-heading">{{localize 'VEILRUNNER.Details'}}</div>
+                    <div class="character-details-fields">
+                      <div class="character-details-core character-details-left">
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Species'}}</span>
+                          <input type="text" name="system.species" value="{{system.species}}"
+                                 placeholder="{{localize 'VEILRUNNER.Species'}}" />
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Origin'}}</span>
+                          <input type="text" name="system.origin" value="{{system.origin}}"
+                                 placeholder="{{localize 'VEILRUNNER.Origin'}}" />
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Background'}}</span>
+                          <input type="text" name="system.background" value="{{system.background}}"
+                                 placeholder="{{localize 'VEILRUNNER.Background'}}" />
+                        </label>
+                      </div>
+                      <div class="character-details-persona">
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Identity'}}</span>
+                          <select name="system.pronouns">
+                            {{#each pronounOptions as |option|}}
+                              <option value="{{option.value}}" {{#if option.active}}selected{{/if}}>{{localize option.label}}</option>
+                            {{/each}}
+                          </select>
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Age'}}</span>
+                          <input type="text" name="system.age" value="{{system.age}}"
+                                 placeholder="{{localize 'VEILRUNNER.Age'}}" />
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Size'}}</span>
+                          <input type="text" name="system.size" value="{{system.size}}"
+                                 placeholder="{{localize 'VEILRUNNER.Size'}}" />
+                        </label>
+                      </div>
+                      <div class="character-details-persona persona-column">
+                        <div class="detail-field persona-index-editor">
+                          <span>{{localize 'VEILRUNNER.PersonaIndex'}}</span>
+                          {{#each personaAxes as |axis|}}
+                            <label class="persona-axis-field persona-axis-{{axis.index}}" data-persona-axis="{{axis.key}}">
+                              <span class="persona-axis-labels">
+                                <span>{{localize axis.leftLabel}}</span>
+                                <input class="persona-axis-value-input" type="number" value="{{axis.value}}" min="-100" max="100" step="1" inputmode="numeric" data-persona-path="{{axis.path}}" aria-label="{{localize 'VEILRUNNER.PersonaIndex'}}" />
+                                <span>{{localize axis.rightLabel}}</span>
+                              </span>
+                              <span class="persona-axis-pips" style="--persona-position: {{axis.percent}}%;" aria-label="{{localize axis.leftLabel}} to {{localize axis.rightLabel}}: {{axis.value}}">
+                                <span class="persona-pip-side left">{{#each axis.leftPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                <b aria-hidden="true"></b>
+                                <span class="persona-pip-side right">{{#each axis.rightPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                <em aria-hidden="true"></em>
+                              </span>
+                              <span class="persona-axis-controls">
+                                <input class="persona-axis-range" type="range" name="{{axis.path}}" value="{{axis.value}}" min="-100" max="100" step="1" />
+                              </span>
+                            </label>
+                          {{/each}}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="qualities-flaws-box">
+                    <div class="qualities-flaws-heading">{{localize 'VEILRUNNER.QualitiesFlaws'}}</div>
+                    <div class="qualities-flaws-grid">
+                      <div class="qualities-flaws-column">
+                        <div class="qualities-flaws-title"><i class="fa-solid fa-medal" aria-hidden="true"></i> {{localize 'VEILRUNNER.Qualities'}}</div>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Severe'}}</span>
+                          <textarea name="system.qualities.severe" rows="2" placeholder="{{localize 'VEILRUNNER.Severe'}}">{{system.qualities.severe}}</textarea>
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Major'}}</span>
+                          <textarea name="system.qualities.major" rows="2" placeholder="{{localize 'VEILRUNNER.Major'}}">{{system.qualities.major}}</textarea>
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Minor'}}</span>
+                          <textarea name="system.qualities.minor" rows="2" placeholder="{{localize 'VEILRUNNER.Minor'}}">{{system.qualities.minor}}</textarea>
+                        </label>
+                        <div class="qualities-flaws-custom-list">
+                          {{#each qualityFlawTiers}}
+                            {{#if perks.length}}
+                              <div class="quality-flaw-tier"><strong>{{label}}</strong>{{#each perks}}<button type="button" class="quality-flaw-entry" data-action="sendQualityFlawToChat" data-quality-flaw-kind="perk" data-quality-flaw-index="{{sourceIndex}}" title="{{description}}"><span>{{name}}</span><i class="fa-solid fa-comment"></i></button>{{/each}}</div>
+                            {{/if}}
+                          {{/each}}
+                        </div>
+                      </div>
+                      <div class="qualities-flaws-column">
+                        <div class="qualities-flaws-title">{{localize 'VEILRUNNER.Flaws'}}</div>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Severe'}}</span>
+                          <textarea name="system.flaws.severe" rows="2" placeholder="{{localize 'VEILRUNNER.Severe'}}">{{system.flaws.severe}}</textarea>
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Major'}}</span>
+                          <textarea name="system.flaws.major" rows="2" placeholder="{{localize 'VEILRUNNER.Major'}}">{{system.flaws.major}}</textarea>
+                        </label>
+                        <label class="detail-field">
+                          <span>{{localize 'VEILRUNNER.Minor'}}</span>
+                          <textarea name="system.flaws.minor" rows="2" placeholder="{{localize 'VEILRUNNER.Minor'}}">{{system.flaws.minor}}</textarea>
+                        </label>
+                        <div class="qualities-flaws-custom-list">
+                          {{#each qualityFlawTiers}}
+                            {{#if flaws.length}}
+                              <div class="quality-flaw-tier"><strong>{{label}}</strong>{{#each flaws}}<button type="button" class="quality-flaw-entry flaw" data-action="sendQualityFlawToChat" data-quality-flaw-kind="flaw" data-quality-flaw-index="{{sourceIndex}}" title="{{description}}"><span>{{name}}</span><i class="fa-solid fa-comment"></i></button>{{/each}}</div>
+                            {{/if}}
+                          {{/each}}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="character-details-box profession-details-box">
+                    <div class="character-details-heading">{{localize 'VEILRUNNER.Profession'}}</div>
+                    <div class="profession-details-grid">
+                      <label class="detail-field">
+                        <span>{{localize 'VEILRUNNER.Archetype'}}</span>
+                        <select name="system.archetype" data-placeholder="{{localize 'VEILRUNNER.Archetype'}}">
+                          <option value="">{{localize 'VEILRUNNER.Archetype'}}</option>
+                          {{#each archetypeOptions as |option|}}
+                            <option value="{{option.archetype}}" {{#if option.active}}selected{{/if}}>{{option.archetype}}</option>
+                          {{/each}}
+                        </select>
+                      </label>
+                      <label class="detail-field">
+                        <span>{{localize 'VEILRUNNER.Profession'}}</span>
+                        <select name="system.profession" data-placeholder="{{localize 'VEILRUNNER.Profession'}}">
+                          <option value="">{{localize 'VEILRUNNER.Profession'}}</option>
+                          {{#each professionOptions as |option|}}
+                            <option value="{{option.profession}}" {{#if option.active}}selected{{/if}}>{{option.profession}}</option>
+                          {{/each}}
+                        </select>
+                      </label>
+                      <label class="detail-field">
+                        <span>{{localize 'VEILRUNNER.Discipline'}}</span>
+                        <select name="system.discipline" data-placeholder="{{localize 'VEILRUNNER.Discipline'}}">
+                          <option value="">{{localize 'VEILRUNNER.Discipline'}}</option>
+                          {{#each disciplineOptions as |option|}}
+                            <option value="{{option.discipline}}" {{#if option.active}}selected{{/if}}>{{option.discipline}}</option>
+                          {{/each}}
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  {{#if selectedProfessionReference}}
+                    <div class="profession-reference-card compact">
+                      <div class="profession-reference-heading">
+                        <span>{{selectedProfessionReference.profession.name}} - {{selectedProfessionReference.discipline.name}}</span>
+                        <small>{{selectedProfessionReference.discipline.primaryWeapon}}</small>
+                      </div>
+                      <p>{{selectedProfessionReference.discipline.summary}}</p>
+                      {{#if selectedProfessionReference.discipline.background}}
+                        <p class="discipline-background"><strong>{{localize 'VEILRUNNER.Background'}}</strong>{{selectedProfessionReference.discipline.background}}</p>
+                      {{/if}}
+                      <div class="discipline-ability-list">
+                        {{#each selectedProfessionReference.discipline.abilities as |ability|}}
+                          <div class="discipline-ability">
+                            <strong>{{ability.name}}</strong>
+                            <span>{{ability.type}}</span>
+                            <p>{{ability.text}}</p>
+                          </div>
+                        {{/each}}
+                      </div>
+                    </div>
+                  {{/if}}
+                {{else}}
+                  <div class="character-details-box">
+                    <div class="character-details-heading">{{localize 'VEILRUNNER.Details'}}</div>
+                    <div class="character-details-grid">
+                      <div class="character-details-core character-details-left">
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Species'}}</strong><span>{{system.species}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Origin'}}</strong><span>{{system.origin}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Background'}}</strong><span>{{system.background}}</span></div>
+                      </div>
+                      <div class="character-details-persona">
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Identity'}}</strong><span>{{pronounsLabel}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Age'}}</strong><span>{{system.age}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Size'}}</strong><span>{{system.size}}</span></div>
+                      </div>
+                      <div class="character-details-persona persona-column">
+                        <div class="detail-line persona-index-view">
+                          <strong>{{localize 'VEILRUNNER.PersonaIndex'}}</strong>
+                          <div class="persona-axis-list">
+                            {{#each personaAxes as |axis|}}
+                              <div class="persona-axis-readout persona-axis-{{axis.index}}" data-persona-axis="{{axis.key}}">
+                                <div class="persona-axis-labels">
+                                  <span>{{localize axis.leftLabel}}</span>
+                                  <strong>{{axis.signedValue}}</strong>
+                                  <span>{{localize axis.rightLabel}}</span>
+                                </div>
+                                <div class="persona-axis-pips" style="--persona-position: {{axis.percent}}%;" aria-label="{{localize axis.leftLabel}} to {{localize axis.rightLabel}}: {{axis.value}}">
+                                  <span class="persona-pip-side left">{{#each axis.leftPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                  <b aria-hidden="true"></b>
+                                  <span class="persona-pip-side right">{{#each axis.rightPips as |pip|}}<i class="{{#if pip.active}}active{{/if}}"></i>{{/each}}</span>
+                                  <em aria-hidden="true"></em>
+                                </div>
+                              </div>
+                            {{/each}}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="qualities-flaws-box">
+                    <div class="qualities-flaws-heading">{{localize 'VEILRUNNER.QualitiesFlaws'}}</div>
+                    <div class="qualities-flaws-grid">
+                      <div class="qualities-flaws-column">
+                        <div class="qualities-flaws-title"><i class="fa-solid fa-medal" aria-hidden="true"></i> {{localize 'VEILRUNNER.Qualities'}}</div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Severe'}}</strong><span>{{system.qualities.severe}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Major'}}</strong><span>{{system.qualities.major}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Minor'}}</strong><span>{{system.qualities.minor}}</span></div>
+                        <div class="qualities-flaws-custom-list">
+                          {{#each qualityFlawTiers}}
+                            {{#if perks.length}}
+                              <div class="quality-flaw-tier"><strong>{{label}}</strong>{{#each perks}}<button type="button" class="quality-flaw-entry" data-action="sendQualityFlawToChat" data-quality-flaw-kind="perk" data-quality-flaw-index="{{sourceIndex}}" title="{{description}}"><span>{{name}}</span><i class="fa-solid fa-comment"></i></button>{{/each}}</div>
+                            {{/if}}
+                          {{/each}}
+                        </div>
+                      </div>
+                      <div class="qualities-flaws-column">
+                        <div class="qualities-flaws-title">{{localize 'VEILRUNNER.Flaws'}}</div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Severe'}}</strong><span>{{system.flaws.severe}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Major'}}</strong><span>{{system.flaws.major}}</span></div>
+                        <div class="detail-line"><strong>{{localize 'VEILRUNNER.Minor'}}</strong><span>{{system.flaws.minor}}</span></div>
+                        <div class="qualities-flaws-custom-list">
+                          {{#each qualityFlawTiers}}
+                            {{#if flaws.length}}
+                              <div class="quality-flaw-tier"><strong>{{label}}</strong>{{#each flaws}}<button type="button" class="quality-flaw-entry flaw" data-action="sendQualityFlawToChat" data-quality-flaw-kind="flaw" data-quality-flaw-index="{{sourceIndex}}" title="{{description}}"><span>{{name}}</span><i class="fa-solid fa-comment"></i></button>{{/each}}</div>
+                            {{/if}}
+                          {{/each}}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="character-details-box profession-details-box">
+                    <div class="character-details-heading">{{localize 'VEILRUNNER.Profession'}}</div>
+                    <div class="profession-details-grid">
+                      <div class="detail-line"><strong>{{localize 'VEILRUNNER.Archetype'}}</strong><span>{{#if characterArchetype}}{{characterArchetype}}{{else}}-{{/if}}</span></div>
+                      <div class="detail-line"><strong>{{localize 'VEILRUNNER.Profession'}}</strong><span>{{#if system.profession}}{{system.profession}}{{else}}-{{/if}}</span></div>
+                      <div class="detail-line"><strong>{{localize 'VEILRUNNER.Discipline'}}</strong><span>{{#if system.discipline}}{{system.discipline}}{{else}}-{{/if}}</span></div>
+                    </div>
+                  </div>
+                  {{#if selectedProfessionReference}}
+                    <div class="profession-reference-card compact">
+                      <div class="profession-reference-heading">
+                        <span>{{selectedProfessionReference.profession.name}} - {{selectedProfessionReference.discipline.name}}</span>
+                        <small>{{selectedProfessionReference.discipline.primaryWeapon}}</small>
+                      </div>
+                      <p>{{selectedProfessionReference.discipline.summary}}</p>
+                      {{#if selectedProfessionReference.discipline.background}}
+                        <p class="discipline-background"><strong>{{localize 'VEILRUNNER.Background'}}</strong>{{selectedProfessionReference.discipline.background}}</p>
+                      {{/if}}
+                      <div class="discipline-ability-list">
+                        {{#each selectedProfessionReference.discipline.abilities as |ability|}}
+                          <div class="discipline-ability">
+                            <strong>{{ability.name}}</strong>
+                            <span>{{ability.type}}</span>
+                            <p>{{ability.text}}</p>
+                          </div>
+                        {{/each}}
+                      </div>
+                    </div>
+                  {{/if}}
+                {{/if}}
+            </div>
+          {{else if (eq subTabs.character "biography")}}
+            <div class="bio-content">
+              <h1 class="cohesive-section-heading">{{localize 'VEILRUNNER.Biography'}}</h1>
+              {{#if biography}}{{{biography}}}{{else}}
+                <p class="empty-row">{{localize 'VEILRUNNER.NoBiography'}}</p>
+              {{/if}}
+            </div>
+          {{/if}}
+

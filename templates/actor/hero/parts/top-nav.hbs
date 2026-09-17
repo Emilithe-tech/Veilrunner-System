@@ -15,10 +15,15 @@
     <i class="fa-solid fa-boxes-stacked"></i>
     <span>{{localize 'VEILRUNNER.Section.inventory'}}</span>
   </button>
-  <button type="button" class="bottom-nav-btn {{#if (eq section "datapad")}}active{{/if}}"
-          data-action="setSection" data-section="datapad">
-    <i class="fa-solid fa-tablet-screen-button"></i>
-    <span>{{localize 'VEILRUNNER.Section.datapad'}}</span>
+  <button type="button" class="bottom-nav-btn {{#if (eq section "arsenal")}}active{{/if}}"
+          data-action="setSection" data-section="arsenal">
+    <i class="fa-solid fa-toolbox"></i>
+    <span>{{localize 'VEILRUNNER.Section.arsenal'}}</span>
+  </button>
+  <button type="button" class="bottom-nav-btn {{#if (eq section "assets")}}active{{/if}}"
+          data-action="setSection" data-section="assets">
+    <i class="fa-solid fa-truck-fast"></i>
+    <span>{{localize 'VEILRUNNER.Section.assets'}}</span>
   </button>
   <button type="button" class="bottom-nav-btn {{#if (eq section "settings")}}active{{/if}}"
           data-action="setSection" data-section="settings">

@@ -1,0 +1,453 @@
+/* Inventory uses a scrollable category filter and body-level subtype lists. */
+.veilrunner.sheet.actor .sub-nav-row.inventory-main-filter-row{
+  display: flex;
+  grid-auto-flow: unset;
+  grid-auto-columns: unset;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.veilrunner.sheet.actor .sub-nav-row.inventory-main-filter-row .nav-indicator{ display: none; }
+
+.veilrunner.sheet.actor .inventory-main-filter{
+  flex: 0 0 auto;
+  min-width: 6.6rem;
+  min-height: 38px;
+  padding: 7px 5px;
+}
+
+.veilrunner.sheet.actor .inventory-main-filter span{
+  position: static;
+  font-size: 0.59rem;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .inventory-filter-drawer .inventory-main-filter{
+  flex: 0 0 68px;
+  width: 68px;
+  min-width: 68px;
+  min-height: 44px;
+}
+
+.veilrunner.sheet.actor .inventory-filter-drawer .inventory-main-filter span{
+  display: block;
+  min-height: 2.1em;
+  max-width: 60px;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.veilrunner.sheet.actor .inventory-layout-controls{
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.veilrunner.sheet.actor .inventory-layout-btn{
+  flex: 0 0 68px;
+  width: 68px;
+  min-width: 68px;
+  min-height: 44px;
+}
+
+.veilrunner.sheet.actor .inventory-layout-btn span{
+  display: block;
+  min-height: 2.1em;
+  max-width: 60px;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.veilrunner.sheet.actor .inventory-search-field{
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 74px;
+  min-height: 44px;
+  padding: 0 9px;
+  border-left: 1px solid var(--vr-sheet-divider);
+  color: var(--vr-text-dim);
+  z-index: 1;
+}
+
+.veilrunner.sheet.actor .inventory-search-field i{
+  flex: 0 0 auto;
+  margin-right: 7px;
+  font-size: 0.7rem;
+}
+
+.veilrunner.sheet.actor .inventory-search-field input{
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--vr-text);
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.veilrunner.sheet.actor .inventory-search-field input::placeholder{ color: var(--vr-text-dim); }
+
+.veilrunner.sheet.actor .inventory-weapon-section-list{
+  display: grid;
+  gap: 10px;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-section-list.inventory-layout-grid{
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-content: start;
+}
+
+.veilrunner.sheet.actor .inventory-card-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 8px;
+  align-content: start;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card{
+  position: relative;
+  display: grid;
+  grid-template-rows: 78px auto auto;
+  min-width: 0;
+  min-height: 124px;
+  padding: 6px;
+  border: 1px solid var(--vr-sheet-divider);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--vr-panel) 86%, var(--vr-bg));
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-image{
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  background: color-mix(in srgb, var(--vr-bg) 72%, transparent);
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-image img{
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-image strong{
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  min-width: 1.4em;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: rgba(3, 4, 8, 0.85);
+  color: var(--vr-text);
+  font-size: 0.63rem;
+  text-align: center;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-name{
+  overflow: hidden;
+  margin-top: 5px;
+  color: var(--vr-text);
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-type{
+  overflow: hidden;
+  color: var(--vr-text-dim);
+  font-size: 0.52rem;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-actions{
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  padding: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--vr-sheet-divider) 72%, transparent);
+  background: var(--vr-bg);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(100%);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card:hover .inventory-grid-card-actions,
+.veilrunner.sheet.actor .inventory-grid-card:focus-within .inventory-grid-card-actions{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-actions button{
+  display: grid;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 28px;
+  padding: 3px;
+  border: 1px solid var(--vr-tech-border);
+  border-radius: 3px;
+  background: var(--vr-tech-control);
+  color: var(--vr-text-dim);
+  cursor: pointer;
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-actions button:hover{
+  border-color: var(--vr-accent);
+  background: color-mix(in srgb, var(--vr-accent) 16%, var(--vr-tech-control-hover));
+  color: var(--vr-text);
+}
+
+.veilrunner.sheet.actor .inventory-grid-card-actions i{ font-size: 0.75rem; }
+.veilrunner.sheet.actor .inventory-grid-card-actions span{ display: none; }
+
+.veilrunner.sheet.actor .inventory-details-panel{
+  position: absolute;
+  inset: 0 0 0 auto;
+  z-index: 20;
+  width: min(310px, 92%);
+  padding: 12px;
+  border-left: 1px solid var(--vr-sheet-divider-strong);
+  background: var(--vr-bg);
+  box-shadow: -14px 0 28px rgba(0, 0, 0, 0.42);
+  overflow-y: auto;
+}
+
+.veilrunner.sheet.actor .inventory-details-panel header{
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.veilrunner.sheet.actor .inventory-details-panel header img{
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--vr-sheet-divider);
+  object-fit: cover;
+}
+
+.veilrunner.sheet.actor .inventory-details-panel h2{ margin: 0; font-size: 0.85rem; }
+.veilrunner.sheet.actor .inventory-details-panel header span{ color: var(--vr-text-dim); font-size: 0.62rem; }
+.veilrunner.sheet.actor .inventory-details-panel header button{ border: 0; background: transparent; color: var(--vr-text-dim); cursor: pointer; }
+.veilrunner.sheet.actor .inventory-details-panel dl{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 14px 0; }
+.veilrunner.sheet.actor .inventory-details-panel dl div{ padding: 7px; border: 1px solid var(--vr-sheet-divider); }
+.veilrunner.sheet.actor .inventory-details-panel dt{ color: var(--vr-text-dim); font-size: 0.56rem; text-transform: uppercase; }
+.veilrunner.sheet.actor .inventory-details-panel dd{ margin: 3px 0 0; color: var(--vr-text); font-size: 0.72rem; }
+.veilrunner.sheet.actor .inventory-details-description{ color: var(--vr-text); font-size: 0.75rem; line-height: 1.45; }
+
+.veilrunner.sheet.actor .inventory-weapon-section{
+  border: 1px solid var(--vr-sheet-divider);
+  background: color-mix(in srgb, var(--vr-panel) 82%, transparent);
+}
+
+.veilrunner.sheet.actor .inventory-weapon-section h2{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px 78px;
+  align-items: center;
+  margin: 0;
+  min-height: 27px;
+  padding: 0;
+  border-bottom: 1px solid var(--vr-sheet-divider);
+  color: var(--vr-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-section h2 > span{
+  min-width: 0;
+  padding: 7px 9px;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-section h2 > span + span{
+  border-left: 1px solid var(--vr-sheet-divider);
+  color: var(--vr-text-dim);
+  font-size: 0.55rem;
+  text-align: center;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-table{
+  width: 100%;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-table-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px 78px;
+  align-items: center;
+}
+.veilrunner.sheet.actor .inventory-weapon-table-row > span{
+  min-width: 0;
+  padding: 5px 8px;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-table-row > span + span{
+  border-left: 1px solid color-mix(in srgb, var(--vr-sheet-divider) 58%, transparent);
+  text-align: center;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-table-row{
+  min-height: 34px;
+  border-bottom: 1px solid color-mix(in srgb, var(--vr-sheet-divider) 44%, transparent);
+  color: var(--vr-text);
+  font-size: 0.7rem;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-table-row:last-child{ border-bottom: 0; }
+
+.veilrunner.sheet.actor .inventory-weapon-table-row:hover{
+  background: color-mix(in srgb, var(--vr-ui-color) 11%, transparent);
+}
+
+.veilrunner.sheet.actor .inventory-weapon-item{
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-item img{
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 1px solid color-mix(in srgb, var(--vr-sheet-divider) 70%, transparent);
+  object-fit: cover;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-item span{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .inventory-weapon-section-list.inventory-layout-grid .inventory-weapon-section h2,
+.veilrunner.sheet.actor .inventory-weapon-section-list.inventory-layout-grid .inventory-weapon-table-row{
+  grid-template-columns: minmax(0, 1fr) 44px 64px;
+}
+
+@media (max-width: 760px) {
+  .veilrunner.sheet.actor .inventory-main-filter { min-width: 6rem; }
+}
+
+.veilrunner.sheet.actor .equipment-panel,
+.veilrunner.sheet.actor .details-panel{
+  height: 100%;
+  padding: 14px;
+}
+
+.veilrunner.sheet.actor .section-body,
+.veilrunner.sheet.actor .details-body,
+.veilrunner.sheet.actor .equipment-tab-body{
+  will-change: transform, opacity;
+}
+
+.veilrunner.sheet.actor .tab-panel-enter{
+  animation-duration: 0.22s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+.veilrunner.sheet.actor .tab-panel-enter-right{
+  animation-name: vr-tab-enter-right;
+}
+
+.veilrunner.sheet.actor .tab-panel-enter-left{
+  animation-name: vr-tab-enter-left;
+}
+
+@keyframes vr-tab-enter-right {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes vr-tab-enter-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes vr-level-max-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px rgba(34, 211, 238, 0.48),
+      0 0 30px rgba(34, 211, 238, 0.28),
+      inset 0 0 12px rgba(34, 211, 238, 0.16);
+  }
+  50% {
+    box-shadow:
+      0 0 28px rgba(34, 211, 238, 0.86),
+      0 0 54px rgba(34, 211, 238, 0.42),
+      0 0 72px rgba(168, 85, 247, 0.26),
+      inset 0 0 18px rgba(34, 211, 238, 0.32);
+  }
+}
+
+@keyframes vr-level-line-pulse {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 4px rgba(34, 211, 238, 0.42));
+  }
+  50% {
+    filter: brightness(1.7) drop-shadow(0 0 12px rgba(34, 211, 238, 0.95));
+  }
+}
+
+@keyframes vr-level-line-blur-pulse {
+  0%,
+  100% {
+    filter: blur(5px) brightness(1) drop-shadow(0 0 4px rgba(34, 211, 238, 0.42));
+  }
+  50% {
+    filter: blur(5px) brightness(1.75) drop-shadow(0 0 14px rgba(34, 211, 238, 0.95));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .veilrunner.sheet.actor .nav-indicator::before,
+  .veilrunner.sheet.actor .tab-panel-enter,
+  .veilrunner.sheet.actor .level-diamond.maxed,
+  .veilrunner.sheet.actor .level-diamond.maxed::before,
+  .veilrunner.sheet.actor .level-diamond.maxed::after {
+    transition: none;
+    animation: none;
+  }
+}
+

@@ -1,0 +1,703 @@
+/* Unified Actions workspace. */
+.veilrunner.sheet.actor .actions-workspace{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  min-height: 0;
+}
+
+.veilrunner.sheet.actor .actions-workspace-list,
+.veilrunner.sheet.actor .action-details-drawer{
+  min-width: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.veilrunner.sheet.actor .actions-workspace-header{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.veilrunner.sheet.actor .actions-workspace-header h2{
+  margin: 0;
+  color: var(--vr-text);
+  font-size: 1rem;
+}
+
+.veilrunner.sheet.actor .actions-workspace-controls,
+.veilrunner.sheet.actor .actions-item-buttons{
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.veilrunner.sheet.actor .actions-sort-select{
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--vr-text-dim);
+  font-size: .72rem;
+}
+
+.veilrunner.sheet.actor .actions-sort-select select,
+.veilrunner.sheet.actor .actions-view-btn,
+.veilrunner.sheet.actor .actions-item-buttons button{
+  min-height: 28px;
+  border: 1px solid var(--vr-border);
+  border-radius: 4px;
+  color: var(--vr-text);
+  background: rgba(0, 0, 0, .2);
+}
+
+.veilrunner.sheet.actor .actions-view-btn,
+.veilrunner.sheet.actor .actions-item-buttons button{
+  width: 30px;
+  padding: 0;
+}
+
+.veilrunner.sheet.actor .actions-view-btn.active,
+.veilrunner.sheet.actor .actions-view-btn:hover,
+.veilrunner.sheet.actor .actions-item-buttons button:hover{
+  border-color: var(--vr-accent);
+  color: var(--vr-accent);
+}
+
+.veilrunner.sheet.actor .actions-card-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 9px;
+}
+
+.veilrunner.sheet.actor .actions-card{
+  position: relative;
+  display: grid;
+  grid-template-rows: 88px minmax(2.4em, auto) auto;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--vr-border);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, .15);
+}
+
+.veilrunner.sheet.actor .actions-card-count,
+.veilrunner.sheet.actor .actions-card-type{
+  position: absolute;
+  top: 7px;
+  z-index: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--vr-text);
+  background: rgba(0, 0, 0, .68);
+  font-size: .7rem;
+}
+
+.veilrunner.sheet.actor .actions-card-count{ left: 7px; min-width: 18px; text-align: center; }
+.veilrunner.sheet.actor .actions-card-type{ right: 7px; max-width: calc(100% - 45px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor .actions-card img{ width: 100%; height: 88px; border-radius: 5px; object-fit: cover; }
+.veilrunner.sheet.actor .actions-card h3{ margin: 0; overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor .actions-card .actions-item-buttons{ justify-content: center; }
+
+.veilrunner.sheet.actor .actions-list-table{
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content 32px max-content;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--vr-border);
+  border-radius: 5px;
+}
+.veilrunner.sheet.actor .actions-list-head,
+.veilrunner.sheet.actor .actions-list-row{
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  gap: 0;
+}
+
+.veilrunner.sheet.actor .actions-list-head{
+  min-height: 32px;
+  padding: 0;
+  border-bottom: 1px solid var(--vr-border);
+  background: rgba(255, 255, 255, .06);
+}
+
+.veilrunner.sheet.actor .actions-list-head button{
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  color: var(--vr-text-dim);
+  background: transparent;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .actions-list-head button,
+.veilrunner.sheet.actor .actions-list-row > span,
+.veilrunner.sheet.actor .actions-list-row > strong,
+.veilrunner.sheet.actor .actions-list-row > .actions-item-buttons{
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-right: 1px solid var(--vr-border);
+}
+
+.veilrunner.sheet.actor .actions-list-head button{
+  display: grid;
+  place-items: center;
+}
+
+.veilrunner.sheet.actor .actions-list-head > :last-child,
+.veilrunner.sheet.actor .actions-list-row > :last-child{
+  border-right: 0;
+}
+
+.veilrunner.sheet.actor .actions-list-head button i{
+  font-size: .8rem;
+}
+
+.veilrunner.sheet.actor .actions-list-head button:first-child{
+  padding-inline: .5ch;
+}
+
+.veilrunner.sheet.actor .actions-list-head button:hover{ color: var(--vr-accent); }
+.veilrunner.sheet.actor .actions-list-row{ min-height: 43px; padding: 0; border-bottom: 1px solid var(--vr-border); font-size: .82rem; }
+.veilrunner.sheet.actor .actions-list-row:last-child{ border-bottom: 0; }
+.veilrunner.sheet.actor .actions-list-count{ display: grid; width: auto; place-items: center; padding-inline: 1ch !important; color: var(--vr-accent); font-weight: 700; text-align: center; }
+.veilrunner.sheet.actor .actions-list-row > span{ display: flex; align-items: center; overflow: hidden; color: var(--vr-text-dim); text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor .actions-list-row strong{ display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor .actions-list-row .actions-item-buttons{ justify-self: stretch; justify-content: center; }
+.veilrunner.sheet.actor .actions-list-damage{ display: inline-flex !important; justify-content: center; gap: 6px; min-width: max-content; padding-inline: 1ch !important; }
+.veilrunner.sheet.actor .actions-list-damage strong{ color: var(--vr-text); }
+.veilrunner.sheet.actor .actions-list-damage i{ color: var(--vr-accent); }
+.veilrunner.sheet.actor .actions-list-recast{ display: grid !important; place-items: center; padding: 0 !important; color: var(--vr-text-dim); }
+.veilrunner.sheet.actor .actions-list-recast i{ font-size: .78rem; }
+
+.veilrunner.sheet.actor .action-details-drawer{ display: grid; gap: 12px; overflow: auto; }
+.veilrunner.sheet.actor .action-details-drawer > img{ width: 100%; max-height: 160px; border-radius: 6px; object-fit: cover; }
+.veilrunner.sheet.actor .action-details-drawer dl{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 0; }
+.veilrunner.sheet.actor .action-details-drawer dl div{ min-width: 0; }
+.veilrunner.sheet.actor .action-details-drawer dt{ color: var(--vr-text-dim); font-size: .66rem; text-transform: uppercase; }
+.veilrunner.sheet.actor .action-details-drawer dd{ margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veilrunner.sheet.actor .action-details-description{ line-height: 1.5; }
+
+@media (max-width: 700px) {
+  .veilrunner.sheet.actor .action-details-drawer { min-height: 180px; }
+}
+
+.veilrunner.sheet.actor .stats-initiative-value button:hover,
+.veilrunner.sheet.actor .stats-initiative-value button:focus-visible{
+  border-color: color-mix(in srgb, var(--vr-accent) 82%, var(--vr-tech-border-strong, #707b89));
+  color: #ffffff;
+  background: color-mix(in srgb, var(--vr-accent) 30%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--vr-accent) 28%, transparent);
+}
+
+.veilrunner.sheet.actor .stats-summary-row input{
+  width: 4ch;
+  min-width: 0;
+  border: 1px solid var(--vr-border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--vr-text);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .veilrunner.sheet.actor .attribute-groups,
+  .veilrunner.sheet.actor .stats-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+.veilrunner.sheet.actor .about-preview,
+.veilrunner.sheet.actor .setting-panel{
+  padding: 12px;
+  border: 1px solid var(--vr-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.veilrunner.sheet.actor .profession-reference-card{
+  border: 1px solid var(--vr-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 12px;
+}
+
+.veilrunner.sheet.actor .profession-reference-card.compact{
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.veilrunner.sheet.actor .profession-reference-heading{
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.veilrunner.sheet.actor .profession-reference-heading span{
+  color: var(--vr-text);
+  font-weight: 800;
+}
+
+.veilrunner.sheet.actor .profession-reference-heading small{
+  color: var(--vr-text-dim);
+  line-height: 1.35;
+}
+
+.veilrunner.sheet.actor .discipline-reference-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.veilrunner.sheet.actor .discipline-reference-card{
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px;
+}
+
+.veilrunner.sheet.actor .discipline-reference-card.compact{
+  margin-top: 8px;
+}
+
+.veilrunner.sheet.actor .discipline-reference-card h4{
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: var(--vr-accent);
+}
+
+.veilrunner.sheet.actor .discipline-reference-card p,
+.veilrunner.sheet.actor .profession-reference-card p,
+.veilrunner.sheet.actor .rule-reference-list{
+  color: var(--vr-text-dim);
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.veilrunner.sheet.actor .discipline-background{
+  white-space: pre-line;
+}
+
+.veilrunner.sheet.actor .discipline-background strong{
+  display: block;
+  margin-bottom: 4px;
+  color: var(--vr-text);
+}
+
+.veilrunner.sheet.actor .discipline-reference-card dl{
+  display: grid;
+  gap: 5px;
+  margin: 0 0 10px;
+}
+
+.veilrunner.sheet.actor .discipline-reference-card dl div{
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor .discipline-reference-card dt{
+  color: var(--vr-text-dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .discipline-reference-card dd{
+  margin: 0;
+  color: var(--vr-text);
+}
+
+.veilrunner.sheet.actor .discipline-ability-list{
+  display: grid;
+  gap: 8px;
+}
+
+.veilrunner.sheet.actor .discipline-ability{
+  border-top: 1px solid var(--vr-border);
+  padding-top: 8px;
+}
+
+.veilrunner.sheet.actor .discipline-ability strong{
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--vr-text);
+}
+
+.veilrunner.sheet.actor .discipline-ability span{
+  color: var(--vr-cyan);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .discipline-ability p{
+  margin-top: 4px;
+}
+
+.veilrunner.sheet.actor .initiative-band-grid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.veilrunner.sheet.actor .initiative-band-grid.compact{
+  grid-template-columns: 1fr;
+}
+
+.veilrunner.sheet.actor .initiative-band-card{
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.06);
+}
+
+.veilrunner.sheet.actor .initiative-band-card strong{
+  color: var(--vr-text);
+}
+
+.veilrunner.sheet.actor .initiative-band-card span{
+  color: var(--vr-cyan);
+}
+
+.veilrunner.sheet.actor .rule-reference-list{
+  padding-left: 18px;
+}
+
+.veilrunner.sheet.actor .ui-settings-panel{
+  display: grid;
+  gap: 10px;
+}
+
+.veilrunner.sheet.actor .ui-settings-panel h3,
+.veilrunner.sheet.actor .ui-settings-panel h4,
+.veilrunner.sheet.actor .ui-settings-panel h5{
+  margin: 0;
+  color: var(--vr-text);
+}
+
+.veilrunner.sheet.actor .ui-settings-panel h3{
+  font-size: 1rem;
+}
+
+/* Top-level settings groups use a clear display face, separate from their smaller subsections. */
+.veilrunner.sheet.actor .ui-settings-panel > .settings-group > h4:first-child{
+  color: var(--vr-text);
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 0.045em;
+  line-height: 1.1;
+  padding: 2px 0 7px;
+  border-bottom: 2px solid color-mix(in srgb, var(--vr-text) 38%, transparent);
+  text-shadow: 1px 0 1px rgba(0, 0, 0, 0.96), -1px 0 1px rgba(0, 0, 0, 0.96), 0 1px 1px rgba(0, 0, 0, 0.96), 0 -1px 1px rgba(0, 0, 0, 0.96) !important;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .ui-settings-panel h5{
+  margin-top: 4px;
+  color: var(--vr-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .ui-toggle-row{
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 !important;
+  padding: 4px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--vr-text) !important;
+  cursor: pointer;
+}
+
+.veilrunner.sheet.actor .ui-toggle-row span{
+  order: 0;
+}
+
+.veilrunner.sheet.actor .ui-toggle-row input[type="checkbox"]{
+  order: 1;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, var(--vr-ui-color) 38%, #8b95a3);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--vr-ui-color) 20%, #080a0f);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* Foundry's generic checkbox decoration creates a second, offset square here. */
+.veilrunner.sheet.actor .ui-toggle-row input[type="checkbox"]::before,
+.veilrunner.sheet.actor .ui-toggle-row input[type="checkbox"]::after{
+  display: none !important;
+  content: none !important;
+}
+
+.veilrunner.sheet.actor .ui-toggle-row input[type="checkbox"]:checked{
+  border-color: var(--vr-accent);
+  background: var(--vr-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 55%, transparent);
+}
+
+.veilrunner.sheet.actor .ui-toggle-row input[type="checkbox"]:focus-visible{
+  outline: 1px solid var(--vr-text);
+  outline-offset: 2px;
+}
+
+.veilrunner.sheet.actor button.ui-toggle-button{
+  width: 100%;
+  min-height: 28px;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+}
+
+.veilrunner.sheet.actor .ui-toggle-check{
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, var(--vr-ui-color) 38%, #8b95a3);
+  background: color-mix(in srgb, var(--vr-ui-color) 20%, #080a0f);
+}
+
+.veilrunner.sheet.actor .ui-toggle-check.is-active{
+  border-color: var(--vr-accent);
+  background: var(--vr-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vr-accent) 55%, transparent);
+}
+
+.veilrunner.sheet.actor button.ui-toggle-button:focus-visible{
+  outline: 1px solid var(--vr-text);
+  outline-offset: 2px;
+}
+
+.veilrunner.sheet.actor .settings-group{
+  display: grid;
+  gap: 7px;
+  padding-top: 10px;
+  border-top: 1px solid var(--vr-border);
+}
+
+.veilrunner.sheet.actor .ui-settings-panel > .settings-group:first-child{
+  padding-top: 0;
+  border-top: 0;
+}
+
+.veilrunner.sheet.actor .settings-group label{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--vr-text-dim);
+}
+
+.veilrunner.sheet.actor .settings-group .color-picker-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--vr-text-dim);
+}
+
+.veilrunner.sheet.actor .settings-group select{
+  width: min(220px, 100%);
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  background: #171b24 !important;
+  color: #f3f4f8 !important;
+  font-weight: 600;
+  opacity: 1;
+}
+
+.veilrunner.sheet.actor .settings-group select option{
+  background: #171b24 !important;
+  color: #f3f4f8 !important;
+}
+
+.veilrunner.sheet.actor .settings-group select:focus{
+  border-color: var(--vr-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--vr-accent) 65%, transparent);
+}
+
+.veilrunner.sheet.actor .settings-group input[type="color"]{
+  width: 42px;
+  height: 28px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.veilrunner.sheet.actor .settings-group .color-picker-control{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.veilrunner.sheet.actor .settings-group .color-picker-control button{
+  min-width: 54px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--vr-ui-color) 48%, #8792a0);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--vr-ui-color) 22%, #12151d);
+  color: var(--vr-text);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .settings-group .color-picker-control button:hover,
+.veilrunner.sheet.actor .settings-group .color-picker-control button:focus-visible{
+  border-color: var(--vr-accent);
+  background: color-mix(in srgb, var(--vr-accent) 22%, var(--vr-ui-color));
+}
+
+/* Field-level defaults use one visible reload control instead of low-contrast text. */
+.veilrunner.sheet.actor .settings-group .color-picker-control button[data-reset-ui-color],
+.veilrunner.sheet.actor .settings-group .xp-slider-control button[data-reset-ui-slider]{
+  display: grid !important;
+  place-items: center;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--vr-ui-color) 52%, #aeb9c5) !important;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--vr-ui-color) 30%, #202630) !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.veilrunner.sheet.actor .settings-group .color-picker-control button[data-reset-ui-color]::before,
+.veilrunner.sheet.actor .settings-group .xp-slider-control button[data-reset-ui-slider]::before{
+  display: none !important;
+  content: none !important;
+}
+
+.veilrunner.sheet.actor .settings-group .color-picker-control button[data-reset-ui-color] i,
+.veilrunner.sheet.actor .settings-group .xp-slider-control button[data-reset-ui-slider] i{
+  color: #f3f4f8 !important;
+  font-size: 0.78rem;
+}
+
+.veilrunner.sheet.actor .settings-group .color-picker-control button[data-reset-ui-color]:hover,
+.veilrunner.sheet.actor .settings-group .color-picker-control button[data-reset-ui-color]:focus-visible,
+.veilrunner.sheet.actor .settings-group .xp-slider-control button[data-reset-ui-slider]:hover,
+.veilrunner.sheet.actor .settings-group .xp-slider-control button[data-reset-ui-slider]:focus-visible{
+  border-color: var(--vr-accent) !important;
+  background: color-mix(in srgb, var(--vr-accent) 30%, var(--vr-ui-color)) !important;
+}
+
+.veilrunner.sheet.actor .settings-group .theme-reset-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--vr-text-dim);
+}
+
+.veilrunner.sheet.actor .settings-group .theme-reset-btn{
+  min-width: 76px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--vr-ui-color) 48%, #8792a0);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--vr-ui-color) 22%, #12151d);
+  color: var(--vr-text);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .settings-group .theme-reset-btn:hover,
+.veilrunner.sheet.actor .settings-group .theme-reset-btn:focus-visible{
+  border-color: var(--vr-accent);
+  background: color-mix(in srgb, var(--vr-accent) 22%, var(--vr-ui-color));
+}
+
+.veilrunner.sheet.actor .settings-group label.xp-slider-row{
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 250px);
+}
+
+.veilrunner.sheet.actor .settings-group .xp-slider-control{
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 16px 46px 28px;
+  align-items: center;
+  gap: 6px;
+}
+
+.veilrunner.sheet.actor .settings-group .xp-slider-control i{
+  color: var(--vr-text-dim);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.veilrunner.sheet.actor .settings-group .xp-slider-control input[type="range"]{
+  width: 100%;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .settings-group .xp-slider-control .xp-value-input{
+  width: 46px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 3px;
+  border: 1px solid color-mix(in srgb, var(--vr-ui-color) 48%, #8792a0);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--vr-ui-color) 18%, #0a0c12);
+  color: var(--vr-text);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+}
+
+.veilrunner.sheet.actor .settings-group .xp-slider-control button{
+  height: 24px;
+  min-height: 24px;
+  padding: 0 4px;
+  border-radius: 0;
+  font: inherit;
+  font-size: 0.57rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+

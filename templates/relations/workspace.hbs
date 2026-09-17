@@ -1,0 +1,28 @@
+<section class="vr-rel-workspace">
+  <div class="vr-rel-layout">
+    {{> "systems/veilrunner/templates/relations/sidebar.hbs"}}
+    <main class="vr-rel-detail">
+      {{#if unavailable}}<p class="vr-rel-placeholder" role="status">{{localize "VEILRUNNER.RelationsUI.Unavailable"}}</p>{{else}}{{#unless selected}}{{#unless eventTab}}<div class="vr-rel-placeholder"><i class="fas fa-address-book" aria-hidden="true"></i><h2>{{localize "VEILRUNNER.Relations"}}</h2><p>{{localize "VEILRUNNER.RelationsUI.SelectRecord"}}</p></div>{{/unless}}{{/unless}}{{/if}}
+      {{#if selected}}<header class="vr-rel-profile">{{#if selected.img}}<img class="vr-rel-portrait" src="{{selected.img}}" alt="">{{else}}<span class="vr-rel-portrait vr-rel-avatar"><i class="fas fa-address-card" aria-hidden="true"></i></span>{{/if}}<div class="vr-rel-profile-body"><span class="vr-rel-kind">{{selectedKind}}</span><h2>{{selected.name}}</h2><div class="vr-rel-controls">
+        <button type="button" data-rel-action="datapad">{{localize "VEILRUNNER.RelationsUI.Datapad"}}</button>
+        <button type="button" data-rel-action="hero">{{localize "VEILRUNNER.RelationsUI.Hero"}}</button>
+        {{#if manage}}<button type="button" data-rel-action="edit">{{localize "VEILRUNNER.RelationsUI.Edit"}}</button><button type="button" data-rel-action="remove">{{localize "VEILRUNNER.RelationsUI.Remove"}}</button>{{/if}}
+      </div></div></header>{{/if}}
+      {{#if entity}}{{> "systems/veilrunner/templates/relations/dossier.hbs"}}{{/if}}
+      {{#if map}}{{> "systems/veilrunner/templates/relations/map.hbs"}}{{/if}}
+      {{#if relationRecord}}<p>{{standingLabel}}</p><p>{{selected.value}}</p>{{/if}}
+      {{#if events}}{{> "systems/veilrunner/templates/relations/events.hbs"}}{{/if}}
+      {{#if selected}}
+        <section class="vr-rel-notes"><h3>{{localize "VEILRUNNER.RelationsUI.Notes"}}</h3>
+          <textarea rows="4" data-rel-note aria-label="{{localize 'VEILRUNNER.RelationsUI.Notes'}}">{{noteText}}</textarea>
+          <button type="button" data-rel-action="note" {{#unless notebooksReady}}disabled{{/unless}}>{{localize "VEILRUNNER.RelationsUI.SaveNote"}}</button>
+          <small>{{localize "VEILRUNNER.RelationsUI.NotePrivacy"}}</small>
+        </section>
+        <section><h3>{{localize "VEILRUNNER.RelationsUI.LinkedRecords"}}</h3>
+          {{#each journals}}<div><button type="button" data-rel-action="journal" data-uuid="{{uuid}}">{{name}}</button>{{#if ../manage}}<button type="button" data-rel-action="unlink" data-id="{{linkId}}">{{localize "VEILRUNNER.RelationsUI.Unlink"}}</button>{{/if}}</div>{{/each}}
+          {{#if manage}}<button type="button" data-rel-action="link">{{localize "VEILRUNNER.RelationsUI.Link"}}</button>{{/if}}
+        </section>
+      {{/if}}
+    </main>
+  </div>
+</section>

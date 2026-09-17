@@ -1,0 +1,15 @@
+<aside class="vr-rel-directory">
+  {{> "systems/veilrunner/templates/relations/navigation.hbs"}}
+  <div class="vr-rel-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i><input type="search" data-rel-search value="{{query}}" placeholder="{{localize 'VEILRUNNER.RelationsUI.Search'}}" aria-label="{{localize 'VEILRUNNER.RelationsUI.Search'}}"></div>
+  <div class="vr-rel-tree">
+    {{#each groups}}<details class="vr-rel-group" open>
+      <summary><i class="fas {{icon}}" aria-hidden="true"></i><span>{{name}}</span><small>{{count}}</small></summary>
+      {{#each rows}}<button type="button" data-rel-item data-rel-action="entity" data-id="{{id}}" class="vr-rel-tree-row {{#if selected}}is-selected{{/if}}" style="--rel-depth:{{depth}}" {{#if hidden}}hidden{{/if}}>
+        {{#if img}}<img src="{{img}}" alt="">{{else}}<span class="vr-rel-avatar"><i class="fas {{../icon}}" aria-hidden="true"></i></span>{{/if}}<span>{{name}}</span>
+      </button>{{else}}<p class="vr-rel-empty-group">{{localize "VEILRUNNER.RelationsUI.Empty"}}</p>{{/each}}
+      {{#if ../manage}}<button type="button" class="vr-rel-add" data-rel-action="new" data-kind="{{kind}}"><i class="fas fa-plus" aria-hidden="true"></i> {{localize "VEILRUNNER.RelationsUI.New"}}</button>{{/if}}
+    </details>{{/each}}
+    {{#if auxiliaryTab}}<div class="vr-rel-group">{{#each items}}<button type="button" data-rel-item data-rel-action="select" data-id="{{id}}" class="vr-rel-tree-row {{#if selected}}is-selected{{/if}}">{{name}}</button>{{else}}<p>{{localize "VEILRUNNER.RelationsUI.Empty"}}</p>{{/each}}{{#if manage}}<button type="button" data-rel-action="new">{{localize "VEILRUNNER.RelationsUI.New"}}</button>{{/if}}</div>{{/if}}
+  </div>
+  <nav class="vr-rel-tabs" aria-label="{{localize 'VEILRUNNER.Relations'}}">{{#each tabs}}<button type="button" data-rel-action="tab" data-tab="{{id}}" class="{{#if active}}is-selected{{/if}}">{{name}}</button>{{/each}}</nav>
+</aside>

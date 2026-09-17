@@ -1,0 +1,9 @@
+<section class="vr-rel-events"><h3>{{localize "VEILRUNNER.RelationsUI.History"}}</h3>
+  {{#each events}}<article><h4>{{name}}</h4><p>{{reason}}</p>
+    {{#if dueNow}}<strong>{{localize "VEILRUNNER.RelationsUI.Due"}}</strong>{{/if}}
+    {{#unless draft}}<small>{{timeLabel}}</small>{{/unless}}
+    {{#if reverses}}<button type="button" data-rel-action="linked-target" data-id="{{reverses}}">{{localize "VEILRUNNER.RelationsUI.OriginalEvent"}}</button>{{/if}}
+    {{#each changes}}<p>{{name}} · {{field}}: {{beforeLabel}} → {{afterLabel}}</p>{{/each}}
+    {{#if ../manage}}{{#if draft}}<button type="button" data-rel-action="apply" data-id="{{id}}">{{localize "VEILRUNNER.RelationsUI.Preview"}}</button>{{else if reversible}}<button type="button" data-rel-action="reverse" data-id="{{id}}">{{localize "VEILRUNNER.RelationsUI.Reverse"}}</button>{{/if}}{{/if}}
+  </article>{{/each}}
+</section>

@@ -1,0 +1,23 @@
+<article class="vr-rel-dossier">
+  <details class="vr-rel-section" open><summary><i class="fas fa-align-left" aria-hidden="true"></i> {{localize "VEILRUNNER.RelationsUI.Description"}}</summary><p class="vr-rel-description">{{selected.description}}</p></details>
+  {{#if selected.actorUuid}}<button type="button" data-rel-action="actor">{{localize "VEILRUNNER.RelationsUI.OpenActor"}}</button>{{/if}}
+  {{#if selected.legacyLabel}}<p>{{selected.legacyLabel}}</p>{{/if}}
+  <section class="vr-rel-standing"><h3>{{localize "VEILRUNNER.RelationsUI.Standing"}}</h3><strong>{{standingLabel}}</strong>
+    {{#if meter}}<meter min="{{meter.min}}" max="{{meter.max}}" value="{{meter.value}}">{{standing.value}}</meter>{{/if}}
+    {{#if standing.acquainted}}<span>{{localize "VEILRUNNER.RelationsUI.Acquainted"}}</span>{{/if}}
+    {{#if manage}}{{#if sourceAvailable}}<button type="button" data-rel-action="standing">{{localize "VEILRUNNER.RelationsUI.SetStanding"}}</button><button type="button" data-rel-action="acquainted">{{localize "VEILRUNNER.RelationsUI.ToggleAcquaintance"}}</button>{{/if}}{{/if}}
+  </section>
+  {{#if selected.parentId}}<p>Parent: <button type="button" data-rel-action="entity" data-id="{{selected.parentId}}">{{parentName}}</button></p>{{/if}}
+  {{#if selected.controllerId}}<p>Controlled by: <button type="button" data-rel-action="entity" data-id="{{selected.controllerId}}">{{controllerName}}</button></p>{{/if}}
+  {{#each memberships}}<p><button type="button" data-rel-action="entity" data-id="{{factionId}}">{{name}}</button> {{rank}}</p>{{/each}}
+  {{#each members}}<p><button type="button" data-rel-action="entity" data-id="{{id}}">{{name}}</button> {{rank}}</p>{{/each}}
+  {{#each associations}}<button type="button" data-rel-action="entity" data-id="{{id}}">{{name}}</button>{{/each}}
+  {{#if relations}}<details class="vr-rel-section" open><summary><i class="fas fa-user-group" aria-hidden="true"></i> {{localize "VEILRUNNER.Relations"}}</summary>{{#each relations}}<div class="vr-rel-relation-row"><span>{{sourceName}} →</span><button type="button" data-rel-action="entity" data-id="{{id}}">{{name}}</button><span class="vr-rel-tier">{{tier}}</span></div>{{/each}}</details>{{/if}}
+  {{#each maps}}<button type="button" data-rel-action="map" data-id="{{id}}">{{name}}</button>{{/each}}
+  {{#if isGM}}<section class="vr-rel-agenda"><h3>{{localize "VEILRUNNER.RelationsUI.Agenda"}}</h3>
+    <p>{{selected.goal}}</p><p>{{selected.strategy}}</p><p>{{selected.gmNotes}}</p>
+    {{#each selected.traits}}<span>{{this}}</span>{{/each}}
+    {{#each selected.resources}}<p>{{name}}: {{value}}</p>{{/each}}
+    {{#each selected.clocks}}<label>{{name}} {{value}} / {{max}}<meter min="0" max="{{max}}" value="{{value}}"></meter></label>{{/each}}
+  </section>{{/if}}
+</article>

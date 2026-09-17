@@ -1,0 +1,12 @@
+      <div class="hero-image-frame">
+        <div class="hero-image" style="--portrait-x: {{portraitCrop.x}}%; --portrait-y: {{portraitCrop.y}}%; --portrait-zoom: {{portraitCrop.zoom}}; --portrait-rotation: {{portraitCrop.rotation}}deg; --portrait-flip-x: {{#if portraitCrop.flipX}}-1{{else}}1{{/if}};{{#if characterBackgroundImage}} background: url('{{characterBackgroundImage}}') center / cover no-repeat !important;{{/if}}">
+          <img src="{{portraitImage}}" alt="{{actor.name}}" />
+
+
+          <div class="inspiration-dots">
+            {{#each inspirationDots}}
+              <span class="inspiration-dot"></span>
+            {{/each}}
+          </div>
+        </div>
+      </div>

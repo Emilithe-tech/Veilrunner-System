@@ -1,0 +1,69 @@
+/* Stats typography: add one point to font sizes and one pixel to letter spacing. */
+.veilrunner.sheet.actor .stats-sections{
+  font-size: calc(1rem + 1pt);
+}
+.veilrunner.sheet.actor .stats-sections > .stats-section > h1{
+  font-size: calc(0.96rem + 1pt);
+}
+.veilrunner.sheet.actor .stats-sections .stats-attributes-section .attribute-group-heading{
+  font-size: calc(0.68rem + 1pt);
+}
+.veilrunner.sheet.actor .stats-sections .attribute-group-icon i{
+  font-size: calc(0.75rem + 1pt);
+}
+.veilrunner.sheet.actor .stats-sections .stats-attributes-section .attribute-row .attribute-label{
+  font-size: calc(0.8rem + 1pt);
+}
+.veilrunner.sheet.actor .stats-sections .stats-summary-row > span{
+  font-size: calc(0.82rem + 1pt);
+}
+.veilrunner.sheet.actor .stats-sections .stats-attributes-section .attribute-row strong,
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-row strong{
+  font-size: calc(0.88rem + 1pt);
+}
+.veilrunner.sheet.actor .stats-sections :is(input, .stats-initiative-value > span, .stats-initiative-value button){
+  font-size: inherit;
+}
+
+.veilrunner.sheet.actor .stats-sections{
+  letter-spacing: 1px;
+}
+.veilrunner.sheet.actor .stats-sections > .stats-section > h1{
+  letter-spacing: calc(0.1em + 1px);
+}
+.veilrunner.sheet.actor .stats-sections .stats-attributes-section .attribute-group-heading{
+  letter-spacing: calc(0.09em + 1px);
+}
+.veilrunner.sheet.actor .stats-sections :is(input, button){
+  letter-spacing: inherit;
+}
+
+/* Keep every stat container identical, including rows with editable controls. */
+.veilrunner.sheet.actor .stats-sections .stats-attributes-section .attribute-row,
+.veilrunner.sheet.actor .stats-sections > .stats-section:not(.stats-attributes-section) .stats-summary-row{
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  padding-block: 4px;
+  align-items: center;
+}
+
+
+/* Screen-space flyouts stay readable at every hero-sheet scale. */
+.vr-stats-flyout{
+  position: fixed;
+  z-index: 10000;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 10px 12px;
+  border: 1px solid #64748b;
+  border-radius: 5px;
+  background: #10141c;
+  color: #f1f5f9;
+  box-shadow: 0 4px 16px #0009;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}

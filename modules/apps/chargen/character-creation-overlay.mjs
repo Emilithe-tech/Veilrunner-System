@@ -15,6 +15,7 @@ import { ChargenBuildStore } from "./build-store.mjs";
 import { validateChargenBuild } from "./validation.mjs";
 import { renderReviewPage, renderReviewStatus } from "./review-view.mjs";
 import { PLANNING_STEPS, normalizePlanningLevel, planningState, planningValidation, saveLevelPlan } from "./planning-mode.mjs";
+import { plannedPurchases } from "../../sheets/planned-purchases.mjs";
 import { renderChargenHeader, renderDetailsPanel } from "./shell.mjs";
 import { renderLiveBuild } from "./live-build.mjs";
 import { renderSelectionBrowser } from "./selection-browser.mjs";
@@ -36,7 +37,7 @@ import {
   treeConnectionPath, treeEditorCreationContext, treeNodeAlignmentTarget, treeRouteSourcePhases, treeWaypointInsertIndex
 } from "./tree-editor-state.mjs";
 import {
-  QUALITY_LIMITS, QUALITY_PILLARS, QUALITY_TIERS, auditQualityBuild, evaluateQualitySelection,
+  QUALITY_LIMITS, QUALITY_PILLARS, QUALITY_TIERS, PERK_ICON, auditQualityBuild, evaluateQualitySelection,
   qualitySelectionId, qualitySelectionSnapshot, tierCost
 } from "./quality-rules.mjs";
 
@@ -433,7 +434,7 @@ export function registerCharacterCreation() {
 }
 
 export function openCharacterCreation(actor, { mode = "creation", portraitEditor = null, destination = null, planningLevel = null } = {}) {
-  const creatorKey = mode === "planning" ? `${actor.id}:plan:${planningLevel}` : actor.id;
+  const creatorKey = mode === "planning" ? `${actor.id}:plan:${planningLevel}` : mode === "levelUp" && planningLevel ? `${actor.id}:implement:${planningLevel}` : actor.id;
   const existing = existingCreators.get(creatorKey);
   if (existing) {
     if (portraitEditor) existing.portraitEditor = portraitEditor;
@@ -569,7 +570,7 @@ class CharacterCreationOverlay {
     });
     this.state = this.store.state;
     if (this.mode === "planning") {
-      Object.assign(this.state, planningState(this.state, actor.getFlag("Veilrunner", "levelPlans"), this.planningLevel));
+      Object.assign(this.state, planningState({ ...this.state, startingLevel: Number(actor.system.level) }, actor.getFlag("Veilrunner", "levelPlans"), this.planningLevel));
     }
     this.catalogProvider = new CatalogProvider(starterStoreContext());
     this.catalogIndex = new CatalogIndex(this.catalogProvider);
@@ -592,6 +593,12 @@ class CharacterCreationOverlay {
     });
     this.initialTalentTree = foundry.utils.deepClone(this.state.talentTree);
     if (this.mode === "levelUp") {
+      if (Number(planningLevel) === Number(actor.system.level) + 1) {
+        const draft = actor.getFlag("Veilrunner", "levelPlans")?.[planningLevel]?.state;
+        if (draft) for (const key of ["attributes", "talentTree", "qualitiesTaken", "flawsTaken"]) {
+          if (draft[key] !== undefined) this.state[key] = foundry.utils.deepClone(draft[key]);
+        }
+      }
       this.state.startingLevel = Math.max(1, number(actor.system?.level, 1) + 1);
       this.state.startingLevelLocked = true;
     }
@@ -616,14 +623,15 @@ class CharacterCreationOverlay {
   }
 
   navigateToProgression(destination, { draw = true } = {}) {
-    if (!["attribute", "talent", "skill"].includes(destination) || this.isTreeEditor) return;
+    if (!["attribute", "talent", "skill", "perk", "review"].includes(destination) || this.isTreeEditor) return;
     if (this.root.isConnected) this.#saveVisibleInputs();
-    const key = destination === "attribute" ? "attributes" : "talents";
+    const key = destination === "review" ? "review" : destination === "attribute" ? "attributes" : destination === "perk" ? "qualitiesFlaws" : "talents";
     const step = this.#steps.findIndex(entry => entry.key === key);
     if (step < 0) return;
     this.step = step;
     this.state.detailSelection = null;
-    if (destination !== "attribute") {
+    if (destination === "perk") this.state.qualityFlawMode = "perks";
+    if (destination === "talent" || destination === "skill") {
       this.treePage = destination === "skill" ? "skills" : "magic";
       this.treeHelpOpen = false;
       this.openPracticeId = null;
@@ -1854,7 +1862,7 @@ class CharacterCreationOverlay {
     return `<article tabindex="0" class="vr-cc-qf-choice-card ${accent} ${pillarClass} ${focused ? "focused" : ""} ${selected ? "selected" : ""} ${locked ? "locked" : ""}" data-quality-id="${escape(record.id)}" aria-label="${escape(`${record.name}, ${record.tier} ${record.kind}`)}">
       <header><strong>${escape(record.tier)} · ${tierCost(record.tier)} ${record.kind === "flaw" ? "FP" : "PP"}</strong>${stateIcon ? `<i class="fa-solid ${stateIcon}" aria-hidden="true"></i>` : ""}</header>
       <h3 title="${escape(record.name)}">${escape(record.name)}</h3>
-      <p>${record.kind === "flaw" ? "Flaw" : "Perk"} · ${escape(record.pillar)}</p>
+      <p>${record.kind === "flaw" ? "Flaw" : `<i class="fa-solid ${PERK_ICON}" aria-hidden="true"></i> Perk`} · ${escape(record.pillar)}</p>
       ${action}
     </article>`;
   }
@@ -1865,7 +1873,7 @@ class CharacterCreationOverlay {
     const perkPillars = QUALITY_FLAW_PILLARS.map(pillar => `<div class="pillar-${pillar.toLowerCase()}"><span>${pillar}</span><strong>${audit.perkPillarTotals[pillar]}</strong><progress max="${perkScale}" value="${audit.perkPillarTotals[pillar]}" aria-label="${pillar} perk points: ${audit.perkPillarTotals[pillar]}"></progress></div>`).join("");
     const flawPillars = QUALITY_FLAW_PILLARS.map(pillar => `<div class="pillar-${pillar.toLowerCase()}"><span>${pillar}</span><strong>${audit.flawPillarTotals[pillar]} / ${QUALITY_LIMITS.pillarMaximum}</strong><progress max="${QUALITY_LIMITS.pillarMaximum}" value="${audit.flawPillarTotals[pillar]}"></progress></div>`).join("");
     return `<header class="vr-cc-qf-quota">
-      ${metric("perk", "fa-star", "Perk Points", audit.perkPointsUsed, audit.perkCapacity, `${audit.perkPointsRemaining} remaining`, `Level ${Math.min(50, Math.max(1, number(this.state.startingLevel, 1)))} capacity`)}
+      ${metric("perk", PERK_ICON, "Perk Points", audit.perkPointsUsed, audit.perkCapacity, `${audit.perkPointsRemaining} remaining`, `Level ${Math.min(50, Math.max(1, number(this.state.startingLevel, 1)))} capacity`)}
       <section class="vr-cc-qf-metric pillars perks"><div><span>Perks by Pillar</span><div class="vr-cc-qf-pillar-list">${perkPillars}</div></div></section>
       <section class="vr-cc-qf-metric flaw combined"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i><div class="vr-cc-qf-flaw-totals"><div><span>Total Flaw Points</span><strong>${audit.flawPoints} / ${QUALITY_LIMITS.flawMinimum}</strong><b>${audit.flawRequirementMet ? "Requirement met" : `${audit.flawRequirementRemaining} required`}</b></div><div><span>Max Minor Flaw Points</span><strong>${audit.minorFlawPoints} / ${QUALITY_LIMITS.minorFlawMaximum}</strong></div></div></section>
       <section class="vr-cc-qf-metric pillars flaws"><div><span>Flaws per Pillar</span><div class="vr-cc-qf-pillar-list">${flawPillars}</div></div></section>
@@ -4899,10 +4907,10 @@ class CharacterCreationOverlay {
 
   #reviewStep(validation) {
     if (this.mode === "planning") {
-      const attributes = ATTRIBUTE_GROUPS.flatMap(group => group.attributes.map(attribute => `<li>${escape(attribute)}: ${number(foundry.utils.getProperty(this.state, `attributes.${group.key}.${attribute}`))}</li>`)).join("");
-      const branches = (this.state.talentTree?.branches ?? []).map(id => `<li>${escape(this.#treeCatalogEntry(id, "practice")?.practice?.name ?? id)}</li>`).join("");
-      const leaves = (this.state.talentTree?.leaves ?? []).map(leaf => `<li>${escape(this.#treeCatalogEntry(leaf.id, "spell")?.spell?.name ?? leaf.id)} · Rank ${number(leaf.rank, 1)}</li>`).join("");
-      return `<section class="vr-cc-planning-review"><h1>Level ${this.planningLevel} Plan</h1><p>Save this future build and return to it later. Your current hero stays at Level ${number(this.actor.system.level)}.</p><h2>Attributes</h2><ul>${attributes}</ul><h2>Talents &amp; Skills</h2><ul>${branches}${leaves || ""}</ul><button type="button" class="vr-cc-btn primary" data-action="confirm">Save Level ${this.planningLevel} Plan &amp; Close</button></section>`;
+      const plans = { ...this.actor.getFlag("Veilrunner", "levelPlans"), [this.planningLevel]: { state: this.state } };
+      const changes = plannedPurchases(this.actor.system, plans, talentTreeCatalog()).get(this.planningLevel) ?? [];
+      const rows = kinds => changes.filter(item => kinds.includes(item.kind)).map(item => `<li>${item.kind === "perk" ? `<i class="fa-solid ${PERK_ICON}" aria-hidden="true"></i> ` : ""}${escape(item.name)}${item.detail ? ` · ${escape(item.detail)}` : ""}</li>`).join("");
+      return `<section class="vr-cc-planning-review"><h1>Level ${this.planningLevel} Plan</h1><p>Save this future build and return to it later. Your current hero stays at Level ${number(this.actor.system.level)}.</p><h2>Attributes</h2><ul>${rows(["attribute"])}</ul><h2>Talents &amp; Skills</h2><ul>${rows(["talent", "skill", "spell"])}</ul><h2><i class="fa-solid ${PERK_ICON}" aria-hidden="true"></i> Perks</h2><ul>${rows(["perk"])}</ul><button type="button" class="vr-cc-btn primary" data-action="confirm">Save Level ${this.planningLevel} Plan &amp; Close</button></section>`;
     }
     const purchases = normalizeCart(this.state.storefront?.purchases);
     const purchaseTotal = cartTotal(purchases, this.catalogRecords);
@@ -5028,7 +5036,7 @@ class CharacterCreationOverlay {
         { key: "identity", label: "Identity", presentation: "cards", entries: identity },
         { key: "attributes", label: "Attributes", presentation: "attributes", groups: attributes },
         { key: "talents", label: "Talents & Skills", compactBadges: true, limit: 5, entries: talents.map(entry => ({ title: `${entry.id} · Rank ${entry.rank}`, description: "Purchased talent or skill.", icon: "fa-solid fa-wand-sparkles" })) },
-        { key: "perks", label: "Perks", compactBadges: true, limit: 5, entries: this.state.qualitiesTaken.map(entry => ({ title: entry.name, description: entry.description, img: entry.img, icon: "fa-solid fa-star" })) },
+        { key: "perks", label: "Perks", compactBadges: true, limit: 5, entries: this.state.qualitiesTaken.map(entry => ({ title: entry.name, description: entry.description, img: entry.img, icon: `fa-solid ${PERK_ICON}` })) },
         { key: "flaws", label: "Flaws", compactBadges: true, limit: 5, entries: this.state.flawsTaken.map(entry => ({ title: entry.name, description: entry.description, img: entry.img, icon: "fa-solid fa-triangle-exclamation" })) },
         { key: "contacts", label: "Contacts", compactBadges: true, limit: 4, entries: contacts.map(entry => ({ title: entry.name || entry.role || "Contact", description: entry.notes || entry.disposition || entry.role, img: entry.img, icon: "fa-solid fa-user-group" })) },
         { key: "purchases", label: "Purchases", presentation: "purchases", entries: purchases.map(line => { const record = this.catalogRecords.find(entry => entry.definitionId === line.definitionId); return { title: record?.name ?? line.definitionId, description: `${Number(record?.price ?? 0).toLocaleString()}c each`, img: record?.img, grade: record?.grade, rarity: record?.rarityName, rarityColor: record?.rarityColor, quantity: line.quantity }; }) }
@@ -6544,6 +6552,7 @@ class CharacterCreationOverlay {
   }
 
   async #confirmLevelUp() {
+    if (!this.actor.isOwner) return;
     const currentLevel = Math.max(1, number(this.actor.system?.level, 1));
     const nextLevel = currentLevel + 1;
     const xp = Math.max(0, number(this.actor.system?.experience?.value));
@@ -6557,6 +6566,13 @@ class CharacterCreationOverlay {
     const attributes = pool("attributePoints", attributePointsForLevel(nextLevel), this.#attributePointCost());
     const treeDelta = this.#treeSpent();
     const initialTree = this.#treeSpent(this.initialTalentTree);
+    const talentSpent = number(this.actor.system?.talentPoints?.total) - number(this.actor.system?.talentPoints?.available) + treeDelta.talent - initialTree.talent;
+    const skillSpent = number(this.actor.system?.skillPoints?.total) - number(this.actor.system?.skillPoints?.available) + treeDelta.skill - initialTree.skill;
+    if (this.#attributePointCost() > attributes.total
+      || talentSpent > Math.max(number(this.actor.system?.talentPoints?.total), talentPointsForLevel(nextLevel))
+      || skillSpent > Math.max(number(this.actor.system?.skillPoints?.total), skillPointsForLevel(nextLevel))) {
+      return ui.notifications.warn("This plan spends more points than are available. Revise it before applying the level up.");
+    }
     const talents = pool("talentPoints", talentPointsForLevel(nextLevel), number(this.actor.system?.talentPoints?.total) - number(this.actor.system?.talentPoints?.available) + treeDelta.talent - initialTree.talent);
     const skills = pool("skillPoints", skillPointsForLevel(nextLevel), number(this.actor.system?.skillPoints?.total) - number(this.actor.system?.skillPoints?.available) + treeDelta.skill - initialTree.skill);
     const treeItemValidation = await validateTalentTreeItemSources(this.state.talentTree, talentTreeCatalog(), this.actor);

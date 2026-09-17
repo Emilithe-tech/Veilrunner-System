@@ -1,0 +1,19 @@
+<div class="vr-rel-map" tabindex="0" aria-label="{{selected.name}}">
+  <svg data-rel-map-surface viewBox="0 0 {{selected.width}} {{selected.height}}" role="img" aria-label="{{selected.name}}">
+    {{#if selected.background}}<image href="{{selected.background}}" width="{{selected.width}}" height="{{selected.height}}" preserveAspectRatio="none"></image>{{/if}}
+    <g class="vr-rel-map-grid">{{#each gridPaths}}<path d="{{this}}"></path>{{/each}}</g>
+    {{#each territories}}<polygon points="{{pointsText}}" fill="{{color}}" fill-opacity=".3" stroke="{{color}}" tabindex="0" role="button" data-rel-action="entity" data-id="{{factionId}}"><title>{{name}}</title></polygon>{{/each}}
+    {{#if draftPoints}}<polyline points="{{draftPoints}}" fill="none" stroke="#ffffff" stroke-width="3"></polyline>{{/if}}
+    {{#each pins}}<g tabindex="0" role="button" data-rel-action="entity" data-id="{{entityId}}"><circle cx="{{x}}" cy="{{y}}" r="12"></circle><text x="{{x}}" y="{{y}}" dy="-18">{{name}}</text><title>{{name}}</title></g>{{/each}}
+  </svg>
+</div>
+{{#if manage}}<div class="vr-rel-map-tools">
+  <label>Pin entity<select data-rel-map-key="mapEntityId">{{#each mapEntities}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+  <button type="button" data-rel-action="pin-mode">Place pins</button>
+  <label>Territory faction<select data-rel-map-key="mapFactionId">{{#each mapFactions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+  <label>Territory color<input type="color" data-rel-map-key="mapColor" value="{{#if mapColor}}{{mapColor}}{{else}}#6fb9cb{{/if}}"></label>
+  <button type="button" data-rel-action="territory-mode">Draw territory</button>
+  <button type="button" data-rel-action="territory-save">Save territory</button>
+  <button type="button" data-rel-action="map-cancel">Finish / cancel drawing</button>
+  {{#if mapMode}}<p>Click the map to place pins or territory vertices. Save a territory after placing at least three vertices.</p>{{/if}}
+</div>{{/if}}

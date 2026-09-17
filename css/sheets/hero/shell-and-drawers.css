@@ -1,0 +1,625 @@
+/* character-sheet.css */
+
+.vr-character-sheet {
+  --sheet-scale: 1;
+  zoom: var(--sheet-scale);
+}
+
+/* .veilrunner.sheet.actor actor sheet object. */
+
+.veilrunner.sheet.actor .generated-weapon-action { border-color: color-mix(in srgb, var(--vr-accent) 60%, transparent); }
+.veilrunner.sheet.actor .generated-weapon-action button:disabled { cursor: not-allowed; opacity: .42; }.veilrunner.sheet.actor.hero{
+  height: 1112px;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 18px 50px rgba(0, 0, 0, 0.55),
+    0 0 40px color-mix(in srgb, var(--vr-accent) 8%, transparent);
+  overflow: hidden;
+  background: var(--vr-bg);
+  transition: width 0.8s ease;
+}
+/* Keep viewport changes from permanently shrinking the fixed-layout hero sheet.
+   Explicit bounds also give Foundry's position resolver stable dimensions. */
+.veilrunner.sheet.actor.hero:not(.minimized):not(.minimizing){
+  min-width: 956px;
+  max-width: 1276px;
+  min-height: 1112px;
+  max-height: 1112px;
+}
+
+.actions-card-traits{ overflow: hidden; color: #94a3b8; font-size: .6rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+
+.veilrunner.sheet.actor.hero .window-header,
+.veilrunner.sheet.actor.basic .window-header{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  z-index: 120;
+  background: transparent;
+  border: none;
+  min-height: 28px;
+  padding: 4px 8px 0;
+}
+
+.veilrunner.sheet.actor.hero .window-header .window-title,
+.veilrunner.sheet.actor.hero .window-header .window-icon,
+.veilrunner.sheet.actor.basic .window-header .window-title,
+.veilrunner.sheet.actor.basic .window-header .window-icon{
+  display: none;
+}
+
+.veilrunner.sheet.actor.hero .window-header .header-button,
+.veilrunner.sheet.actor.basic .window-header .header-button{
+  color: var(--vr-text-dim);
+  background: transparent;
+  border: none;
+}
+
+.veilrunner.sheet.actor.hero .window-header .header-button:hover,
+.veilrunner.sheet.actor.basic .window-header .header-button:hover{
+  color: var(--vr-accent);
+}
+
+.veilrunner.sheet.actor.hero .window-header [data-action="toggleEditMode"]{
+  order: -2;
+  margin-right: 0;
+  color: var(--vr-text-dim);
+}
+.veilrunner.sheet.actor.hero .window-header [data-action="toggleHeroColumn"]{order:-1; margin-right:auto; color:var(--vr-text-dim);}
+.veilrunner.sheet.actor.hero .window-header [data-action="toggleHeroColumn"]:hover{color:var(--vr-accent);}
+
+.veilrunner.sheet.actor.hero .window-header [data-action="toggleEditMode"].active,
+.veilrunner.sheet.actor.hero .window-header [data-action="toggleEditMode"]:hover{
+  color: var(--vr-accent);
+}
+
+.veilrunner.sheet.actor.hero .window-header [data-action="toggleEditMode"][data-edit-mode="on"]::before{
+  content: "\f205";
+}
+
+.veilrunner.sheet.actor .window-content{
+  --vr-sheet-gutter: 24px;
+  --vr-main-width: 908px;
+  --vr-details-width: 320px;
+  --vr-equipment-width: 260px;
+  display: grid;
+  grid-template-columns: var(--vr-sheet-gutter) var(--vr-main-width) var(--vr-sheet-gutter);
+  grid-template-rows: minmax(0, 1fr);
+  height: calc(100% - 28px);
+  gap: 0;
+  background:
+    radial-gradient(1200px 400px at 20% -10%, rgba(168, 85, 247, 0.08), transparent 60%),
+    var(--vr-bg);
+  overflow: visible;
+  position: relative;
+  padding: 0;
+  color: var(--vr-text);
+}
+
+.veilrunner.sheet.actor .window-content.details-open,
+.veilrunner.sheet.actor .window-content.details-closing{
+  grid-template-columns: var(--vr-sheet-gutter) var(--vr-main-width) var(--vr-sheet-gutter);
+}
+
+.veilrunner.sheet.actor .window-content.details-reserved{
+  grid-template-columns: var(--vr-sheet-gutter) var(--vr-main-width) var(--vr-sheet-gutter);
+}
+
+/* Continue the header divider across the open drawer without adding a second drawer line. */
+.veilrunner.sheet.actor .window-content.details-open::before,
+.veilrunner.sheet.actor .window-content.details-closing::before{
+  content: "";
+  position: absolute;
+  top: var(--vr-header-height, 0px);
+  left: calc(var(--vr-sheet-gutter) + var(--vr-main-width) + var(--vr-sheet-gutter));
+  right: 0;
+  height: 1px;
+  background: var(--vr-border);
+  pointer-events: none;
+  z-index: 60;
+}
+
+/* Keep the lower-z drawer hidden until it clears the character-sheet edge. */
+.veilrunner.sheet.actor .window-content.details-open::after,
+.veilrunner.sheet.actor .window-content.details-closing::after{
+  content: "";
+  position: absolute;
+  top: var(--vr-header-height, 0px);
+  bottom: 0;
+  left: 0;
+  width: calc(var(--vr-sheet-gutter) + var(--vr-main-width) + var(--vr-sheet-gutter));
+  background: var(--vr-bg);
+  pointer-events: none;
+  z-index: 55;
+}
+
+/* Foundry's window controls follow the widened header while the drawer is visible. */
+.veilrunner.sheet.actor:has(.window-content.details-open) .window-header,
+.veilrunner.sheet.actor:has(.window-content.details-closing) .window-header{
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.veilrunner.sheet.actor .window-content.details-open [data-application-part="main"],
+.veilrunner.sheet.actor .window-content.details-closing [data-application-part="main"]{
+  grid-column: 2;
+}
+
+.veilrunner.sheet.actor .window-content.details-open [data-application-part="main"]::after,
+.veilrunner.sheet.actor .window-content.details-closing [data-application-part="main"]::after{
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: var(--vr-sheet-gutter);
+  background: var(--vr-bg);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.veilrunner.sheet.actor [data-application-part="header"]{
+  /* Keep the header controls fixed to the original sheet width. */
+  grid-column: 1 / 3;
+  width: calc(var(--vr-sheet-gutter) + var(--vr-main-width) + var(--vr-sheet-gutter));
+  box-sizing: border-box;
+  position: relative;
+  z-index: 60;
+  background: var(--vr-bg);
+}
+
+.veilrunner.sheet.actor [data-application-part="bottomNav"]{
+  display: none;
+}
+
+.veilrunner.sheet.actor [data-application-part="main"]{
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+  z-index: 60;
+  background: var(--vr-bg);
+}
+
+.veilrunner.sheet.actor [data-application-part="equipment"]{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--vr-equipment-width, var(--vr-details-width));
+  height: 100%;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-ui-color) 24%, #10131c), color-mix(in srgb, var(--vr-ui-color) 12%, #07080d));
+  border-right: 1px solid color-mix(in srgb, var(--vr-accent) 34%, var(--vr-border));
+  box-shadow:
+    18px 0 40px rgba(0, 0, 0, 0.5),
+    inset -1px 0 0 color-mix(in srgb, var(--vr-accent) 24%, transparent);
+  transform: translateX(calc(-100% - 2px));
+  transition: transform 0.8s ease, clip-path 0.8s ease;
+  pointer-events: auto;
+  overflow: auto;
+  z-index: 80;
+}
+
+.veilrunner.sheet.actor .window-content.equipment-expanded-left{
+  grid-template-columns:calc(var(--vr-sheet-gutter) + var(--vr-left-drawer-extent)) var(--vr-main-width) var(--vr-sheet-gutter);
+}
+.veilrunner.sheet.actor .window-content.equipment-expanded-left [data-application-part="details"]{
+  left:calc(var(--vr-sheet-gutter) + var(--vr-main-width) + var(--vr-sheet-gutter) + var(--vr-left-drawer-extent));
+}
+
+.veilrunner.sheet.actor [data-application-part="equipment"].open{
+  transform: translateX(0);
+}
+
+.veilrunner.sheet.actor .window-content:has(.hero-row.hero-column-hidden) [data-application-part="equipment"] [data-action="toggleEquipment"] > i{
+  transform: scaleX(-1);
+}
+
+.veilrunner.sheet.actor [data-application-part="details"]{
+  position: absolute;
+  top: var(--vr-header-height, 0px);
+  left: calc(var(--vr-sheet-gutter) + var(--vr-main-width) + var(--vr-sheet-gutter));
+  width: var(--vr-details-width);
+  height: calc(100% - var(--vr-header-height, 0px));
+  display: block;
+  visibility: hidden;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--vr-ui-color) 24%, #10131c), color-mix(in srgb, var(--vr-ui-color) 12%, #07080d));
+  border-left: 1px solid color-mix(in srgb, var(--vr-ui-color) 64%, var(--vr-border));
+  box-shadow:
+    -18px 0 40px rgba(0, 0, 0, 0.42),
+    inset 1px 0 0 color-mix(in srgb, var(--vr-accent) 24%, transparent);
+  overflow: auto;
+  /* The details panel travels beneath the fixed character-sheet surface. */
+  z-index: 50;
+  pointer-events: none;
+  transform: translateX(calc(-100% - 2px));
+  transition: transform 0.8s ease;
+}
+
+/* Drawers share the sheet's themed surface so the open layout is continuous. */
+.veilrunner.sheet.actor [data-application-part="equipment"],
+.veilrunner.sheet.actor [data-application-part="details"]{
+  background: var(--vr-bg);
+}
+
+.veilrunner.sheet.actor .window-content.details-open [data-application-part="details"],
+.veilrunner.sheet.actor .window-content.details-closing [data-application-part="details"]{
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.veilrunner.sheet.actor .window-content.details-open [data-application-part="details"]{
+  transform: translateX(0);
+}
+
+.veilrunner.sheet.actor .window-content.details-closing [data-application-part="details"]{
+  transform: translateX(calc(-100% - 2px));
+}
+
+/* Clip the entire closed subtree, including controls with their own visibility rules. */
+.veilrunner.sheet.actor .window-content:not(.details-open):not(.details-closing) [data-application-part="details"]{
+  clip-path: inset(50%);
+  pointer-events: none;
+}
+
+.veilrunner.sheet.actor .window-content.details-open .drawer-handle.handle-right,
+.veilrunner.sheet.actor .window-content.details-closing .drawer-handle.handle-right{
+  display: none;
+}
+
+/* The edge control returns with the gutter only after the drawer has closed. */
+.veilrunner.sheet.actor .window-content.details-reserved .drawer-handle.handle-right{
+  animation: vr-right-drawer-handle-return 0.8s ease both;
+}
+
+@keyframes vr-right-drawer-handle-return {
+  from {
+    opacity: 0;
+    transform: translate(14px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+.drawer-handle{
+  position: absolute;
+  width: 26px;
+  min-height: 92px;
+  padding: 0;
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  background:
+    linear-gradient(180deg, rgba(20, 23, 34, 0.98), rgba(8, 9, 16, 0.98));
+  color: var(--vr-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 0 20px rgba(0, 0, 0, 0.18);
+  z-index: 70;
+  overflow: hidden;
+}
+
+.drawer-handle:hover{
+  background:
+    radial-gradient(80% 60% at 50% 50%, rgba(34, 211, 238, 0.12), transparent 70%),
+    linear-gradient(180deg, rgba(24, 28, 40, 0.98), rgba(10, 12, 18, 0.98));
+  border-color: rgba(34, 211, 238, 0.42);
+  color: var(--vr-cyan);
+}
+
+.drawer-handle.handle-left{
+  left: -14px;
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 0 18px 18px 0;
+  border-left: none;
+  border-color: rgba(34, 211, 238, 0.34);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 18px rgba(34, 211, 238, 0.12),
+    0 0 26px rgba(168, 85, 247, 0.1);
+}
+
+.drawer-handle.handle-left::before{
+  content: "";
+  position: absolute;
+  inset: 8px 5px 8px auto;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, rgba(34, 211, 238, 0.86), rgba(168, 85, 247, 0.72), transparent);
+  box-shadow: 0 0 9px rgba(34, 211, 238, 0.5);
+}
+
+.drawer-handle.handle-left i{
+  transform: translateX(3px);
+  color: rgba(243, 244, 248, 0.84);
+  filter: drop-shadow(0 0 7px rgba(34, 211, 238, 0.42));
+}
+
+.drawer-handle.handle-left:hover i{
+  color: var(--vr-cyan);
+  filter:
+    drop-shadow(0 0 7px rgba(34, 211, 238, 0.8))
+    drop-shadow(0 0 16px rgba(168, 85, 247, 0.28));
+}
+
+.drawer-handle.handle-right{
+  right: -14px;
+  left: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 18px 0 0 18px;
+}
+
+.drawer-handle.handle-right::before{
+  content: "";
+  position: absolute;
+  inset: 12px auto 12px 7px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, rgba(168, 85, 247, 0.62), transparent);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.38);
+}
+
+.drawer-handle i{
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.veilrunner.sheet.actor .sheet-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid var(--vr-border);
+  background: transparent;
+}
+
+.veilrunner.sheet.actor .hero-header-meta{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  width: 100%;
+  min-height: 44px;
+  overflow: visible;
+}
+
+.veilrunner.sheet.actor .hero-header-meta .hero-xp{
+  flex: none;
+  position: relative;
+  min-width: 0;
+  width: 260px;
+  margin-left: -20px;
+}
+
+.veilrunner.sheet.actor .inspiration-dots{
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 3;
+}
+
+.veilrunner.sheet.actor .inspiration-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--vr-amber);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+.veilrunner.sheet.actor .hero-header-meta .level-diamond{
+  position: relative;
+  margin-right: -18px;
+  z-index: 2;
+}
+
+.veilrunner.sheet.actor .hero-header-meta .hero-xp .bar-track.horizontal{
+  border-radius: 999px;
+}
+
+.veilrunner.sheet.actor .sheet-header .name-input{
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--vr-text);
+  width: 100%;
+  padding: 0;
+}
+
+.veilrunner.sheet.actor .sheet-header .name-input:focus{
+  box-shadow: none;
+  outline: none;
+}
+
+.veilrunner.sheet.actor .identity{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  /* Match the portrait's 6px frame inset below. */
+  margin-left: 6px;
+}
+
+.veilrunner.sheet.actor .identity-discipline-icon{
+  display: grid;
+  place-items: center;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--vr-border);
+  border-radius: 4px;
+  background: var(--vr-panel);
+  color: var(--vr-accent);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.veilrunner.sheet.actor .identity-copy{
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .species,
+.veilrunner.sheet.actor .profession-discipline{
+  color: var(--vr-text-dim);
+  font-size: 0.88rem;
+}
+
+.veilrunner.sheet.actor .identity-profession-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.veilrunner.sheet.actor .identity-profession-row .profession-discipline{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.veilrunner.sheet.actor .header-resolve-track{
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+  width: auto;
+  max-width: 100%;
+}
+
+.veilrunner.sheet.actor .header-resolve-label{
+  color: var(--vr-text-dim);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.veilrunner.sheet.actor .header-resolve-icons{
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  justify-content: flex-end;
+}
+
+.veilrunner.sheet.actor .header-resolve-pip{
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  min-height: 13px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  background: rgba(8, 10, 16, 0.78);
+  cursor: pointer;
+}
+
+.veilrunner.sheet.actor .header-resolve-pip.active{
+  border-color: rgba(34, 211, 238, 0.62);
+  background: #67e8f9;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.28);
+}
+
+.veilrunner.sheet.actor .character-details-fields input,
+.veilrunner.sheet.actor .profession-details-grid input,
+.veilrunner.sheet.actor .qualities-flaws-box textarea{
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--vr-border);
+  color: var(--vr-text);
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+
+.veilrunner.sheet.actor .character-details-fields select,
+.veilrunner.sheet.actor .profession-details-grid select{
+  width: 100%;
+  background: #f4f1e8;
+  border: 1px solid var(--vr-border);
+  color: #1f2430;
+  border-radius: 8px;
+  padding: 5px 8px;
+  color-scheme: light;
+}
+
+.veilrunner.sheet.actor .character-details-fields select option,
+.veilrunner.sheet.actor .profession-details-grid select option{
+  background: #f4f1e8;
+  color: #1f2430;
+}
+
+.veilrunner.sheet.actor .character-details-fields select option:checked,
+.veilrunner.sheet.actor .profession-details-grid select option:checked{
+  background: var(--vr-blue);
+  color: #ffffff;
+}
+
+.veilrunner.sheet.actor .qualities-flaws-box textarea{
+  min-height: 48px;
+  resize: vertical;
+}
+
+.veilrunner.sheet.actor .header-icons{
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: var(--vr-sheet-gutter);
+}
+
+.veilrunner.sheet.actor .header-icon-btn{
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--vr-text-dim);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.veilrunner.sheet.actor .header-icon-btn:hover,
+.veilrunner.sheet.actor .header-icon-btn.active{
+  color: var(--vr-accent);
+  background: var(--vr-accent-soft);
+  border-color: color-mix(in srgb, var(--vr-accent) 35%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--vr-accent) 20%, transparent);
+}
+
+.veilrunner.sheet.actor .main-panel{
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  padding: 14px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  --vr-sheet-divider: #56606c;
+  --vr-sheet-divider-strong: #8a95a2;
+  --vr-sheet-divider-soft: rgba(138, 149, 162, 0.24);
+}
+

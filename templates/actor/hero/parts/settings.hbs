@@ -1,0 +1,130 @@
+          {{#if (eq subTabs.settings "ui")}}
+          <div class="setting-panel ui-settings-panel">
+            <section class="settings-group">
+              <h4>{{localize 'VEILRUNNER.UIColorCustomization'}}</h4>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.UIStyle'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.uiColor" value="{{sheetOptions.uiColor}}" data-ui-preview="uiColor" /><button type="button" data-reset-ui-color="uiColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CategoryHighlightColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.categoryHighlightColor" value="{{sheetOptions.categoryHighlightColor}}" data-ui-preview="categoryHighlightColor" /><button type="button" data-reset-ui-color="categoryHighlightColor">Default</button></span></div>
+              <label>{{localize 'VEILRUNNER.ColorBlindMode'}}
+                <select name="system.sheetOptions.colorVision" data-ui-preview="colorVision">
+                  <option value="default" {{#if (eq sheetOptions.colorVision "default")}}selected{{/if}}>{{localize 'VEILRUNNER.ColorVisionDefault'}}</option>
+                  <option value="protanopia" {{#if (eq sheetOptions.colorVision "protanopia")}}selected{{/if}}>{{localize 'VEILRUNNER.Protanopia'}}</option>
+                  <option value="deuteranopia" {{#if (eq sheetOptions.colorVision "deuteranopia")}}selected{{/if}}>{{localize 'VEILRUNNER.Deuteranopia'}}</option>
+                  <option value="tritanopia" {{#if (eq sheetOptions.colorVision "tritanopia")}}selected{{/if}}>{{localize 'VEILRUNNER.Tritanopia'}}</option>
+                </select>
+              </label>
+              <div class="theme-reset-row">
+                <span>{{localize 'VEILRUNNER.ResetThemesToDefault'}}</span>
+                <button type="button" class="theme-reset-btn" data-reset-theme>{{localize 'VEILRUNNER.ResetTheme'}}</button>
+              </div>
+            </section>
+
+            <section class="settings-group">
+              <h4>{{localize 'VEILRUNNER.CharacterColumn'}}</h4>
+              <h5>{{localize 'VEILRUNNER.CharacterPortrait'}}</h5>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CharacterBackgroundImage'}}</span><button type="button" class="appearance-pick-btn" data-action="setCharacterBackgroundImage"><i class="fa-solid fa-image"></i><span>{{localize 'VEILRUNNER.ChangeCharacterBackground'}}</span></button></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CharacterBackgroundColor'}}</span><span class="color-picker-control"><button type="button" class="ui-toggle-icon {{#if sheetOptions.characterBackgroundColorEnabled}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="characterBackgroundColorEnabled" aria-pressed="{{#if sheetOptions.characterBackgroundColorEnabled}}true{{else}}false{{/if}}" title="{{localize 'VEILRUNNER.ToggleCharacterBackgroundColor'}}"><i class="fa-solid {{#if sheetOptions.characterBackgroundColorEnabled}}fa-toggle-on{{else}}fa-toggle-off{{/if}}"></i></button><input type="color" name="system.sheetOptions.characterBackgroundColor" value="{{sheetOptions.characterBackgroundColor}}" data-ui-preview="characterBackgroundColor" /><button type="button" data-reset-ui-color="characterBackgroundColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.CharacterBorderColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.characterBorderColor" value="{{sheetOptions.characterBorderColor}}" data-ui-preview="characterBorderColor" /><button type="button" data-reset-ui-color="characterBorderColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.LoadoutCardColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.loadoutCardColor" value="{{sheetOptions.loadoutCardColor}}" data-ui-preview="loadoutCardColor" /><button type="button" data-reset-ui-color="loadoutCardColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.LoadoutButtonColor'}}</span><span class="color-picker-control"><input type="color" value="{{#if sheetOptions.loadoutButtonColor}}{{sheetOptions.loadoutButtonColor}}{{else}}{{sheetOptions.loadoutCardColor}}{{/if}}" data-loadout-button-color aria-label="{{localize 'VEILRUNNER.LoadoutButtonColor'}}" /><button type="button" data-reset-loadout-button-color title="{{localize 'VEILRUNNER.LoadoutButtonFollowCard'}}" aria-label="{{localize 'VEILRUNNER.LoadoutButtonFollowCard'}}"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.ManaTextColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.manaTextColor" value="{{sheetOptions.manaTextColor}}" data-ui-preview="manaTextColor" /><button type="button" data-reset-ui-color="manaTextColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.StaminaTextColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.staminaTextColor" value="{{sheetOptions.staminaTextColor}}" data-ui-preview="staminaTextColor" /><button type="button" data-reset-ui-color="staminaTextColor">Default</button></span></div>
+              <h5>{{localize 'VEILRUNNER.LevellingAndXP'}}</h5>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.EarnedXPColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.earnedXpColor" value="{{sheetOptions.earnedXpColor}}" data-ui-preview="earnedXpColor" /><button type="button" data-reset-ui-color="earnedXpColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.XPIndicatorColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.levelUpColor" value="{{sheetOptions.levelUpColor}}" data-ui-preview="levelUpColor" /><button type="button" data-reset-ui-color="levelUpColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.XPBackgroundColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.totalXpColor" value="{{sheetOptions.totalXpColor}}" data-ui-preview="totalXpColor" /><button type="button" data-reset-ui-color="totalXpColor">Default</button></span></div>
+              <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorBrightness'}}</span><span class="xp-slider-control"><i class="fa-solid fa-moon" title="Dim"></i><input type="range" name="system.sheetOptions.levelUpBrightness" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpBrightness}}" data-ui-preview="levelUpBrightness" /><i class="fa-solid fa-sun" title="Bright"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpBrightnessDescriptor}}" data-ui-value="levelUpBrightness" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpBrightness" title="Reset to 1.00">Default</button></span></label>
+              <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorRate'}}</span><span class="xp-slider-control"><i class="fa-solid fa-turtle" title="Slow"></i><input type="range" name="system.sheetOptions.levelUpIntensity" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpRate}}" data-ui-preview="levelUpIntensity" /><i class="fa-solid fa-bolt" title="Fast"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpRateDescriptor}}" data-ui-value="levelUpIntensity" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpIntensity" title="Reset to 1.00">Default</button></span></label>
+              <label class="xp-slider-row"><span>{{localize 'VEILRUNNER.XPIndicatorIntensity'}}</span><span class="xp-slider-control"><i class="fa-solid fa-circle" title="Low intensity"></i><input type="range" name="system.sheetOptions.levelUpGlowIntensity" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpGlowIntensity}}" data-ui-preview="levelUpGlowIntensity" /><i class="fa-solid fa-burst" title="High intensity"></i><input class="xp-value-input" type="number" min="0.25" max="2" step="0.05" value="{{sheetOptions.levelUpGlowIntensityDescriptor}}" data-ui-value="levelUpGlowIntensity" title="Enter a value from 0.25 to 2.00" /><button type="button" data-reset-ui-slider="levelUpGlowIntensity" title="Reset to 1.00">Default</button></span></label>
+              <h5>{{localize 'VEILRUNNER.ResourceBarType'}}</h5>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.staticHealthColor}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="staticHealthColor" aria-pressed="{{#if sheetOptions.staticHealthColor}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.StaticHealthColor'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.staticHealthColor}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              {{#each resourceBarSettings}}
+                <h5>{{localize label}}</h5>
+                <label class="color-picker-row"><span>{{localize 'VEILRUNNER.ResourceBarColor'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.{{key}}BarColor" value="{{color}}" data-ui-preview="{{key}}BarColor" /></span></label>
+                <button type="button" class="ui-toggle-row ui-toggle-button {{#if roundLeft}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="{{key}}BarRoundLeft" aria-pressed="{{#if roundLeft}}true{{else}}false{{/if}}">
+                  <span>{{localize 'VEILRUNNER.ResourceBarRoundLeft'}}</span><span class="ui-toggle-check {{#if roundLeft}}is-active{{/if}}" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="ui-toggle-row ui-toggle-button {{#if roundRight}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="{{key}}BarRoundRight" aria-pressed="{{#if roundRight}}true{{else}}false{{/if}}">
+                  <span>{{localize 'VEILRUNNER.ResourceBarRoundRight'}}</span><span class="ui-toggle-check {{#if roundRight}}is-active{{/if}}" aria-hidden="true"></span>
+                </button>
+              {{/each}}
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.disableResourceBarVfx}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="disableResourceBarVfx" aria-pressed="{{#if sheetOptions.disableResourceBarVfx}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.DisableResourceBarVfx'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.disableResourceBarVfx}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.compactResourceBars}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="compactResourceBars" aria-pressed="{{#if sheetOptions.compactResourceBars}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.CompactResourceBars'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.compactResourceBars}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.hideResourceBarIcons}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="hideResourceBarIcons" aria-pressed="{{#if sheetOptions.hideResourceBarIcons}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.HideResourceBarIcons'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.hideResourceBarIcons}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.compactEnergyBars}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="compactEnergyBars" aria-pressed="{{#if sheetOptions.compactEnergyBars}}true{{else}}false{{/if}}">
+                <span>{{localize 'VEILRUNNER.CompactEnergyBars'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.compactEnergyBars}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              {{#each energyBarSettings}}
+                <h5>{{localize label}}</h5>
+                <button type="button" class="ui-toggle-row ui-toggle-button {{#if rounded}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="{{key}}BarRounded" aria-pressed="{{#if rounded}}true{{else}}false{{/if}}">
+                  <span>{{localize 'VEILRUNNER.ResourceBarRounded'}}</span><span class="ui-toggle-check {{#if rounded}}is-active{{/if}}" aria-hidden="true"></span>
+                </button>
+              {{/each}}
+              <p>{{localize 'VEILRUNNER.ResourceBarTypeHint'}}</p>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showAllResourceBars}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showAllResourceBars" aria-pressed="{{#if sheetOptions.showAllResourceBars}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-layer-group"></i> {{localize 'VEILRUNNER.ShowAllResourceBars'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showAllResourceBars}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showArmorResourceBar}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showArmorResourceBar" aria-pressed="{{#if sheetOptions.showArmorResourceBar}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-shield-halved"></i> {{localize 'VEILRUNNER.ShowArmorResourceBar'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showArmorResourceBar}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showShieldsResourceBar}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showShieldsResourceBar" aria-pressed="{{#if sheetOptions.showShieldsResourceBar}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-shield"></i> {{localize 'VEILRUNNER.ShowShieldsResourceBar'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showShieldsResourceBar}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showBarriersResourceBar}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showBarriersResourceBar" aria-pressed="{{#if sheetOptions.showBarriersResourceBar}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-hexagon"></i> {{localize 'VEILRUNNER.ShowBarriersResourceBar'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showBarriersResourceBar}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+            </section>
+
+            <section class="settings-group">
+              <h4>{{localize 'VEILRUNNER.PartyList'}}</h4>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.hidePartyList}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="hidePartyList" aria-pressed="{{#if sheetOptions.hidePartyList}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-users-slash"></i> {{localize 'VEILRUNNER.ShowPartyList'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.hidePartyList}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="ui-toggle-row ui-toggle-button {{#if sheetOptions.showAllPartyResources}}is-active{{/if}}" data-action="toggleSheetOption" data-sheet-option="showAllPartyResources" aria-pressed="{{#if sheetOptions.showAllPartyResources}}true{{else}}false{{/if}}">
+                <span><i class="fa-solid fa-bars-staggered"></i> {{localize 'VEILRUNNER.ShowAllPartyResources'}}</span>
+                <span class="ui-toggle-check {{#if sheetOptions.showAllPartyResources}}is-active{{/if}}" aria-hidden="true"></span>
+              </button>
+              <p>{{localize 'VEILRUNNER.ShowAllPartyResourcesHint'}}</p>
+              <h5>{{localize 'VEILRUNNER.PANIndicatorColors'}}</h5>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANOff'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panOffColor" value="{{sheetOptions.panOffColor}}" data-ui-preview="panOffColor" /><button type="button" data-reset-ui-color="panOffColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANOn'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panOnColor" value="{{sheetOptions.panOnColor}}" data-ui-preview="panOnColor" /><button type="button" data-reset-ui-color="panOnColor">Default</button></span></div>
+              <div class="color-picker-row"><span>{{localize 'VEILRUNNER.PANInterference'}}</span><span class="color-picker-control"><input type="color" name="system.sheetOptions.panInterferenceColor" value="{{sheetOptions.panInterferenceColor}}" data-ui-preview="panInterferenceColor" /><button type="button" data-reset-ui-color="panInterferenceColor">Default</button></span></div>
+            </section>
+          </div>
+          {{else}}
+          <div class="setting-panel">
+            <button type="button" class="settings-action-btn" data-action="openCharacterCreation">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>{{localize 'VEILRUNNER.OpenCharacterGeneration'}}</span>
+            </button>
+            <p>{{localize 'VEILRUNNER.OpenCharacterGenerationHint'}}</p>
+            <button type="button" class="network-toggle {{#if system.networkLinked}}is-active{{/if}}" data-action="togglePan" aria-pressed="{{#if system.networkLinked}}true{{else}}false{{/if}}">
+              <span><i class="fa-solid fa-tower-broadcast"></i> {{localize 'VEILRUNNER.NearbyNetwork'}}</span>
+              <span class="ui-toggle-check {{#if system.networkLinked}}is-active{{/if}}" aria-hidden="true"></span>
+            </button>
+            <p>{{localize 'VEILRUNNER.NearbyNetworkHint'}}</p>
+            <details class="vr-hud-asset-authoring">
+              <summary>Controlled Combat Assets</summary>
+              <p>Link pets, spirits, drones, summons, or vehicles by Actor UUID and kind.</p>
+              <textarea name="system.assetLinksJson" rows="8">{{assetLinksJson}}</textarea>
+            </details>
+          </div>
+          {{/if}}
+

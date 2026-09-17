@@ -1,0 +1,10 @@
+.vr-rel-map{width:100%; overflow:auto; background:#111820; border:1px solid #52616f;}
+.vr-rel-map svg{width:100%; min-width:450px; max-height:650px;}
+.vr-rel-map-grid{fill:none; stroke:#bacbd5; stroke-width:1; opacity:.3; pointer-events:none;}
+.vr-rel-map circle{fill:var(--rel-accent); stroke:#08111a; stroke-width:3;}
+.vr-rel-map text{font-size:18px; text-anchor:middle; fill:#fff; stroke:#111; stroke-width:3px; paint-order:stroke;}
+.vr-rel-map [role=button]{cursor:pointer;}
+.vr-rel-map [role=button]:focus{outline:3px solid var(--rel-accent);}
+.vr-rel-map-tools{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0;}
+.vr-rel-map-tools label{display:grid; gap:3px;}
+.vr-rel-token-controls{display:flex; flex-direction:column; gap:3px; padding:5px; background:#17212b; color:#fff; min-width:95px; pointer-events:auto;}
